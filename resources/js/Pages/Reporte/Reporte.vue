@@ -1,0 +1,125 @@
+<script setup>
+    import AppLayout from '@/Layouts/AppLayout.vue';
+    import { useForm } from '@inertiajs/vue3';
+    import VueDatePicker from '@vuepic/vue-datepicker';
+    import '@vuepic/vue-datepicker/dist/main.css';
+
+    const props = defineProps({
+        clasificaciones: Array,
+        marcas: Array
+    });
+
+    const formReporte = useForm({
+        datesReport: [],
+        fechaInicio: {
+            type: Date
+        },
+        fechaFin: {
+            type: Date
+        },
+        id_clasificacion: 0,
+        id_marca:  0,
+    });
+
+    const generarReporteVentas = () => {
+        let fechaFin = formReporte.datesReport[1];
+        let fechaInicio = formReporte.datesReport[0];
+        let popup  = window.open( "_blank");
+        popup.location = '/reporte/venta?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        location.replace('/reporte');
+               
+    }
+
+    const generarReporteInventario = () => {
+        let query = "?";
+        if (formReporte.id_clasificacion !== 0) {
+            query = query + "id_clasificacion=" + formReporte.id_clasificacion + "&";
+        }
+        if (formReporte.id_marca !== 0) {
+            query = query + "id_marca=" + formReporte.id_marca + "&";
+        }
+        let popup  = window.open( "_blank");
+        popup.location = '/reporte/inventario' + query;
+        location.replace('/reporte');
+    } 
+
+</script>
+
+<template>
+    <AppLayout title="Reportes">
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                Reportes
+            </h2>
+        </template>
+
+        <hr class="my-6">
+
+        <div class="flex">
+            <div class="flex-none w-14 h-14">
+            </div>
+            <div class="grow h-14">
+                <div class="md-col-span-2 mt-5 md:mt-0" id="ventas" 
+                    v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                          $page.props.auth.user.tipo == 'admin'" >
+                    <label><strong>Reporte de ventas</strong></label>
+                    <br>
+                    <br>
+                    <label>Rango de fechas para generar reporte:</label>
+                    <VueDatePicker
+                    v-model="formReporte.datesReport"
+                    range 
+                    model-type="dd-MM-yyyy"></VueDatePicker>
+                    <br>
+                    <button @click="generarReporteVentas()"
+                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
+                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        Reporte de ventas</button>
+                </div>
+                <hr class="my-6">
+                <div class="md-col-span-2 mt-5 md:mt-0" id="inventario"
+                    v-if="$page.props.auth.user.tipo == 'inventario' ||
+                          $page.props.auth.user.tipo == 'admin'" >
+                    <label><strong>Reporte de inventario</strong></label>
+                    <br>
+                    <br>
+                    <label class="block font-medium text-sm text-gray-700">Clasificacion (Opcional)</label>
+                    <select v-model="formReporte.id_clasificacion" id="id_clasificacion" name="id_clasificacion"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm 
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>Selecione</option>
+                        <option v-for="clasificacion in clasificaciones" :value="clasificacion.id" :key="clasificacion.id">
+                            {{ clasificacion.nombre }}
+                        </option>
+                    </select>
+                        <br>
+
+                    <label class="block font-medium text-sm text-gray-700">Marca (Opcional)</label>
+                    <select v-model="formReporte.id_marca" id="id_marca" name="id_marca"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm 
+                            focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>Selecione</option>
+                        <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
+                            {{ marca.nombre }}
+                        </option>
+                    </select>
+                        <br>
+                    <button @click="generarReporteInventario()"
+                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
+                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        Reporte de inventario</button>
+                </div>
+            </div>
+            <div class="flex-none w-14 h-14">
+            </div>
+        </div>
+    </AppLayout>
+</template>
+
+
+                            
+                            
