@@ -78,6 +78,11 @@ instalar las dependencias de composer ejecutando el comando en terminal
 composer install
 ```
 
+Crear estructura de base de datos
+
+```
+php artisan migrate
+```
 
 Como dev se inicia el proyecto vue en modo dev
 
