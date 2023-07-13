@@ -40,8 +40,15 @@ class ClientesController extends Controller
             'nombre' => 'required',
             'porcentaje_descuento' => 'required'
         ]);
-
-        Clientes::create($request->all());
+        
+        $cliente = [
+            'nombre' => $request->nombre,
+            'porcentaje_descuento' => $request->porcentaje_descuento,
+            'adeudo_total' => 0,
+            'abono_total' => 0,
+            'balance' => 0
+        ];
+        Clientes::create($cliente);
         return redirect()->route('cliente.index');
     }
 
