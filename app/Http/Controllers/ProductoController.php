@@ -17,7 +17,8 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
+        $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
+        ->orWhere('ingrediente_activo','LIKE',"%$request->q%")
         ->latest()
         ->paginate(10);
 
@@ -39,7 +40,7 @@ class ProductoController extends Controller
     {
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
-    
+
         return Inertia::render('Inventario/CreateProducto', [
             'clasificaciones' => $clasificaciones,
             'marcas' => $marca
@@ -60,7 +61,7 @@ class ProductoController extends Controller
             'ieps' => 'required',
             'tamano' => 'required',
         ]);
-        
+
         $data['id_usuario'] = Auth::user()->id;
         $request->merge($data);
         $producto = Producto::create($request->all());
@@ -73,7 +74,7 @@ class ProductoController extends Controller
      * Show the form for editing the specified resource.
      */
     public function edit(Producto $inventario)
-    { 
+    {
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
         return Inertia::render('Inventario/CreateProducto', [
@@ -87,7 +88,7 @@ class ProductoController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
         $request->validate([
             'nombre' => 'required',
             'id_clasificacion' => 'required',
@@ -107,6 +108,7 @@ class ProductoController extends Controller
         $catProducto->ieps = $request->ieps;
         $catProducto->precio_ieps = $request->precio_ieps;
         $catProducto->tamano = $request->tamano;
+        $catProducto->ingrediente_activo = $request->ingrediente_activo;
         $catProducto->id_usuario = Auth::user()->id;;
         $catProducto->save();
 
@@ -116,20 +118,20 @@ class ProductoController extends Controller
     }
 
     public function show(Producto $inventario)
-    { 
+    {
         return Inertia::render('Inventario/AddInventario', [
             'producto' =>$inventario
         ]);
     }
 
-    public function addInventario(Request $request) 
+    public function addInventario(Request $request)
     {
         $request->validate(['cantidad' => 'required|numeric|gt:0']);
 
         $catProducto = Producto::find($request->id);
-        
+
         $altaInventario = new AltaInventario();
-        $altaInventario->cantidad_actual = $catProducto->cantidad; 
+        $altaInventario->cantidad_actual = $catProducto->cantidad;
         $altaInventario->cantidad_nueva = $request->cantidad + $catProducto->cantidad;
         $altaInventario->id_usuario = Auth::user()->id ;
         $altaInventario->id_producto = $catProducto->id;

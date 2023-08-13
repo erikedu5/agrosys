@@ -19,19 +19,20 @@ class Producto extends Model
         'precio_ieps',
         'tamano',
         'id_usuario',
+        'ingrediente_activo'
     ];
 
-    public function clasificacion() 
+    public function clasificacion()
     {
         return $this->belongsTo(CatClasificacion::class);
     }
 
-    public function marca() 
+    public function marca()
     {
         return $this->belongsTo(CatMarca::class);
     }
 
-    public function usuario() 
+    public function usuario()
     {
         return $this->belongsTo(User::class);
     }

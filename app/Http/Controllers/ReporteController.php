@@ -23,10 +23,13 @@ class ReporteController extends Controller
     {
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
+        $productos = Producto::get();
+
 
         return Inertia::render('Reporte/Reporte', [
             'clasificaciones' => $clasificaciones,
-            'marcas' => $marca
+            'marcas' => $marca,
+            'productos' =>$productos,
         ]);
     }
 
@@ -60,11 +63,11 @@ class ReporteController extends Controller
                 $producto->detail = Producto::find($producto->id_producto);
                 array_push($productosArray, $producto);
             }
-            $venta->productos = $productosArray; 
-    
+            $venta->productos = $productosArray;
+
             $cliente = clientes::where('id', $venta->id_cliente)->first();
             $venta->cliente = $cliente;
-            
+
             $usuario = User::where('id', $venta->id_usuario)->first();
             $venta->usuario = $usuario;
         }
@@ -89,7 +92,7 @@ class ReporteController extends Controller
 
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option("enable_php", true);
-        $pdf->loadView('reportes/ventas', 
+        $pdf->loadView('reportes/ventas',
             compact("ventas", "empresa", "fechaInicio", "fechaFin", 'montoCredito', 'montoContado', 'totalAbonadoRango'));
         $pdf->setOption('javascript-delay', 3000);
 
@@ -124,7 +127,7 @@ class ReporteController extends Controller
             ->first();
             $id_usuario = optional($producto->alta)->id_usuario;
             $producto->usuario = optional(User::where('id', $id_usuario)->first());
-            
+
         }
         $empresas = Empresa::get();
 
@@ -134,12 +137,94 @@ class ReporteController extends Controller
 
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option("enable_php", true);
-        $pdf->loadView('reportes/inventario', 
+        $pdf->loadView('reportes/inventario',
             compact("inventario", "empresa", 'clasificacion', 'marca', 'fechaCreacion'));
         $pdf->set_paper('letter', 'landscape');
         $pdf->set_paper('A4', 'landscape');
         $pdf->setOption('javascript-delay', 3000);
 
         return $pdf->stream('inventario.pdf');
+    }
+
+    public function ventaPorProductoMarca(Request $request)
+    {
+
+        $fechaInicio = new DateTime($request->fechaInicio);
+        $fechaInicio->setTime(0,0,0);
+        $fechaInicio->format('Y-m-d h:i:s a');
+
+        $fechaFin = new DateTime($request->fechaFin);
+        $fechaFin->setTime(23,59,59);
+        $fechaFin->format('Y-m-d h:i:s a');
+
+        $ventas = [];
+        $porProducto = $request->id_producto != 0;
+        $porMarca = $request->id_marca != 0;
+        $nameFilter = "";
+
+        if($porProducto) {
+            $ventas = Venta::select('ventas.*')
+            ->where('producto_ventas.id_producto', $request->id_producto)
+            ->where('ventas.created_at', '>=', $fechaInicio)
+            ->where('ventas.created_at', '<=', $fechaFin)
+            ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
+            ->get();
+
+            $nameFilter = Producto::select('nombre')
+            ->where('id', $request->id_producto)
+            ->first()->nombre;
+        }
+
+        if ($porMarca){
+            $ventas = Venta::select('ventas.*')
+            ->where('productos.id_marca', $request->id_marca)
+            ->where('ventas.created_at', '>=', $fechaInicio)
+            ->where('ventas.created_at', '<=', $fechaFin)
+            ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
+            ->join('productos', 'productos.id', 'producto_ventas.id_producto')
+            ->get();
+
+            $nameFilter = CatMarca::select('nombre')
+            ->where('id', $request->id_marca)
+            ->first()->nombre;
+        }
+
+        $productosVendidos = 0;
+
+        foreach($ventas as $venta) {
+            $productos = ProductoVenta::where('id_venta', $venta->id)->get();
+            $productosArray = [];
+            foreach ($productos as $producto) {
+                $producto->detail = Producto::find($producto->id_producto);
+                if ($porProducto && $producto->id_producto == $request->id_producto) {
+                    $productosVendidos += $producto->cantidad;
+                } else if ($porMarca && $producto->detail->id_marca == $request->id_marca) {
+                    $productosVendidos += $producto->cantidad;
+                }
+                $producto->detail->marca = CatMarca::find($producto->detail->id_marca);
+                array_push($productosArray, $producto);
+            }
+            $venta->productos = $productosArray;
+
+            $cliente = clientes::where('id', $venta->id_cliente)->first();
+            $venta->cliente = $cliente;
+
+            $usuario = User::where('id', $venta->id_usuario)->first();
+            $venta->usuario = $usuario;
+        }
+
+        $empresas = Empresa::get();
+
+        if (!empty($empresas)) {
+            $empresa = $empresas[0];
+        }
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->getDomPDF()->set_option("enable_php", true);
+        $pdf->loadView('reportes/ventasMarcaProducto',
+            compact("ventas", "empresa", "productosVendidos", "nameFilter"));
+        $pdf->setOption('javascript-delay', 3000);
+
+        return $pdf->stream('ventas.pdf');
     }
 }

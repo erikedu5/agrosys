@@ -43,7 +43,7 @@ class SolucionEnfermedadController extends Controller
             $enfermedad = CatEnfermedades::where('id', $enfermedadTipoFlor->id_enfermedad)->first();
             $enfermedadTipoFlor->tipoFlor = $tipoFlor;
             $enfermedadTipoFlor->enfermedad = $enfermedad;
-            $enfermedadTipoFlor->nombre = $tipoFlor->nombre. ' en '. $enfermedad->nombre;
+            $enfermedadTipoFlor->nombre = $enfermedad->nombre.' en '.$tipoFlor->nombre;
             array_push($enfermedadesFlorArray, $enfermedadTipoFlor);
         }
 

@@ -16,7 +16,7 @@
         datesReport: []
     });
 
-    const q = ref('');  
+    const q = ref('');
 
     watch(q, (value) => {
         router.get( route( 'dashboard', { q: value } ), {}, { preserveState: true } );
@@ -38,7 +38,6 @@
             </h2>
         </template>
 
-
         <hr class="my-6">
 
         <div class="flex">
@@ -47,39 +46,38 @@
             <div class="grow h-14">
                 <div class="md-col-span-2 mt-5 md:mt-0">
                     <div class="shadow bg-white md:rounded-md p-4">
-
                         <div class="flex justify-between">
                             <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar Producto...">
                         </div>
-                    </div>
-
-                    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                <th>Id</th>
-                                <th>Nombre del producto</th>
-                                <th>Enfermedad en planta</th>
-                                <th>Dosis en ml por bomba</th>
-                                <th>Dosis en ml por tambo</th>
-                                <th>Cantidad en stock</th>
-                                <th>Ultima actualización del stock</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="solucionByProduct in solucionesByProduct.data">
-                                    <td class="px-4 py-2"> {{ solucionByProduct.id }}</td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.producto.nombre }} </td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{ solucionByProduct.tipoFlor.nombre }} </td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.dosis_bomba_ml }} </td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.dosis_tambo_ml }} </td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.producto.cantidad }} </td>
-                                    <td class="px-4 py-2"> {{ solucionByProduct.producto.updated_at }} </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div name="Pagination">
-                            <Pagination class="mt-6" :links="solucionesByProduct.links" :prefix="''" />
+                        <br>
+                        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                    <th>Nombre del producto</th>
+                                    <th>Enfermedad en planta</th>
+                                    <th>Ingrediente activo</th>
+                                    <th>Dosis en ml por bomba</th>
+                                    <th>Dosis en ml por tambo</th>
+                                    <th>Cantidad en stock</th>
+                                    <th>Ultima actualización del stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="solucionByProduct in solucionesByProduct.data">
+                                        <td class="px-4 py-2"> {{ solucionByProduct.producto.nombre }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{ solucionByProduct.tipoFlor.nombre }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.producto.ingrediente_activo }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.dosis_bomba_ml }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.dosis_tambo_ml }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.producto.cantidad }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.producto.updated_at }} </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div name="Pagination">
+                                <Pagination class="mt-6" :links="solucionesByProduct.links" :prefix="''" />
+                            </div>
                         </div>
                     </div>
                 </div>

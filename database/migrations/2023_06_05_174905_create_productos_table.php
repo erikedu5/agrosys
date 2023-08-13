@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('tamano');
             $table->unsignedBigInteger('id_usuario');
             $table->foreign('id_usuario')->references('id')->on('users');
+            $table->string('ingrediente_activo');
             $table->timestamps();
         });
     }

@@ -19,6 +19,7 @@ class MainController extends Controller
     {
 
         $solucionesByProduct = SolucionEnfermedad::where('productos.nombre', 'LIKE', "%$request->q%")
+        ->orWhere('productos.ingrediente_activo', 'LIKE', "%$request->q%")
         ->orWhere('cat_enfermedades.nombre', 'LIKE', "%$request->q%")
         ->orWhere('cat_tipo_flors.nombre', 'LIKE', "%$request->q%")
         ->join('productos', 'productos.id', 'solucion_enfermedads.id_producto')

@@ -4,7 +4,7 @@
     import { router, useForm } from '@inertiajs/vue3';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { reactive } from 'vue';
- 
+
     const productoVenta = reactive([]);
     let total = 0.0;
     let selectClient = false;
@@ -42,7 +42,7 @@
         total: 0
     });
 
-    const q = ref('');  
+    const q = ref('');
 
     watch(q, (value) => {
         router.get( route( 'venta.index', { q: value } ), {}, { preserveState: true } );
@@ -102,8 +102,8 @@
 
     const handleSelectChange = (event) => {
         if (event !== null) {
-            form.precio_ieps_con_descuento = (form.producto.precio_ieps 
-                                            - ((form.producto.precio_ieps / 100) 
+            form.precio_ieps_con_descuento = (form.producto.precio_ieps
+                                            - ((form.producto.precio_ieps / 100)
                                                 * form.cliente.porcentaje_descuento)).toFixed(2);
             form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
         }
@@ -113,10 +113,10 @@
         if (event !== null) {
             form.porcentaje_descuento = form.cliente.porcentaje_descuento;
             if (form.producto !== null) {
-                form.precio_ieps_con_descuento = (form.producto.precio_ieps 
-                                                    - ((form.producto.precio_ieps / 100) 
+                form.precio_ieps_con_descuento = (form.producto.precio_ieps
+                                                    - ((form.producto.precio_ieps / 100)
                                                             * form.cliente.porcentaje_descuento)).toFixed(2);
-                form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2); 
+                form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
             }
         }
     }
@@ -130,7 +130,7 @@
     const eliminarProducto = (producto) => {
         total = (total - parseFloat(producto.importe)).toFixed(2);
         const index = productoVenta.indexOf(producto);
-        productoVenta.splice(index, 1);   
+        productoVenta.splice(index, 1);
     }
 
 </script>
@@ -149,16 +149,16 @@
             <div class="flex-none w-14 h-14">
             </div>
             <div class="grow h-14">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    
+                <div  class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
+
                     <div style=" text-align: center;">
                         <h6>Agregar productos de venta</h6>
                     </div>
 
 
-                    <div class="shadow bg-white md:rounded-md p-4">
+                    <div class="columns-2">
                         <label>Cliente: </label>
-                        <vue-single-select 
+                        <vue-single-select
                             id = "singleTest"
                             placeholder="Seleccione un cliente"
                             v-model="form.cliente"
@@ -171,7 +171,7 @@
                         <br>
 
                         <label>Productos: </label>
-                        <vue-single-select 
+                        <vue-single-select
                             placeholder="Seleccione un producto"
                             v-model="form.producto"
                             option-key="id"
@@ -184,7 +184,7 @@
                         <label>Cantidad de productos: </label>
                         <input type="number" min="1" v-model="form.cantidad"
                                @input="changeQuantity($event)"
-                               class="form-input rounded-md shadow-sm w-full"/>                        
+                               class="form-input rounded-md shadow-sm w-full"/>
                         <br><br>
 
 
@@ -203,15 +203,17 @@
                                class="form-input rounded-md shadow-sm w-full"/>
                         <br><br>
 
+                    </div>
+                    <div>
                         <button @click="agregarVenta()"
                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
-                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                             Agregar producto
                         </button>
-
-                        
+                    </div>
+                    <div>
                         <hr class="my-6">
 
                         <div style="text-align: center;">
@@ -259,32 +261,35 @@
                             <label>Total final: {{ total }} </label>
                             <br><br>
 
+                        </div>
+                        <br>
+                        <div class="columns-2">
                             <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
                             <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm 
+                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                                     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             <option value="" disabled>Selecione</option>
                             <option value="Contado">Contado</option>
                             <option value="Credito">Credito</option>
                             </select>
-                            <br><br>
+                            <br>
 
                             <div v-if="formVenta.tipoVenta === 'Credito'">
                                 <label>abono a cuenta: </label>
                                 <input type="number" v-model="form.abono"
                                     class="form-input rounded-md shadow-sm w-full"/>
-                                <br><br>
                             </div>
-
                         </div>
-                        <br><br>
-                        <button @click="finalizeSale()"
-                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
-                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
-                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                            Terminar venta
-                        </button>
+                        <br>
+                        <div>
+                            <button @click="finalizeSale()"
+                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                Terminar venta
+                            </button>
+                        </div>
 
                         <br>
                     </div>
