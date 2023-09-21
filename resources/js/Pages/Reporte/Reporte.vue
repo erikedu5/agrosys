@@ -10,6 +10,8 @@
         productos: Array
     });
 
+    let errors = [];
+
     const formReporte = useForm({
         datesReport: [],
         fechaInicio: {
@@ -27,6 +29,10 @@
     });
 
     const generarReporteVentas = () => {
+        if (formReporte.datesReport.length == 0) {
+            errors.push('Debe seleccionar un rango de fecha');
+            return;
+        }
         let fechaFin = formReporte.datesReport[1];
         let fechaInicio = formReporte.datesReport[0];
         let popup  = window.open( "_blank");
@@ -76,6 +82,11 @@
             <div class="flex-none w-14 h-14">
             </div>
             <div class="grow h-14">
+                <div v-show="errors.length > 0">
+                    <p v-for="error in errors" :value="error" :key="error">
+                        {{ error }}
+                    </p>
+                </div>
                 <div class="shadow bg-white md:rounded-md p-4">
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
                         v-if="$page.props.auth.user.tipo == 'vendedor' ||
@@ -107,7 +118,7 @@
 
                         <div>
                             <label>Rango de fechas para generar reporte:</label>
-                            <VueDatePicker :required="required"
+                            <VueDatePicker
                             v-model="formReporte.datesReportVenta"
                             range
                             model-type="dd-MM-yyyy"></VueDatePicker>

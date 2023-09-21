@@ -18,8 +18,8 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('tipo');
-            $table->unsignedBigInteger('id_empresa');
-            $table->foreign('id_empresa')->references('id')->on('empresas');
+            $table->unsignedBigInteger('id_sucursal');
+            $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->rememberToken();
             $table->foreignId('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();

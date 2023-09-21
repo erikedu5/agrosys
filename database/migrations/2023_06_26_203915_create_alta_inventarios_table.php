@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('cantidad_nueva');
             $table->string('id_usuario');
             $table->string('id_producto');
+            $table->unsignedBigInteger('id_sucursal');
+            $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->timestamps();
         });
     }

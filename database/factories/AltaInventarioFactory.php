@@ -21,6 +21,7 @@ class AltaInventarioFactory extends Factory
             'cantidad_nueva' => $this->faker->numberBetween(1, 10),
             'id_usuario' => $this->faker->numberBetween(1, 10),
             'id_producto' => $this->faker->numberBetween(1, 10),
+            'id_sucursal' => 1,
         ];
     }
 }

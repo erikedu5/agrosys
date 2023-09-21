@@ -21,6 +21,7 @@ class SolucionEnfermedadFactory extends Factory
             'id_enfermedad_tipo_flor' => $this->faker->numberBetween(1, 10),
             'dosis_bomba_ml' => $this->faker->numberBetween(1, 40),
             'dosis_tambo_ml' => $this->faker->numberBetween(1, 40),
+            'id_sucursal' => 1,
         ];
     }
 }

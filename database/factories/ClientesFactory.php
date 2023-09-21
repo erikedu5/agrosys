@@ -12,8 +12,8 @@ use App\Models\Clientes;
 class ClientesFactory extends Factory
 {
 
-    
-    
+
+
     protected $model = Clientes::class;
 
     /**
@@ -28,7 +28,8 @@ class ClientesFactory extends Factory
             'porcentaje_descuento' => $this->faker->numberBetween(1, 30),
             'adeudo_total' => 0,
             'abono_total' => 0,
-            'balance' => 0
+            'balance' => 0,
+            'id_sucursal' => 1,
         ];
     }
 }

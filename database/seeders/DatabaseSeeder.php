@@ -15,6 +15,7 @@ use App\Models\EnfermedadesTipoFlor;
 use App\Models\Producto;
 use App\Models\ProductoVenta;
 use App\Models\SolucionEnfermedad;
+use App\Models\Sucursales;
 use App\Models\User;
 use App\Models\Venta;
 use Illuminate\Database\Seeder;
@@ -26,14 +27,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Empresa::factory(2)->create();
+        Empresa::factory(1)->create();
+
+        Sucursales::factory(2)->create();
 
         User::factory()->create([
             'name' => 'Erik Jimenez',
             'email' => 'erikedu5@gmail.com',
             'password' => bcrypt('123456789'),
             'tipo' => 'admin',
-            'id_empresa' => 1
+            'id_sucursal' => 1
 
        ]);
 

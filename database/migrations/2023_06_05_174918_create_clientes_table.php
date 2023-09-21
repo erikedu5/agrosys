@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('porcentaje_descuento');
             $table->float('adeudo_total');
             $table->float('abono_total');
+            $table->float('balance');
+            $table->unsignedBigInteger('id_sucursal');
+            $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->timestamps();
         });
     }

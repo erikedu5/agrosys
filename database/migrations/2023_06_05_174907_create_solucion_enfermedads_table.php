@@ -17,6 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('id_enfermedad_tipo_flor');
             $table->foreign('id_producto')->references('id')->on('productos')->onDelete('cascade');
             $table->foreign('id_enfermedad_tipo_flor')->references('id')->on('enfermedades_tipo_flors')->onDelete('cascade');
+            $table->unsignedBigInteger('id_sucursal');
+            $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->string('dosis_bomba_ml');
             $table->string('dosis_tambo_ml');
             $table->timestamps();

@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
  */
 class VentaFactory extends Factory
 {
-    
+
     protected $model = Venta::class;
 
     public function definition(): array
@@ -23,6 +23,7 @@ class VentaFactory extends Factory
             'tipo_venta' => $this->faker->text(10),
             'venta_pagada' => $this->faker->boolean(),
             'fecha_pago' => $this->faker->date(),
+            'id_sucursal' => 1,
         ];
     }
 }
