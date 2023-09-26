@@ -49,6 +49,10 @@
     });
 
     const agregarVenta = () => {
+        if (form.producto.cantidad < form.cantidad) {
+            alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
+            return false;
+        }
         let venta = {
             'producto': form.producto,
             'cantidad': form.cantidad,
@@ -76,7 +80,6 @@
 
     const finalizeSale = () => {
         if (productoVenta.length !== 0) {
-            let data;
             form.post(route('venta.store',
                 {
                     'id_cliente': form.cliente.id,
@@ -102,10 +105,21 @@
 
     const handleSelectChange = (event) => {
         if (event !== null) {
+            if (form.producto.cantidad < form.cantidad) {
+                alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
+                return false;
+            }
             form.precio_ieps_con_descuento = (form.producto.precio_ieps
                                             - ((form.producto.precio_ieps / 100)
                                                 * form.cliente.porcentaje_descuento)).toFixed(2);
             form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
+        } else {
+            let cliente = form.cliente;
+            form.reset();
+            form.producto = 0;
+            form.cliente = cliente;
+            form.porcentaje_descuento = cliente.porcentaje_descuento;
+            selectClient = true;
         }
     }
 
@@ -234,7 +248,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="producto in productoVenta">
+                                    <tr v-for="producto in productoVenta" :value="producto.producto.id" :key="producto.producto.id">
                                         <td class="px-4 py-2"> {{ producto.producto.id }}</td>
                                         <td class="px-4 py-2"> {{ producto.producto.nombre }} </td>
                                         <td class="px-4 py-2"> {{ producto.cantidad }} </td>

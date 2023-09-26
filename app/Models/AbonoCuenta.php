@@ -15,6 +15,7 @@ class AbonoCuenta extends Model
         'id_cliente',
         'cuenta_pagada',
         'is_active',
+        'id_sucursal'
     ];
 
 

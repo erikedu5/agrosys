@@ -26,8 +26,6 @@ return new class extends Migration
             $table->unsignedBigInteger('id_usuario');
             $table->foreign('id_usuario')->references('id')->on('users');
             $table->string('ingrediente_activo');
-            $table->unsignedBigInteger('id_sucursal');
-            $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->timestamps();
         });
     }

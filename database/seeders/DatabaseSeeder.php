@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Erik Jimenez',
             'email' => 'erikedu5@gmail.com',
             'password' => bcrypt('123456789'),
-            'tipo' => 'admin',
+            'tipo' => 'superAdmin',
             'id_sucursal' => 1
 
        ]);

@@ -11,10 +11,12 @@ use App\Models\ProductoVenta;
 use App\Models\Venta;
 use App\Models\CatClasificacion;
 use App\Models\CatMarca;
+use App\Models\Sucursales;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use DateTime;
+use Illuminate\Support\Facades\Auth;
 
 class ReporteController extends Controller
 {
@@ -23,7 +25,7 @@ class ReporteController extends Controller
     {
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
-        $productos = Producto::get();
+        $productos = Producto::where('id_sucursal', Auth::user()->id_sucursal)->get();
 
 
         return Inertia::render('Reporte/Reporte', [
@@ -45,6 +47,7 @@ class ReporteController extends Controller
 
         $ventas = Venta::where('created_at', '>=', $fechaInicio)
         ->where('created_at', '<=', $fechaFin)
+        ->where('id_sucursal', Auth::user()->id_sucursal)
         ->get();
 
         $montoContado = 0;
@@ -72,11 +75,8 @@ class ReporteController extends Controller
             $venta->usuario = $usuario;
         }
 
-        $empresas = Empresa::get();
-
-        if (!empty($empresas)) {
-            $empresa = $empresas[0];
-        }
+        $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+        $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $abonos = AbonoCuenta::where('created_at', '>=', $fechaInicio)
         ->where('created_at', '<=', $fechaFin)
@@ -104,7 +104,7 @@ class ReporteController extends Controller
         $id_clasificacion = $request->id_clasificacion;
         $id_marca = $request->id_marca;
 
-        $inventario = Producto::where('id', '>', 0);
+        $inventario = Producto::where('id_sucursal', Auth::user()->id_sucursal);
 
         $fechaCreacion = Date('Y-m-d h:i:s a');
         $clasificacion = null;
@@ -122,6 +122,7 @@ class ReporteController extends Controller
         foreach ($inventario as $producto) {
             $producto->marca = CatMarca::find($producto->id_marca);
             $producto->alta = AltaInventario::where('id_producto', $producto->id)
+            ->where('id_sucursal',  Auth::user()->id_sucursal)
             ->orderBy('id', 'desc')
             ->limit(1)
             ->first();
@@ -129,11 +130,8 @@ class ReporteController extends Controller
             $producto->usuario = optional(User::where('id', $id_usuario)->first());
 
         }
-        $empresas = Empresa::get();
-
-        if (!empty($empresas)) {
-            $empresa = $empresas[0];
-        }
+        $sucursalUser = Sucursales::where('id', Auth::user()->id_sucursal)->first();
+        $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option("enable_php", true);
@@ -167,6 +165,7 @@ class ReporteController extends Controller
             ->where('producto_ventas.id_producto', $request->id_producto)
             ->where('ventas.created_at', '>=', $fechaInicio)
             ->where('ventas.created_at', '<=', $fechaFin)
+            ->where('ventas.id_sucursal', Auth::user()->id_sucursal)
             ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
             ->get();
 
@@ -180,6 +179,7 @@ class ReporteController extends Controller
             ->where('productos.id_marca', $request->id_marca)
             ->where('ventas.created_at', '>=', $fechaInicio)
             ->where('ventas.created_at', '<=', $fechaFin)
+            ->where('ventas.id_sucursal', Auth::user()->id_sucursal)
             ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
             ->join('productos', 'productos.id', 'producto_ventas.id_producto')
             ->get();
@@ -213,11 +213,8 @@ class ReporteController extends Controller
             $venta->usuario = $usuario;
         }
 
-        $empresas = Empresa::get();
-
-        if (!empty($empresas)) {
-            $empresa = $empresas[0];
-        }
+        $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+        $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option("enable_php", true);

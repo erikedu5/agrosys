@@ -64,7 +64,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="solucionByProduct in solucionesByProduct.data">
+                                    <tr v-for="solucionByProduct in solucionesByProduct.data"  :value="solucionByProduct.producto.id" :key="solucionByProduct.producto.id" >
                                         <td class="px-4 py-2"> {{ solucionByProduct.producto.nombre }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{ solucionByProduct.tipoFlor.nombre }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.producto.ingrediente_activo }} </td>

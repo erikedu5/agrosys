@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Empresa;
+use App\Models\Sucursales;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\Rules\Password;
@@ -15,10 +18,15 @@ class UsuarioController extends Controller
      */
     public function index(Request $request)
     {
-        $usuarios = User::where('name', 'LIKE', "%$request->q%")
-        ->latest()
+        $query = User::where('name', 'LIKE', "%$request->q%");
+
+        if (Auth::user()->tipo !== 'superAdmin') {
+           $usuarios = $query->where('id_sucursal',  Auth::user()->id_sucursal);
+        }
+
+        $usuarios = $query->latest()
         ->paginate(10);
-        
+
         return Inertia::render('Usuario/Usuario', [
             'usuarios' => $usuarios,
         ]);
@@ -29,7 +37,22 @@ class UsuarioController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Usuario/CreateUsuario');
+        $sucursales = [];
+        if (Auth::user()->tipo == 'superAdmin') {
+            $sucursales = Sucursales::get();
+            foreach ($sucursales as $sucursal) {
+                $empresa = Empresa::where('id',  $sucursal->id_empresa)->first();
+                $sucursal->nombre = $empresa->nombre. ' - '.$sucursal->nombre ;
+            }
+        } else {
+            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
+
+        }
+
+        return Inertia::render('Usuario/CreateUsuario', [
+            'sucursales' => $sucursales
+        ]);
     }
 
     /**
@@ -45,6 +68,12 @@ class UsuarioController extends Controller
             'password' => 'required',
         ]);
 
+        if ($request->password !== null) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $request->merge($data);
+
         User::create($request->all());
         return redirect()->route('usuario.index');
     }
@@ -56,6 +85,7 @@ class UsuarioController extends Controller
     public function edit( $id)
     {
         $usuario = User::find($id);
+        dd($usuario);
         return Inertia::render('Usuario/CreateUsuario', compact('usuario'));
     }
 
@@ -69,7 +99,6 @@ class UsuarioController extends Controller
             'email' => 'required|email',
             'tipo' => 'required'
         ]);
-        
 
         $usuario = User::find($request->id);
         $usuario->name = $request->name;
@@ -78,6 +107,7 @@ class UsuarioController extends Controller
         }
         $usuario->email = $request->email;
         $usuario->tipo = $request->tipo;
+        $usuario->id_sucursal = $request->id_sucursal;
         $usuario->save();
         return redirect()->route('usuario.index');
     }

@@ -16,14 +16,15 @@ class Venta extends Model
         'tipo_venta',
         'venta_pagada',
         'fecha_pago',
+        'id_sucursal',
     ];
 
-    public function usuario() 
+    public function usuario()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function ventas() 
+    public function ventas()
     {
         return $this->hasMany(ProductoVenta::class);
     }

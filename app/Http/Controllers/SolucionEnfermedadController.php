@@ -8,7 +8,9 @@ use App\Models\CatTipoFlor;
 use App\Models\Producto;
 use App\Models\SolucionEnfermedad;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Mockery\Undefined;
 
 class SolucionEnfermedadController extends Controller
 {
@@ -19,11 +21,13 @@ class SolucionEnfermedadController extends Controller
     {
         $solucion = SolucionEnfermedad::where('id_enfermedad_tipo_flor', intval($request->q))
                                       ->where('id_producto', $request->id_producto)
-                                      ->first();    
-                                    
+                                      ->where('id_sucursal', Auth::user()->id_sucursal)
+                                      ->first();
+
         $producto = Producto::where('id', $request->id_producto)->first();
 
         $solucionesByProduct = SolucionEnfermedad::where('id_producto', $request->id_producto)
+        ->where('id_sucursal', Auth::user()->id_sucursal)
         ->latest()
         ->paginate(10);
 
@@ -67,16 +71,29 @@ class SolucionEnfermedadController extends Controller
             'id_producto' => 'required|numeric|not_in:0',
         ]);
 
-        SolucionEnfermedad::create([
-            'dosis_tambo_ml' => $request->dosis_tambo_ml,
-            'dosis_bomba_ml' => $request->dosis_bomba_ml,
-            'id_producto' => $request->id_producto,
-            'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor['id'],
-        ]);
+        $solu = SolucionEnfermedad::where('id_producto', $request->id_producto)
+        ->where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor['id'])
+        ->where('id_sucursal', Auth::user()->id_sucursal)
+        ->first();
+
+        if ($solu === null) {
+            SolucionEnfermedad::create([
+                'dosis_tambo_ml' => $request->dosis_tambo_ml,
+                'dosis_bomba_ml' => $request->dosis_bomba_ml,
+                'id_producto' => $request->id_producto,
+                'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor['id'],
+                'id_sucursal' => Auth::user()->id_sucursal,
+            ]);
+        }else {
+            $solu->dosis_tambo_ml = $request->dosis_tambo_ml;
+            $solu->dosis_bomba_ml = $request->dosis_bomba_ml;
+            $solu->save();
+        }
 
         $solucion = SolucionEnfermedad::where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor['id'])
                                       ->where('id_producto', $request->id_producto)
-                                      ->first();    
+                                      ->where('id_sucursal', Auth::user()->id_sucursal)
+                                      ->first();
 
         $producto = Producto::where('id', $request->id_producto)->first();
 
@@ -90,7 +107,7 @@ class SolucionEnfermedadController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
 
         $request->validate([
             'dosis_tambo_ml' => 'required|numeric|not_in:0',
@@ -112,5 +129,5 @@ class SolucionEnfermedadController extends Controller
             'id_producto' => $producto->id,
         ]);
     }
-    
+
 }

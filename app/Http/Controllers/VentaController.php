@@ -8,11 +8,13 @@ use App\Models\Empresa;
 use App\Models\ProductoVenta;
 use App\Models\Venta;
 use App\Models\AbonoCuenta;
+use App\Models\AltaInventario;
+use App\Models\Sucursales;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use PDF;  
+use PDF;
 use DateTime;
 use Illuminate\Support\Facades\Redirect;
 
@@ -25,13 +27,24 @@ class VentaController extends Controller
     public function index(Request $request)
     {
         $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-        ->where('cantidad', '!=' , 0)
+        ->get();
+        $productoFiltrado = [];
+
+        foreach ($productos as $product) {
+            $actualStock = AltaInventario::where('id_producto', $product->id)
+                ->where('id_sucursal',  Auth::user()->id_sucursal)
+                ->orderBy('created_at', 'desc')->first();
+            $product->cantidad = $actualStock !== null? $actualStock->cantidad_nueva: 0;
+            if ($product->cantidad > 0) {
+                array_push($productoFiltrado, $product);
+            }
+        }
+
+        $clientes = Clientes::where('id_sucursal',  Auth::user()->id_sucursal)
         ->get();
 
-        $clientes = Clientes::get();
-        
         return Inertia::render('Venta/Venta', [
-            'productos' => $productos,
+            'productos' => $productoFiltrado,
             'clientes' => $clientes,
         ]);
     }
@@ -56,6 +69,7 @@ class VentaController extends Controller
             'tipo_venta'=> $request->tipo_venta,
             'venta_pagada'=> $venta_pagada,
             'fecha_pago'=> $fecha_pago,
+            'id_sucursal'=> Auth::user()->id_sucursal,
         ]);
 
         foreach ($request->producto_venta as $producto_venta) {
@@ -67,9 +81,16 @@ class VentaController extends Controller
             ]);
 
             //Reduccion de stock;
-            $producto = Producto::find($producto_venta['producto']['id']);
-            $producto->cantidad = $producto->cantidad - $producto_venta['cantidad'];
-            $producto->save();
+            $stockStatus = AltaInventario::where('id_producto', $producto_venta['producto']['id'])
+            ->orderBy('created_at', 'desc')->first();
+
+            $altaInventario = new AltaInventario();
+            $altaInventario->cantidad_actual = $stockStatus->cantidad_nueva;
+            $altaInventario->cantidad_nueva = $stockStatus->cantidad_nueva - $producto_venta['cantidad'];
+            $altaInventario->id_usuario = Auth::user()->id ;
+            $altaInventario->id_producto = $producto_venta['producto']['id'];
+            $altaInventario->id_sucursal = Auth::user()->id_sucursal;
+            $altaInventario->save();
         }
 
         $abonoVenta = [];
@@ -82,6 +103,7 @@ class VentaController extends Controller
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
                 'is_active' => false,
+                'id_sucursal' =>Auth::user()->id_sucursal,
             ];
         } else if ($request->tipo_venta == 'Credito') {
             $abonado = $request->abono;
@@ -91,10 +113,11 @@ class VentaController extends Controller
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
                 'is_active' => true,
+                'id_sucursal' =>Auth::user()->id_sucursal,
             ];
         }
 
-        AbonoCuenta::Create($abonoVenta);
+        AbonoCuenta::create($abonoVenta);
 
         $cliente = Clientes::find($request->id_cliente);
         $cliente->adeudo_total +=  $request->total;
@@ -128,19 +151,17 @@ class VentaController extends Controller
         $cliente = Clientes::where('id', $venta->id_cliente)->first();
         $usuario = User::where('id', $venta->id_usuario)->first();
 
-        $empresas = Empresa::get();
-
-        if (!empty($empresas)) {
-            $empresa = $empresas[0];
-        }
+        $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+        $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $abonos = AbonoCuenta::where('id_cliente', $venta->id_cliente)
+        ->where('id_sucursal',  Auth::user()->id_sucursal)
         ->where('is_active', true)
         ->get();
-        
+
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option("enable_php", true);
-        $pdf->loadView('reportes/venta', 
+        $pdf->loadView('reportes/venta',
             compact("venta", "productos", "cliente", 'empresa', 'abonos', 'usuario'));
         $pdf->setOption('javascript-delay', 3000);
 
@@ -152,9 +173,13 @@ class VentaController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $cliente = clientes::where('id', $id)->first();
+        $cliente = clientes::where('id', $id)
+        ->where('id_sucursal',  Auth::user()->id_sucursal)
+        ->first();
+
         $ventas = Venta::where('id_cliente', $id)
         ->where('venta_pagada', false)
+        ->where('id_sucursal',  Auth::user()->id_sucursal)
         ->latest()
         ->paginate(5);
 

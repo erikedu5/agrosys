@@ -49,32 +49,37 @@ const logout = () => {
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin'" 
+                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
                                     :href="route('venta.index')" :active="route().current('venta.*')">
                                     Venta
-                                </NavLink> 
-                                <NavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' "
+                                </NavLink>
+                                <NavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
                                     :href="route('inventario.index')" :active="route().current('inventario.*')">
                                     Inventario
-                                </NavLink> 
-                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin'" 
+                                </NavLink>
+                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
                                     :href="route('cliente.index')" :active="route().current('cliente.*')">
                                     Clientes
-                                </NavLink> 
+                                </NavLink>
                                 <NavLink v-if="$page.props.auth.user.tipo == 'inventario' ||
                                                $page.props.auth.user.tipo == 'vendedor' ||
-                                               $page.props.auth.user.tipo == 'admin'" 
+                                               $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
                                     :href="route('reporte')" :active="route().current('reporte.*')">
                                     Reportes
-                                </NavLink> 
-                                <div v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' "
-                                    class="inline-flex items-center px-1 pt-1 border-b-2 
-                                            border-transparent text-sm font-medium leading-5 
-                                            text-gray-500 dark:text-gray-400 hover:text-gray-700 
+                                </NavLink>
+                                <div v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                           $page.props.auth.user.tipo == 'superAdmin'"
+                                    class="inline-flex items-center px-1 pt-1 border-b-2
+                                            border-transparent text-sm font-medium leading-5
+                                            text-gray-500 dark:text-gray-400 hover:text-gray-700
                                             dark:hover:text-gray-300 hover:border-gray-300
                                             dark:hover:border-gray-700 focus:outline-none focus:text-gray-700
                                             dark:focus:text-gray-300 focus:border-gray-300
-                                            dark:focus:border-gray-700 transition 
+                                            dark:focus:border-gray-700 transition
                                             duration-150 ease-in-out">
                                     <Dropdown>
                                         <template #trigger>
@@ -101,15 +106,15 @@ const logout = () => {
                                             </DropdownLink>
                                         </template>
                                     </Dropdown>
-                                </div>      
-                                <div v-if="$page.props.auth.user.tipo == 'admin' "
-                                    class="inline-flex items-center px-1 pt-1 border-b-2 
-                                            border-transparent text-sm font-medium leading-5 
-                                            text-gray-500 dark:text-gray-400 hover:text-gray-700 
+                                </div>
+                                <div v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                    class="inline-flex items-center px-1 pt-1 border-b-2
+                                            border-transparent text-sm font-medium leading-5
+                                            text-gray-500 dark:text-gray-400 hover:text-gray-700
                                             dark:hover:text-gray-300 hover:border-gray-300
                                             dark:hover:border-gray-700 focus:outline-none focus:text-gray-700
                                             dark:focus:text-gray-300 focus:border-gray-300
-                                            dark:focus:border-gray-700 transition 
+                                            dark:focus:border-gray-700 transition
                                             duration-150 ease-in-out">
                                     <Dropdown>
                                         <template #trigger>
@@ -118,9 +123,14 @@ const logout = () => {
                                             </button>
                                         </template>
 
-                                        <template #content>
-                                            <DropdownLink :href="route('empresa.create')">
-                                                Empresa
+                                        <template #content >
+                                            <DropdownLink v-if="$page.props.auth.user.tipo == 'superAdmin'"
+                                             :href="route('empresa.index')">
+                                                Empresas
+                                            </DropdownLink>
+
+                                            <DropdownLink :href="route('sucursal.index')">
+                                                Sucursal
                                             </DropdownLink>
 
                                             <DropdownLink :href="route('usuario.index')">
@@ -128,7 +138,7 @@ const logout = () => {
                                             </DropdownLink>
                                         </template>
                                     </Dropdown>
-                                </div>                                  
+                                </div>
                             </div>
                         </div>
 
@@ -203,7 +213,7 @@ const logout = () => {
 
                                         <span v-else class="inline-flex rounded-md">
                                             <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700 active:bg-gray-50 dark:active:bg-gray-700 transition ease-in-out duration-150">
-                                                {{ $page.props.auth.user.name }} 
+                                                {{ $page.props.auth.user.name }}
 
                                                 <!--svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -215,15 +225,11 @@ const logout = () => {
                                     <template #content>
                                         <!-- Account Management -->
                                         <div class="block px-4 py-2 text-xs text-gray-400">
-                                            Manage Account
+                                            Administrador de cuenta
                                         </div>
 
                                         <DropdownLink :href="route('profile.show')">
-                                            Profile
-                                        </DropdownLink>
-
-                                        <DropdownLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')">
-                                            API Tokens
+                                            Perfil
                                         </DropdownLink>
 
                                         <div class="border-t border-gray-200 dark:border-gray-600" />
@@ -231,7 +237,7 @@ const logout = () => {
                                         <!-- Authentication -->
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
-                                                Log Out
+                                                Cerrar sessión
                                             </DropdownLink>
                                         </form>
                                     </template>
@@ -274,48 +280,76 @@ const logout = () => {
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('venta.index')" :active="route().current('venta.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('venta.index')" :active="route().current('venta.*')">
                             Venta
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('inventario.index')" :active="route().current('inventario.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('inventario.index')" :active="route().current('inventario.*')">
                             Inventario
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('cliente.index')" :active="route().current('cliente.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('cliente.index')" :active="route().current('cliente.*')">
                              Clientes
-                        </ResponsiveNavLink>   
-                        <ResponsiveNavLink :href="route('reporte')" :active="route().current('reporte.*')">
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' || $page.props.auth.user.tipo =='inventario' ||
+                                               $page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('reporte')" :active="route().current('reporte.*')">
                             Reportes
-                        </ResponsiveNavLink>   
+                        </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href="">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               href="">
                             --------- Administración de Catalogos ---------
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink :href="route('clasificacion.index')" :active="route().current('clasificacion.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('clasificacion.index')" :active="route().current('clasificacion.*')">
                             Catalogo de Clasificación
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('marca.index')" :active="route().current('marca.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('marca.index')" :active="route().current('marca.*')">
                             Catalogo de Marca
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('enfermedad.index')" :active="route().current('enfermedad.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('enfermedad.index')" :active="route().current('enfermedad.*')">
                             Catalogo de Enfermedades
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tipoFlor.index')" :active="route().current('tipoFlor.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('tipoFlor.index')" :active="route().current('tipoFlor.*')">
                             Catalogo de Tipo de Flores
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tipoFlor.index')" :active="route().current('tipoFlor.*')">
-                            Catalogo de Tipo de Flores
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' || $page.props.auth.user.tipo == 'admin' ||
+                                               $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('tipoFlor.index')" :active="route().current('tipoFlor.*')">
+                            Catalogo de Tipo de cultivo
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink href="">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                               href="">
                             --------- Administración ---------
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink :href="route('empresa.index')" :active="route().current('empresa.*')">
-                            Empresa
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('empresa.index')" :active="route().current('empresa.*')">
+                            Empresas
                         </ResponsiveNavLink>
 
-                        <ResponsiveNavLink :href="route('usuario.index')" :active="route().current('usuario.*')">
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('sucursal.index')" :active="route().current('sucursal.*')">
+                            Sucursales
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'superAdmin'"
+                                               :href="route('usuario.index')" :active="route().current('usuario.*')">
                             Usuarios
                         </ResponsiveNavLink>
                     </div>
@@ -339,59 +373,16 @@ const logout = () => {
 
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
-                                Profile
-                            </ResponsiveNavLink>
-
-                            <ResponsiveNavLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')" :active="route().current('api-tokens.index')">
-                                API Tokens
+                                Perfil
                             </ResponsiveNavLink>
 
                             <!-- Authentication -->
                             <form method="POST" @submit.prevent="logout">
                                 <ResponsiveNavLink as="button">
-                                    Log Out
+                                    Cerrar Sessión
                                 </ResponsiveNavLink>
                             </form>
 
-                            <!-- Team Management -->
-                            <template v-if="$page.props.jetstream.hasTeamFeatures">
-                                <div class="border-t border-gray-200 dark:border-gray-600" />
-
-                                <div class="block px-4 py-2 text-xs text-gray-400">
-                                    Manage Team
-                                </div>
-
-                                <!-- Team Settings -->
-                                <ResponsiveNavLink :href="route('teams.show', $page.props.auth.user.current_team)" :active="route().current('teams.show')">
-                                    Team Settings
-                                </ResponsiveNavLink>
-
-                                <ResponsiveNavLink v-if="$page.props.jetstream.canCreateTeams" :href="route('teams.create')" :active="route().current('teams.create')">
-                                    Create New Team
-                                </ResponsiveNavLink>
-
-                                <!-- Team Switcher -->
-                                <template v-if="$page.props.auth.user.all_teams.length > 1">
-                                    <div class="border-t border-gray-200 dark:border-gray-600" />
-
-                                    <div class="block px-4 py-2 text-xs text-gray-400">
-                                        Switch Teams
-                                    </div>
-
-                                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                                        <form @submit.prevent="switchToTeam(team)">
-                                            <ResponsiveNavLink as="button">
-                                                <div class="flex items-center">
-                                                    <svg v-if="team.id == $page.props.auth.user.current_team_id" class="mr-2 h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <div>{{ team.name }}</div>
-                                                </div>
-                                            </ResponsiveNavLink>
-                                        </form>
-                                    </template>
-                                </template>
-                            </template>
                         </div>
                     </div>
                 </div>

@@ -5,7 +5,7 @@
     import Pagination from '@/Components/Pagination.vue'
 
     defineProps({
-        empresas: {
+        sucursales: {
             type: Array,
             default: []
         }
@@ -14,21 +14,21 @@
     const q = ref('');
 
     watch(q, (value) => {
-        router.get( route( 'empresa.index', { q: value } ), {}, { preserveState: true } );
+        router.get( route( 'sucursal.index', { q: value } ), {}, { preserveState: true } );
     });
 
     const desactivar = (id) => {
-        if (confirm("¿Desea desactivar la empresa?")) {
-            useForm({}).delete(route('empresa.destroy', id));
+        if (confirm("¿Desea desactivar la sucursal?")) {
+            useForm({}).delete(route('sucursal.destroy', id));
         }
     }
 </script>
 
 <template>
-    <AppLayout title="Empresa">
+    <AppLayout title="Sucursal">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Empresas
+                Sucursales
             </h2>
         </template>
 
@@ -42,13 +42,13 @@
                     <div class="shadow bg-white md:rounded-md p-4">
 
                         <div class="flex justify-between">
-                            <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar empresa...">
-                            <Link :href="route('empresa.create')"
+                            <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar sucursal...">
+                            <Link :href="route('sucursal.create')"
                                   class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Crear empresa
+                                Crear sucursal
                             </Link>
                         </div>
 
@@ -59,31 +59,28 @@
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                     <tr>
                                     <th>Id</th>
-                                    <th>Nombre de la empresa</th>
+                                    <th>Nombre de la sucursal</th>
                                     <th>Dirección</th>
                                     <th>Telefono</th>
                                     <th>Email</th>
-                                    <th>RFC</th>
-                                    <th>Aviso</th>
-                                    <th></th>
+                                    <th>Es Matriz</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="empresa in empresas.data" :key="empresa.id">
-                                        <td class="px-4 py-2"> {{ empresa.id }}</td>
-                                        <td class="px-4 py-2"> {{ empresa.nombre }} </td>
-                                        <td class="px-4 py-2"> {{ empresa.direccion }} </td>
-                                        <td class="px-4 py-2"> {{ empresa.telefono }} </td>
-                                        <td class="px-4 py-2"> {{ empresa.email }} </td>
-                                        <td class="px-4 py-2"> {{ empresa.rfc }} </td>
-                                        <td class="px-4 py-2"> {{ empresa.aviso }} </td>
+                                    <tr v-for="sucursal in sucursales.data" :key="sucursal.id">
+                                        <td class="px-4 py-2"> {{ sucursal.id }}</td>
+                                        <td class="px-4 py-2"> {{ sucursal.nombre }} </td>
+                                        <td class="px-4 py-2"> {{ sucursal.direccion }} </td>
+                                        <td class="px-4 py-2"> {{ sucursal.telefono }} </td>
+                                        <td class="px-4 py-2"> {{ sucursal.email }} </td>
+                                        <td class="px-4 py-2"> {{ sucursal.es_matriz == 1? 'Si': 'No' }} </td>
                                         <td class="px-4 py-2">
                                             <div class="inline-flex rounded-md shadow-sm" role="group">
-                                                <Link :href="route('empresa.edit', empresa.id)"
+                                                <Link :href="route('sucursal.edit', sucursal.id)"
                                                       class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Actualizar
                                                 </Link>
-                                                <Link href="" @click.prevent="desactivar(empresa.id)"
+                                                <Link href="" @click.prevent="desactivar(sucursal.id)"
                                                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md  hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Desactivar
                                                 </Link>
@@ -95,7 +92,7 @@
                         </div>
 
                         <div name="Pagination">
-                            <Pagination class="mt-6" :links="empresas.links" />
+                            <Pagination class="mt-6" :links="sucursales.links" />
                         </div>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Clientes;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class ClientesController extends Controller
 {
@@ -14,9 +15,10 @@ class ClientesController extends Controller
     public function index(Request $request)
     {
         $clientes = Clientes::where('nombre', 'LIKE', "%$request->q%")
+        ->where('id_sucursal', Auth::user()->id_sucursal)
         ->latest()
         ->paginate(10);
-        
+
         return Inertia::render('Cliente/Cliente', [
             'clientes' => $clientes,
         ]);
@@ -40,13 +42,14 @@ class ClientesController extends Controller
             'nombre' => 'required',
             'porcentaje_descuento' => 'required'
         ]);
-        
+
         $cliente = [
             'nombre' => $request->nombre,
             'porcentaje_descuento' => $request->porcentaje_descuento,
             'adeudo_total' => 0,
             'abono_total' => 0,
-            'balance' => 0
+            'balance' => 0,
+            'id_sucursal' => Auth::user()->id_sucursal,
         ];
         Clientes::create($cliente);
         return redirect()->route('cliente.index');
@@ -70,7 +73,7 @@ class ClientesController extends Controller
             'nombre' => 'required',
             'porcentaje_descuento' => 'required',
         ]);
-        
+
         $cliente = Clientes::find($request->id);
         $cliente->nombre = $request->nombre;
         $cliente->porcentaje_descuento = $request->porcentaje_descuento;

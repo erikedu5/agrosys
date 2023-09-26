@@ -14,7 +14,8 @@ class Clientes extends Model
         'porcentaje_descuento',
         'adeudo_total',
         'abono_total',
-        'balance'
+        'balance',
+        'id_sucursal'
     ];
 
     protected function getCreatedAtAttribute() {

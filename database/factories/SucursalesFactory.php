@@ -21,6 +21,7 @@ class SucursalesFactory extends Factory
             'direccion' => $this->faker->text(20),
             'telefono' => $this->faker->numberBetween(1, 10),
             'email' => $this->faker->unique()->safeEmail(),
+            'es_matriz' => true,
             'id_empresa' => 1,
         ];
     }

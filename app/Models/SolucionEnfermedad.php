@@ -14,14 +14,16 @@ class SolucionEnfermedad extends Model
         'id_enfermedad_tipo_flor',
         'dosis_bomba_ml',
         'dosis_tambo_ml',
+        'id_sucursal',
+        'id'
     ];
 
-    public function producto() 
+    public function producto()
     {
         return $this->belongsTo(Producto::class);
     }
 
-    public function enfermedadFlor() 
+    public function enfermedadFlor()
     {
         return $this->belongsTo(EnfermedadesTipoFlor::class);
     }

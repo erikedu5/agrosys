@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('direccion');
             $table->string('telefono');
             $table->string('email');
+            $table->boolean('es_matriz');
             $table->unsignedBigInteger('id_empresa');
             $table->foreign('id_empresa')->references('id')->on('empresas');
             $table->timestamps();
