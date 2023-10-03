@@ -77,29 +77,26 @@ class SolucionEnfermedadController extends Controller
         ->first();
 
         if ($solu === null) {
-            SolucionEnfermedad::create([
+            $solu = SolucionEnfermedad::create([
                 'dosis_tambo_ml' => $request->dosis_tambo_ml,
                 'dosis_bomba_ml' => $request->dosis_bomba_ml,
                 'id_producto' => $request->id_producto,
                 'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor['id'],
                 'id_sucursal' => Auth::user()->id_sucursal,
+                'condiciones' => $request->condiciones,
             ]);
         }else {
             $solu->dosis_tambo_ml = $request->dosis_tambo_ml;
             $solu->dosis_bomba_ml = $request->dosis_bomba_ml;
+            $solu->condiciones = $request->condiciones;
             $solu->save();
         }
-
-        $solucion = SolucionEnfermedad::where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor['id'])
-                                      ->where('id_producto', $request->id_producto)
-                                      ->where('id_sucursal', Auth::user()->id_sucursal)
-                                      ->first();
 
         $producto = Producto::where('id', $request->id_producto)->first();
 
         return redirect()->route('solucion.index', [
             'id_producto' => $producto->id,
-            'solucion' => $solucion,
+            'solucion' => $solu,
         ]);
     }
 
@@ -121,6 +118,7 @@ class SolucionEnfermedadController extends Controller
         $solucion->id_enfermedad_tipo_flor = $request->id_enfermedad_tipo_flor;
         $solucion->dosis_bomba_ml = $request->dosis_bomba_ml;
         $solucion->dosis_tambo_ml = $request->dosis_tambo_ml;
+        $solucion->condiciones = $request->condiciones;
         $solucion->save();
 
         $producto = Producto::where('id', $request->id_producto)->first();

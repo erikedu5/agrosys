@@ -19,6 +19,7 @@
         id_enfermedad_tipo_flor: props.solucion != null ? props.solucion.id_enfermedad_tipo_flor : 0,
         dosis_bomba_ml: props.solucion != null ? props.solucion.dosis_bomba_ml: 0,
         dosis_tambo_ml: props.solucion != null ? props.solucion.dosis_tambo_ml: 0,
+        condiciones: props.solucion != null ? props.solucion.condiciones: '',
         id: props.solucion != null ? props.solucion.id: null,
     });
 
@@ -71,22 +72,28 @@
                             :options="enfermedadesFlor">
                         </vue-single-select>
                         <br>
-                        <br>
 
                         <form @submit.prevent="submit">
+                            <label class="block font-medium text-sm text-gray-700">Condiciones de aplicación</label>
+                            <textarea
+                                class="form-input w-full rounded-md shadow-sm"
+                                v-model="form.condiciones"></textarea>
+                            <br>
+                            <br>
+
                             <label class="block font-medium text-sm text-gray-700">Dosis por bomba en Ml.</label>
                             <input type="number" @input="addDosisbomba()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_bomba_ml">
-                                <br>
-                                <br>
+                            <br>
+                            <br>
 
-                                <label class="block font-medium text-sm text-gray-700">Dosis por tambo en Ml.</label>
+                            <label class="block font-medium text-sm text-gray-700">Dosis por tambo en Ml.</label>
                             <input type="number" readonly
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_tambo_ml">
-                                <br>
-                                <br>
+                            <br>
+                            <br>
 
                             <button
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
@@ -108,6 +115,7 @@
                                     <th>Enfermedad en planta</th>
                                     <th>Dosis en ml por bomba</th>
                                     <th>Dosis en ml por tambo</th>
+                                    <th>Condiciones de aplicación</th>
                                     <th>Ultima actualización</th>
                                     </tr>
                                 </thead>
@@ -118,6 +126,7 @@
                                         <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{ solucionByProduct.tipoFlor.nombre }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.dosis_bomba_ml }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.dosis_tambo_ml }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.condiciones }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.updated_at }} </td>
                                     </tr>
                                 </tbody>

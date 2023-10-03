@@ -84,9 +84,21 @@ class UsuarioController extends Controller
      */
     public function edit( $id)
     {
+        $sucursales = [];
+        if (Auth::user()->tipo == 'superAdmin') {
+            $sucursales = Sucursales::get();
+            foreach ($sucursales as $sucursal) {
+                $empresa = Empresa::where('id',  $sucursal->id_empresa)->first();
+                $sucursal->nombre = $empresa->nombre. ' - '.$sucursal->nombre ;
+            }
+        } else {
+            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
+
+        }
+
         $usuario = User::find($id);
-        dd($usuario);
-        return Inertia::render('Usuario/CreateUsuario', compact('usuario'));
+        return Inertia::render('Usuario/CreateUsuario', compact('usuario', 'sucursales'));
     }
 
     /**

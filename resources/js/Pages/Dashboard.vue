@@ -57,6 +57,7 @@
                                     <th>Nombre del producto</th>
                                     <th>Enfermedad en planta</th>
                                     <th>Ingrediente activo</th>
+                                    <th>Condiciones de aplicación</th>
                                     <th>Dosis en ml por bomba</th>
                                     <th>Dosis en ml por tambo</th>
                                     <th>Cantidad en stock</th>
@@ -68,6 +69,7 @@
                                         <td class="px-4 py-2"> {{ solucionByProduct.producto.nombre }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{ solucionByProduct.tipoFlor.nombre }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.producto.ingrediente_activo }} </td>
+                                        <td class="px-4 py-2"> {{ solucionByProduct.condiciones }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.dosis_bomba_ml }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.dosis_tambo_ml }} </td>
                                         <td class="px-4 py-2"> {{ solucionByProduct.producto.cantidad }} </td>

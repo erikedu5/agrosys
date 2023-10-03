@@ -25,7 +25,7 @@ class ReporteController extends Controller
     {
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
-        $productos = Producto::where('id_sucursal', Auth::user()->id_sucursal)->get();
+        $productos = Producto::get();
 
 
         return Inertia::render('Reporte/Reporte', [
@@ -104,7 +104,7 @@ class ReporteController extends Controller
         $id_clasificacion = $request->id_clasificacion;
         $id_marca = $request->id_marca;
 
-        $inventario = Producto::where('id_sucursal', Auth::user()->id_sucursal);
+        $inventario = Producto::where('id', '>', 0);
 
         $fechaCreacion = Date('Y-m-d h:i:s a');
         $clasificacion = null;

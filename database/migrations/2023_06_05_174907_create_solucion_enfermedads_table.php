@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->string('dosis_bomba_ml');
             $table->string('dosis_tambo_ml');
+            $table->text('condiciones');
             $table->timestamps();
         });
     }

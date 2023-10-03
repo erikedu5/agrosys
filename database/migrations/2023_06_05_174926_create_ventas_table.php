@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('total');
             $table->string('tipo_venta');
             $table->boolean('venta_pagada');
-            $table->date('fecha_pago');
+            $table->date('fecha_pago')->nullable(true);
             $table->unsignedBigInteger('id_cliente');
             $table->unsignedBigInteger('id_usuario');
             $table->foreign('id_cliente')->references('id')->on('clientes');
