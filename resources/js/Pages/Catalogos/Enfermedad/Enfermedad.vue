@@ -11,7 +11,7 @@
         }
     })
 
-    const q = ref('');  
+    const q = ref('');
 
     watch(q, (value) => {
         router.get( route( 'enfermedad.index', { q: value } ), {}, { preserveState: true } );
@@ -43,17 +43,17 @@
 
                         <div class="flex justify-between">
                             <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar enfermedad...">
-                            <Link :href="route('enfermedad.create')"  
+                            <Link :href="route('enfermedad.create')"
                                   class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                 Crear
                             </Link>
                         </div>
 
                         <hr class="my-6">
-                        
+
 
                         <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -67,19 +67,19 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="enfermedad in enfermedades.data">
+                                    <tr v-for="enfermedad in enfermedades.data" :key="enfermedad.id">
                                         <td class="px-4 py-2"> {{ enfermedad.id }}</td>
                                         <td class="px-4 py-2"> {{ enfermedad.nombre }} </td>
                                         <td class="px-4 py-2"> {{ enfermedad.descripcion }} </td>
                                         <td class="px-4 py-2"> {{ enfermedad.updated_at }} </td>
                                         <td class="px-4 py-2">
                                             <div class="inline-flex rounded-md shadow-sm" role="group">
-                                                <Link :href="route('enfermedad.edit', enfermedad.id)" 
+                                                <Link :href="route('enfermedad.edit', enfermedad.id)"
                                                       class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Actualizar
                                                 </Link>
-                                                <Link href="" @click.prevent="destroy(enfermedad.id)" 
-                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"> 
+                                                <Link href="" @click.prevent="destroy(enfermedad.id)"
+                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Eliminar
                                                 </Link>
                                             </div>

@@ -1,5 +1,5 @@
 <template>
-    <AppLayout title="CrearTipoFlor">  
+    <AppLayout title="CrearTipoFlor">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Tipo de flor
@@ -13,23 +13,23 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" 
+                            <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                                 <br>
                                 <br>
                                 <label class="block font-medium text-sm text-gray-700">Enfermedades (Seleccione más de una con tecla ctrl/command)</label>
                                 <select multiple v-model="form.selectedOptions" class="w-full h-64 rounded-md shadow-sm">
-                                    <option v-for="enfermedad in enfermedades" :value="enfermedad.id">
+                                    <option v-for="enfermedad in enfermedades" :key="enfermedad.id">
                                         {{ enfermedad.nombre }}
                                     </option>
                                 </select>
                                 <br>
                                 <br>
-                            <button 
+                            <button
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                 Guardar
                             </button>
