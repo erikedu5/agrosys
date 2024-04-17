@@ -15,7 +15,9 @@ class Clientes extends Model
         'adeudo_total',
         'abono_total',
         'balance',
-        'id_sucursal'
+        'id_sucursal',
+        'requiereFactura',
+        'rfc'
     ];
 
     protected function getCreatedAtAttribute() {

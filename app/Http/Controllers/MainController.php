@@ -42,7 +42,11 @@ class MainController extends Controller
                 ->where('id_sucursal', Auth::user()->id_sucursal)
                 ->orderBy('created_at', 'desc')->first();
 
-            $producto->cantidad = $actualStock->cantidad_nueva;
+            if ($actualStock != null) {
+                $producto->cantidad = $actualStock->cantidad_nueva;
+            } else {
+                $producto->cantidad = 0;
+            }
 
             $solucionByProd->tipoFlor = $tipoFlor;
             $solucionByProd->enfermedad = $enfermedad;

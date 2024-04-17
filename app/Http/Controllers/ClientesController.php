@@ -40,7 +40,8 @@ class ClientesController extends Controller
 
         $request->validate([
             'nombre' => 'required',
-            'porcentaje_descuento' => 'required'
+            'porcentaje_descuento' => 'required',
+            'requiereFactura' => 'required'
         ]);
 
         $cliente = [
@@ -49,6 +50,8 @@ class ClientesController extends Controller
             'adeudo_total' => 0,
             'abono_total' => 0,
             'balance' => 0,
+            'requiereFactura' => $request->requiereFactura,
+            'rfc' => $request->rfc,
             'id_sucursal' => Auth::user()->id_sucursal,
         ];
         Clientes::create($cliente);

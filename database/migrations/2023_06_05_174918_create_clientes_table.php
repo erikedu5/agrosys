@@ -18,6 +18,8 @@ return new class extends Migration
             $table->float('adeudo_total');
             $table->float('abono_total');
             $table->float('balance');
+            $table->boolean('requiereFactura');
+            $table->string('rfc');
             $table->unsignedBigInteger('id_sucursal');
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->timestamps();

@@ -68,6 +68,8 @@
                                         <td class="px-4 py-2"> {{ cliente.id }}</td>
                                         <td class="px-4 py-2"> {{ cliente.nombre }} </td>
                                         <td class="px-4 py-2"> {{ cliente.porcentaje_descuento }} % </td>
+                                        <td class="px-4 py-2"> {{ cliente.requiereFactura==0 ? 'No': 'Si' }}</td>
+                                        <td class="px-4 py-2"> {{ cliente.rfc }}</td>
                                         <td class="px-4 py-2">
                                             <div class="inline-flex rounded-md shadow-sm" role="group">
                                                 <Link :href="route('cliente.edit', cliente.id)"
