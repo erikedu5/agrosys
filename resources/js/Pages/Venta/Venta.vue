@@ -73,7 +73,7 @@
             if (item.producto.id == form.producto.id) {
                 let ventaDetalle = productoVenta[index];
                 ventaDetalle.cantidad += form.cantidad;
-                ventaDetalle.importe = (form.importe * ventaDetalle.cantidad).toFixed(2);
+                ventaDetalle.importe = (form.precio_ieps_con_descuento * ventaDetalle.cantidad).toFixed(2);
                 finded = true;
                 if (ventaDetalle.cantidad > form.producto.cantidad) {
                     ventaDetalle.cantidad = form.producto.cantidad;
