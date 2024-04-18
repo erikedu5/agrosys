@@ -17,6 +17,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                                 <br>
+                                <div v-if="$page.props.errors.nombre" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                    <span class="block sm:inline"> {{ $page.props.errors.nombre }}</span>
+                                </div>
                                 <br>
                                 <label class="block font-medium text-sm text-gray-700">Enfermedades (Seleccione más de una con tecla ctrl/command)</label>
                                 <select multiple v-model="form.selectedOptions" class="w-full h-64 rounded-md shadow-sm">
@@ -25,6 +28,9 @@
                                     </option>
                                 </select>
                                 <br>
+                                <div v-if="$page.props.errors.selectedOptions" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                    <span class="block sm:inline"> {{ $page.props.errors.selectedOptions }}</span>
+                                </div>
                                 <br>
                             <button
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded

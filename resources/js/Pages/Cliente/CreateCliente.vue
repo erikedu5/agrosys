@@ -42,6 +42,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                             <br>
+                            <div v-if="$page.props.errors.nombre" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.nombre }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Porcentaje de Descuento</label>
@@ -49,6 +52,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.porcentaje_descuento">
                             <br>
+                            <div v-if="$page.props.errors.porcentaje_descuento" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.porcentaje_descuento }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Requiere factura</label>
@@ -60,6 +66,11 @@
                             <option value="1">Si</option>
                             <option value="0">No</option>
                             </select>
+
+                            <div v-if="$page.props.errors.requiereFactura" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <br>
+                                <span class="block sm:inline"> {{ $page.props.errors.requiereFactura }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">RFC</label>

@@ -46,6 +46,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                             <br>
+                            <div v-if="$page.props.errors.nombre" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.nombre }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Dirección</label>
@@ -53,6 +56,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.direccion">
                             <br>
+                            <div v-if="$page.props.errors.direccion" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.direccion }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Telefono</label>
@@ -60,6 +66,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.telefono">
                             <br>
+                            <div v-if="$page.props.errors.telefono" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.telefono }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Email</label>
@@ -67,6 +76,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.email">
                             <br>
+                            <div v-if="$page.props.errors.email" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.email }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">RFC</label>
@@ -74,6 +86,9 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.rfc">
                             <br>
+                            <div v-if="$page.props.errors.rfc" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.rfc }}</span>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Aviso</label>
@@ -83,6 +98,9 @@
                                 rows="6">
                             </textarea>
                             <br>
+                            <div v-if="$page.props.errors.aviso" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                                <span class="block sm:inline"> {{ $page.props.errors.aviso }}</span>
+                            </div>
                             <br>
 
                             <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded

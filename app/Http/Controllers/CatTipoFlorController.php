@@ -52,7 +52,8 @@ class CatTipoFlorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required'
+            'nombre' => 'required',
+            'selectedOptions' => 'required'
         ]);
 
         $tipoFlor = CatTipoFlor::create($request->all());

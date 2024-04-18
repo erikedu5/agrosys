@@ -8,7 +8,7 @@ use Inertia\Inertia;
 
 class CatClasificacionController extends Controller
 {
-    
+
     public function index(Request $request)
     {
         return Inertia::render('Catalogos/Clasificacion/Clasificacion', [
@@ -46,12 +46,12 @@ class CatClasificacionController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
         $request->validate([
             'nombre' => 'required',
             'criterio' => 'required',
         ]);
-        
+
         $catClasificacion = CatClasificacion::find($request->id);
         $catClasificacion->nombre = $request->nombre;
         $catClasificacion->criterio = $request->criterio;

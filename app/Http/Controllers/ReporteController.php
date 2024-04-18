@@ -37,6 +37,11 @@ class ReporteController extends Controller
 
     public function venta(Request $request)
     {
+        $request->validate([
+            'fechaInicio' => 'required',
+            'fechaFin' => 'required'
+        ]);
+
         $fechaInicio = new DateTime($request->fechaInicio);
         $fechaInicio->setTime(0,0,0);
         $fechaInicio->format('Y-m-d h:i:s a');
@@ -75,11 +80,12 @@ class ReporteController extends Controller
             $venta->usuario = $usuario;
         }
 
-        $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+        $sucursalUser = Sucursales::where('id', Auth::user()->id_sucursal)->first();
         $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $abonos = AbonoCuenta::where('created_at', '>=', $fechaInicio)
         ->where('created_at', '<=', $fechaFin)
+        ->where('id_sucursal', Auth::user()->id_sucursal)
         ->get();
 
         $totalAbonadoRango = 0;
@@ -146,6 +152,10 @@ class ReporteController extends Controller
 
     public function ventaPorProductoMarca(Request $request)
     {
+        $request->validate([
+            'fechainicio' => ['required'],
+            'fechaFin' => ['required']
+        ]);
 
         $fechaInicio = new DateTime($request->fechaInicio);
         $fechaInicio->setTime(0,0,0);

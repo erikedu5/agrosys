@@ -46,9 +46,16 @@
             alert('Debe seleccionar un rango de fecha');
             return;
         }
-        if (formReporte.id_marca_venta == 0 || formReporte.id_producto == 0) {
-            alert('Debe seleccionar una marca/producto');
-            return;
+        if (formReporte.tipoReporteVenta == "marca") {
+            if (formReporte.id_marca_venta == 0) {
+                alert('Debe seleccionar una marca');
+                return;
+            }
+        } else {
+            if (formReporte.id_producto == 0) {
+                alert('Debe seleccionar una producto');
+                return;
+            }
         }
         let id_marca = formReporte.id_marca_venta;
         let id_producto = formReporte.id_producto;

@@ -54,6 +54,13 @@ class VentaController extends Controller
      */
     public function store(Request $request)
     {
+        $validated = $request->validate([
+            'id_cliente' => ['required'],
+            'total' => ['required'],
+            'tipo_venta' => ['required'],
+            'producto_venta' => ['required']
+            ]
+        );
         $id_usuario = Auth::user()->id;
         $venta_pagada = false;
         $fecha_pago = null;
