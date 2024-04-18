@@ -77,6 +77,7 @@
                 finded = true;
                 if (ventaDetalle.cantidad > form.producto.cantidad) {
                     ventaDetalle.cantidad = form.producto.cantidad;
+                    ventaDetalle.importe = (form.precio_ieps_con_descuento * ventaDetalle.cantidad).toFixed(2);
                     alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
                 }
             }
