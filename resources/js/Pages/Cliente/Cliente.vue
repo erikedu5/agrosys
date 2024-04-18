@@ -61,6 +61,9 @@
                                     <th>Id</th>
                                     <th>Nombre del cliente</th>
                                     <th>Porcentaje de descuento</th>
+                                    <th>Requiere factura</th>
+                                    <th>RFC</th>
+                                    <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>

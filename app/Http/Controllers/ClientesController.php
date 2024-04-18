@@ -16,6 +16,7 @@ class ClientesController extends Controller
     {
         $clientes = Clientes::where('nombre', 'LIKE', "%$request->q%")
         ->where('id_sucursal', Auth::user()->id_sucursal)
+        ->where('activo', true)
         ->latest()
         ->paginate(10);
 
@@ -41,7 +42,7 @@ class ClientesController extends Controller
         $request->validate([
             'nombre' => 'required',
             'porcentaje_descuento' => 'required',
-            'requiereFactura' => 'required'
+            'requiereFactura' => 'required',
         ]);
 
         $cliente = [
@@ -51,6 +52,7 @@ class ClientesController extends Controller
             'abono_total' => 0,
             'balance' => 0,
             'requiereFactura' => $request->requiereFactura,
+            'activo' => true,
             'rfc' => $request->rfc,
             'id_sucursal' => Auth::user()->id_sucursal,
         ];
@@ -77,7 +79,8 @@ class ClientesController extends Controller
             'porcentaje_descuento' => 'required',
         ]);
 
-        $cliente = Clientes::find($request->id);
+        $cliente = Clientes::where($request->id)
+        ->where('activo', true)->first();
         $cliente->nombre = $request->nombre;
         $cliente->porcentaje_descuento = $request->porcentaje_descuento;
         $cliente->save();
@@ -87,9 +90,12 @@ class ClientesController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Clientes $cliente)
+    public function destroy(String $idCliente)
     {
-        $cliente->delete();
+        $cliente = Clientes::where($idCliente)
+        ->where('activo', true)->first();
+        $cliente->activo = false;
+        $cliente->save();
         return redirect()->route('cliente.index');
     }
 }

@@ -31,6 +31,7 @@ class ClientesFactory extends Factory
             'balance' => 0,
             'requiereFactura' => 0,
             'rfc' => '',
+            'activo' => 0,
             'id_sucursal' => 1,
         ];
     }

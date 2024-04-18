@@ -40,6 +40,7 @@ class VentaController extends Controller
             }
         }
         $clientes = Clientes::where('id_sucursal',  Auth::user()->id_sucursal)
+        ->where('activo', true)
         ->get();
 
         return Inertia::render('Venta/Venta', [

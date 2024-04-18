@@ -19,7 +19,8 @@ return new class extends Migration
             $table->float('abono_total');
             $table->float('balance');
             $table->boolean('requiereFactura');
-            $table->string('rfc');
+            $table->string('rfc')->nullable();
+            $table->boolean('activo');
             $table->unsignedBigInteger('id_sucursal');
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->timestamps();

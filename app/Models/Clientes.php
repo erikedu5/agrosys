@@ -17,7 +17,8 @@ class Clientes extends Model
         'balance',
         'id_sucursal',
         'requiereFactura',
-        'rfc'
+        'rfc',
+        'activo'
     ];
 
     protected function getCreatedAtAttribute() {
