@@ -28,7 +28,7 @@ class CatTipoFlorController extends Controller
             }
             $tipoFlor->enfermedades = implode(', ', $enfermedadesArray);
         }
-        
+
         return Inertia::render('Catalogos/TipoFlor/TipoFlor', [
             'tipoFlor' => $catTipoFlores
         ]);
@@ -59,7 +59,7 @@ class CatTipoFlorController extends Controller
         foreach($request->selectedOptions as $enfermedadId) {
             $enfermedadTipoFlor = [];
             $enfermedadTipoFlor['id_tipo_flor'] = $tipoFlor->id;
-            $enfermedadTipoFlor['id_enfermedad'] = $enfermedadId;
+            $enfermedadTipoFlor['id_enfermedad'] = CatEnfermedades::where("nombre",$enfermedadId)->first()->id;
             EnfermedadesTipoFlor::create($enfermedadTipoFlor);
         }
         return redirect()->route('tipoFlor.index');
@@ -88,7 +88,7 @@ class CatTipoFlorController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
         $request->validate([
             'nombre' => 'required'
         ]);
@@ -102,7 +102,7 @@ class CatTipoFlorController extends Controller
         foreach($request->selectedOptions as $enfermedadId) {
             $enfermedadTipoFlor = [];
             $enfermedadTipoFlor['id_tipo_flor'] = $catTipoFlor->id;
-            $enfermedadTipoFlor['id_enfermedad'] = $enfermedadId;
+            $enfermedadTipoFlor['id_enfermedad'] = CatEnfermedades::where("nombre",$enfermedadId)->first()->id;
             $enfermedadTipoFlorObj->create($enfermedadTipoFlor);
         }
         return redirect()->route('tipoFlor.index');
@@ -111,8 +111,9 @@ class CatTipoFlorController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CatTipoFlor $catTipoFlor)
+    public function destroy(String $idTipoflor)
     {
+        $catTipoFlor = CatTipoFlor::find($idTipoflor);
         $catTipoFlor->delete();
         return redirect()->route('tipoFlor.index');
     }
