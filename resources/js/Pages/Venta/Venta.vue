@@ -68,7 +68,22 @@
             'precio_unitario': form.precio_ieps_con_descuento,
             'importe': form.importe
         };
-        productoVenta.push(venta);
+        let finded = false;
+        productoVenta.forEach((item, index) => {
+            if (item.producto.id == form.producto.id) {
+                let ventaDetalle = productoVenta[index];
+                ventaDetalle.cantidad += form.cantidad;
+                ventaDetalle.importe = (form.importe * ventaDetalle.cantidad).toFixed(2);
+                finded = true;
+                if (ventaDetalle.cantidad > form.producto.cantidad) {
+                    ventaDetalle.cantidad = form.producto.cantidad;
+                    alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
+                }
+            }
+        });
+        if (finded === false) {
+            productoVenta.push(venta);
+        }
         total = (parseFloat(total) + parseFloat(form.importe)).toFixed(2);
         let cliente = form.cliente;
         form.reset();
