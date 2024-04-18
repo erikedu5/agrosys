@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Producto;
-use App\Models\clientes;
+use App\Models\Clientes;
 use App\Models\Empresa;
 use App\Models\ProductoVenta;
 use App\Models\Venta;
@@ -39,7 +39,6 @@ class VentaController extends Controller
                 array_push($productoFiltrado, $product);
             }
         }
-
         $clientes = Clientes::where('id_sucursal',  Auth::user()->id_sucursal)
         ->get();
 
