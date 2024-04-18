@@ -214,6 +214,7 @@ class VentaController extends Controller
             'cantidad_abonada' => $request->abono,
             'cuenta_pagada' => true,
             'id_usuario' => Auth::user()->id,
+            'id_sucursal' =>  Auth::user()->id_sucursal,
             'id_cliente' => $request->id,
             'is_active' => true
         ]);
