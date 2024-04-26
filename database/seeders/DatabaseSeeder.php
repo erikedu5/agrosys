@@ -27,9 +27,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        Empresa::factory(1)->create();
+        Empresa::factory()->create([
+            'nombre' => 'MeztliTech',
+            'direccion' => 'Calle dos de marzo s/n, San Lucas, Villa Guerrero.',
+            'telefono' => '7228259581',
+            'email' => 'meztlitechsolutions@gmail.com',
+            'rfc' => 'JIDE930407AS4',
+            'aviso' => 'Si tiene algun requerimiento contactenos por whatsapp'
+        ]);
 
-        Sucursales::factory(2)->create();
+        Sucursales::factory()->create([
+            'nombre' => 'Matriz',
+            'direccion' => 'Calle dos de marzo s/n, San Lucas, Villa Guerrero.',
+            'telefono' => '7228259581',
+            'email' => 'meztlitechsolutions@gmail.com',
+            'es_matriz' => true,
+            'id_empresa' => 1
+        ]);
 
         User::factory()->create([
             'name' => 'Erik Jimenez',
@@ -39,19 +53,5 @@ class DatabaseSeeder extends Seeder
             'id_sucursal' => 1
 
        ]);
-
-
-       User::factory(9)->create();
-       CatClasificacion::factory(10)->create();
-       CatMarca::factory(10)->create();
-       CatEnfermedades::factory(10)->create();
-       CatTipoFlor::factory(10)->create();
-       EnfermedadesTipoFlor::factory(10)->create();
-       Producto::factory(10)->create();
-       SolucionEnfermedad::factory(10)->create();
-       Clientes::factory(10)->create();
-       Venta::factory(10)->create();
-       ProductoVenta::factory(10)->create();
-       AltaInventario::factory(10)->create();
     }
 }

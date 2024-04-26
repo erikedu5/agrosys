@@ -31,7 +31,7 @@ const logout = () => {
 
         <Banner />
 
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div>
             <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,12 +55,37 @@ const logout = () => {
                                     :href="route('venta.index')" :active="route().current('venta.*')">
                                     Venta
                                 </NavLink>
-                                <NavLink  v-if="$page.props.auth.user.tipo == 'inventario' ||
-                                               $page.props.auth.user.tipo == 'superAdmin' ||
-                                               $page.props.auth.user.tipo == 'admin' "
-                                    :href="route('inventario.index')" :active="route().current('inventario.*')">
-                                    Inventario
-                                </NavLink>
+
+                                <div v-if="$page.props.auth.user.tipo == 'inventario' ||
+                                           $page.props.auth.user.tipo == 'admin' ||
+                                           $page.props.auth.user.tipo == 'superAdmin'"
+                                    class="inline-flex items-center px-1 pt-1 border-b-2
+                                            border-transparent text-sm font-medium leading-5
+                                            text-gray-500 dark:text-gray-400 hover:text-gray-700
+                                            dark:hover:text-gray-300 hover:border-gray-300
+                                            dark:hover:border-gray-700 focus:outline-none focus:text-gray-700
+                                            dark:focus:text-gray-300 focus:border-gray-300
+                                            dark:focus:border-gray-700 transition
+                                            duration-150 ease-in-out">
+                                    <Dropdown>
+                                        <template #trigger >
+                                            <button type="button">
+                                                Administración de Inventario
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('inventario.index')">
+                                                Inventario
+                                            </DropdownLink>
+
+                                            <DropdownLink :href="route('compra.index')">
+                                                Compra a proveedores
+                                            </DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
+
                                 <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
                                                $page.props.auth.user.tipo == 'superAdmin' ||
                                                $page.props.auth.user.tipo == 'admin' "

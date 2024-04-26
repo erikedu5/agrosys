@@ -82,5 +82,5 @@ Route::get('/reporte/ventaMarcaProducto', [App\Http\Controllers\ReporteControlle
 ->name("reporte.ventaMarcaProducto")
 ->middleware('auth:sanctum', 'hasRoles:vendedor-admin-superAdmin');
 
-Route::resource('/abono', \App\Http\Controllers\AbonoCuentaController::class)
+Route::resource('/compra', \App\Http\Controllers\ComprasController::class)
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
