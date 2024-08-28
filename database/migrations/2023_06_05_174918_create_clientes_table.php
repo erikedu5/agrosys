@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('nombre');
             $table->string('porcentaje_descuento');
-            $table->float('adeudo_total');
-            $table->float('abono_total');
-            $table->float('balance');
+            $table->decimal('adeudo_total', 10, 2);
+            $table->decimal('abono_total', 10, 2);
+            $table->decimal('balance', 10, 2);
             $table->boolean('requiereFactura');
             $table->string('rfc')->nullable();
             $table->boolean('activo');

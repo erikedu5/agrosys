@@ -33,7 +33,7 @@
     }
 
     const calcularIps = () => {
-        form.precio_ieps = ((form.precio_unitario / 100) * form.ieps) + form.precio_unitario;
+        form.precio_ieps = (((parseFloat(form.precio_unitario) / 100) * parseFloat(form.ieps)) + parseFloat(form.precio_unitario)).toFixed(2);
     }
 </script>
 
@@ -82,7 +82,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio Unitario</label>
-                            <input type="number"
+                            <input type="decimal"
                                 @change="calcularIps()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_unitario">
@@ -95,6 +95,7 @@
                              class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                                     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             <option value="" disabled>Selecione</option>
+                            <option value="0">0%</option>
                             <option value="3">3%</option>
                             <option value="6">6%</option>
                             <option value="7">7%</option>

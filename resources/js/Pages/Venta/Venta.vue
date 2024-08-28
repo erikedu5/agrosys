@@ -53,38 +53,13 @@
             alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
             return false;
         }
-        if (form.producto.nombre == undefined ) {
-            alert("Selecciona al menos un producto");
-            return false;
-        }
-        if(form.precio_ieps_con_descuento == "NaN") {
-            alert("Seleccione un cliente primero");
-            return false;
-        }
-
         let venta = {
             'producto': form.producto,
             'cantidad': form.cantidad,
             'precio_unitario': form.precio_ieps_con_descuento,
             'importe': form.importe
         };
-        let finded = false;
-        productoVenta.forEach((item, index) => {
-            if (item.producto.id == form.producto.id) {
-                let ventaDetalle = productoVenta[index];
-                ventaDetalle.cantidad += form.cantidad;
-                ventaDetalle.importe = (form.precio_ieps_con_descuento * ventaDetalle.cantidad).toFixed(2);
-                finded = true;
-                if (ventaDetalle.cantidad > form.producto.cantidad) {
-                    ventaDetalle.cantidad = form.producto.cantidad;
-                    ventaDetalle.importe = (form.precio_ieps_con_descuento * ventaDetalle.cantidad).toFixed(2);
-                    alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
-                }
-            }
-        });
-        if (finded === false) {
-            productoVenta.push(venta);
-        }
+        productoVenta.push(venta);
         total = (parseFloat(total) + parseFloat(form.importe)).toFixed(2);
         let cliente = form.cliente;
         form.reset();
@@ -104,18 +79,6 @@
     }
 
     const finalizeSale = () => {
-        if (form.cliente.id == undefined) {
-            alert("Debe seleccionar un cliente");
-            return false;
-        }
-        if (formVenta.tipoVenta == "") {
-            alert("Debe seleccionar tipo de venta");
-            return false;
-        }
-        if (productoVenta.length == 0) {
-            alert("Debe seleccionar al menos un producto a la venta");
-            return false;
-        }
         if (productoVenta.length !== 0) {
             form.post(route('venta.store',
                 {

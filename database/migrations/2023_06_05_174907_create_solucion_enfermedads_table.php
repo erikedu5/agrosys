@@ -19,8 +19,8 @@ return new class extends Migration
             $table->foreign('id_enfermedad_tipo_flor')->references('id')->on('enfermedades_tipo_flors')->onDelete('cascade');
             $table->unsignedBigInteger('id_sucursal');
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
-            $table->string('dosis_bomba_ml');
-            $table->string('dosis_tambo_ml');
+            $table->decimal('dosis_bomba_ml', 10, 2);
+            $table->decimal('dosis_tambo_ml', 10, 2);
             $table->text('condiciones');
             $table->timestamps();
         });

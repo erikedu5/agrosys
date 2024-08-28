@@ -17,8 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('id_venta');
             $table->foreign('id_producto')->references('id')->on('productos');
             $table->foreign('id_venta')->references('id')->on('ventas');
-            $table->string('cantidad');
-            $table->string('total_productos');
+            $table->decimal('cantidad', 10,2);
+            $table->decimal('total_productos', 10,2);
             $table->timestamps();
         });
     }

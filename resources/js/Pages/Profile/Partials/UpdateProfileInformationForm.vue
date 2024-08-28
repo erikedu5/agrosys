@@ -78,11 +78,11 @@ const clearPhotoFileInput = () => {
 <template>
     <FormSection @submitted="updateProfileInformation">
         <template #title>
-            Información del perfil
+            Profile Information
         </template>
 
         <template #description>
-            Actualice la información del perfil y la dirección de correo electrónico de su cuenta.
+            Update your account's profile information and email address.
         </template>
 
         <template #form>
@@ -112,7 +112,7 @@ const clearPhotoFileInput = () => {
                 </div>
 
                 <SecondaryButton class="mt-2 mr-2" type="button" @click.prevent="selectNewPhoto">
-                    Seleccione una nueva foto
+                    Select A New Photo
                 </SecondaryButton>
 
                 <SecondaryButton
@@ -121,7 +121,7 @@ const clearPhotoFileInput = () => {
                     class="mt-2"
                     @click.prevent="deletePhoto"
                 >
-                    Eliminar Foto
+                    Remove Photo
                 </SecondaryButton>
 
                 <InputError :message="form.errors.photo" class="mt-2" />
@@ -154,7 +154,7 @@ const clearPhotoFileInput = () => {
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
                     <p class="text-sm mt-2 dark:text-white">
-                        Su dirección de correo electrónico no está verificada.
+                        Your email address is unverified.
 
                         <Link
                             :href="route('verification.send')"
@@ -168,7 +168,7 @@ const clearPhotoFileInput = () => {
                     </p>
 
                     <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-green-600 dark:text-green-400">
-                        Haga clic aquí para volver a enviar el correo electrónico de verificación.
+                        A new verification link has been sent to your email address.
                     </div>
                 </div>
             </div>
@@ -176,11 +176,11 @@ const clearPhotoFileInput = () => {
 
         <template #actions>
             <ActionMessage :on="form.recentlySuccessful" class="mr-3">
-                Guardado.
+                Saved.
             </ActionMessage>
 
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Guardar
+                Save
             </PrimaryButton>
         </template>
     </FormSection>

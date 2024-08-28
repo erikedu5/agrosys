@@ -18,10 +18,10 @@ return new class extends Migration
             $table->unsignedBigInteger('id_marca');
             $table->foreign('id_clasificacion')->references('id')->on('cat_clasificacions');
             $table->foreign('id_marca')->references('id')->on('cat_marcas');
-            $table->string('cantidad');
-            $table->string('precio_unitario');
-            $table->string('precio_ieps');
-            $table->string('ieps');
+            $table->decimal('cantidad', 10,2);
+            $table->decimal('precio_unitario', 10,2);
+            $table->decimal('precio_ieps', 10,2);
+            $table->unsignedBigInteger('ieps');
             $table->string('tamano');
             $table->unsignedBigInteger('id_usuario');
             $table->foreign('id_usuario')->references('id')->on('users');

@@ -29,8 +29,8 @@
     });
 
     const generarReporteVentas = () => {
-        if (formReporte.datesReport.length == 0 || formReporte.datesReport[1] == null) {
-            alert('Debe seleccionar un rango de fecha');
+        if (formReporte.datesReport.length == 0) {
+            errors.push('Debe seleccionar un rango de fecha');
             return;
         }
         let fechaFin = formReporte.datesReport[1];
@@ -42,21 +42,6 @@
     }
 
     const generarReporteVentasProducto = () => {
-        if (formReporte.datesReportVenta.length == 0 || formReporte.datesReportVenta[1] == null) {
-            alert('Debe seleccionar un rango de fecha');
-            return;
-        }
-        if (formReporte.tipoReporteVenta == "marca") {
-            if (formReporte.id_marca_venta == 0) {
-                alert('Debe seleccionar una marca');
-                return;
-            }
-        } else {
-            if (formReporte.id_producto == 0) {
-                alert('Debe seleccionar una producto');
-                return;
-            }
-        }
         let id_marca = formReporte.id_marca_venta;
         let id_producto = formReporte.id_producto;
 

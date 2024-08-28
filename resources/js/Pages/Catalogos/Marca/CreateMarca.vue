@@ -4,12 +4,12 @@
     import{ useForm }from'@inertiajs/vue3';
 
     const props=defineProps({marca: Object});
-
+    
     const form = useForm({
         nombre: props.marca !== undefined ? props.marca.nombre : '',
         id: props.marca !== undefined ? props.marca.id: null
     });
-
+    
     const submit = () => {
         if (props.marca == undefined) {
             form.post(route('marca.store'), form);
@@ -20,7 +20,7 @@
 </script>
 
 <template>
-    <AppLayout title="CrearMarca">
+    <AppLayout title="CrearMarca">  
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Marcas
@@ -35,25 +35,22 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
+                            <input type="text" 
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                                 <br>
-                                <div v-if="$page.props.errors.nombre" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                    <span class="block sm:inline"> {{ $page.props.errors.nombre }}</span>
-                                </div>
                                 <br>
 
-                            <button
+                            <button 
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
+                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                 Guardar
                             </button>
                         </form>
 
-
+                        
                     </div>
                 </div>
             </div>
