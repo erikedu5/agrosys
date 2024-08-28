@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('nombre')->unique()->nullable(false);
             $table->string('direccion');
-            $table->string('telefono');
-            $table->string('email');
-            $table->string('rfc');
+            $table->string('telefono')->nullable();
+            $table->string('email')->nullable();
+            $table->string('rfc')->nullable();
             $table->text('aviso');
             $table->timestamps();
         });

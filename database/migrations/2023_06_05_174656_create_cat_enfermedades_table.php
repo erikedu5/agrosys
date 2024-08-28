@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('cat_enfermedades', function (Blueprint $table) {
             $table->id();
             $table->string('nombre')->unique();
-            $table->text('descripcion');
+            $table->text('descripcion')->nullable();
             $table->timestamps();
         });
     }

@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('sucursales', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre')->unique()->nullable(false);
+            $table->string('nombre')->nullable(false);
             $table->string('direccion');
-            $table->string('telefono');
-            $table->string('email');
+            $table->string('telefono')->nullable();
+            $table->string('email')->nullable();
             $table->boolean('es_matriz');
             $table->unsignedBigInteger('id_empresa');
             $table->foreign('id_empresa')->references('id')->on('empresas');
