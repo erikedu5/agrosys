@@ -37,7 +37,7 @@
     }
 
     const calcularPrecioCompra = () => {
-        form.precio_unitario = (form.precio_ieps - ((parseFloat(form.precio_ieps) / 100) * form.ieps));
+        form.precio_unitario = (parseFloat(form.precio_ieps) - ((parseFloat(form.precio_ieps) / 100) * parseFloat(form.ieps))).toFixed(2);
     }
 </script>
 
