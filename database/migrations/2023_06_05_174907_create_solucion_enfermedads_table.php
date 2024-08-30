@@ -21,7 +21,7 @@ return new class extends Migration
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->decimal('dosis_bomba_ml', 10, 2);
             $table->decimal('dosis_tambo_ml', 10, 2);
-            $table->text('condiciones');
+            $table->text('condiciones')->nullable();
             $table->timestamps();
         });
     }

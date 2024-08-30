@@ -35,6 +35,10 @@
     const calcularIps = () => {
         form.precio_ieps = (((parseFloat(form.precio_unitario) / 100) * parseFloat(form.ieps)) + parseFloat(form.precio_unitario)).toFixed(2);
     }
+
+    const calcularPrecioCompra = () => {
+        form.precio_unitario = (form.precio_ieps - ((parseFloat(form.precio_ieps) / 100) * form.ieps));
+    }
 </script>
 
 <template>
@@ -81,7 +85,7 @@
                             </select>
                                 <br>
 
-                            <label class="block font-medium text-sm text-gray-700">Precio Unitario</label>
+                            <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
                             <input type="decimal"
                                 @change="calcularIps()"
                                 class="form-input w-full rounded-md shadow-sm"
@@ -104,7 +108,8 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
-                            <input type="text" readonly
+                            <input type="text"
+                                @change="calcularPrecioCompra()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_ieps">
                                 <br>

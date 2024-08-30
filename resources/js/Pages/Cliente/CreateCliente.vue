@@ -2,15 +2,17 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import Checkbox from '@/Components/Checkbox.vue';
 
     const props=defineProps({cliente: Object});
-    
+
     const form = useForm({
         nombre: props.cliente !== undefined ? props.cliente.nombre : '',
+        requiereFactura: props.cliente !== undefined ? props.cliente.requiereFactura: false,
         porcentaje_descuento: props.cliente !== undefined ? props.cliente.porcentaje_descuento: 0,
         id: props.cliente !== undefined ? props.cliente.id: null,
     });
-    
+
     const submit = () => {
         if (props.cliente == undefined) {
             form.post(route('cliente.store'), form);
@@ -21,7 +23,7 @@
 </script>
 
 <template>
-    <AppLayout title="CrearCliente">  
+    <AppLayout title="CrearCliente">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Crear Cliente
@@ -36,22 +38,28 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" 
+                            <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                             <br>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">porcentaje de Descuento</label>
-                            <input 
+                            <input
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.porcentaje_descuento">
                             <br>
                             <br>
+                            <label class="block font-medium text-sm text-gray-700">
+                                <checkbox name="options" value="b" />
+                                <span class="ml-2 text-sm">Require factura</span>
+                            </label><br>
+                            <br>
 
-                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded 
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white 
+
+                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                             dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                 Guardar
                             </button>
