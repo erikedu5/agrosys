@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AbonoCuenta;
 use App\Models\AltaInventario;
 use App\Models\Producto;
-use App\Models\clientes;
+use App\Models\Clientes;
 use App\Models\Empresa;
 use App\Models\ProductoVenta;
 use App\Models\Venta;
