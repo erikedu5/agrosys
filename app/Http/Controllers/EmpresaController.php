@@ -73,6 +73,7 @@ class EmpresaController extends Controller
         $empresa->email= $request->email;
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
+        $empresa->numero_sucursales = $request->numero_sucursales;
         $empresa->save();
 
         $empresas = Empresa::get();

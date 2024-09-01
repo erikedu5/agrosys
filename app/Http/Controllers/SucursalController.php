@@ -16,16 +16,22 @@ class SucursalController extends Controller
      */
     public function index(Request $request)
     {
+        $empresa = Empresa::find(1);
         $query = Sucursales::where('nombre', 'LIKE', "%$request->q%");
         if (Auth::user()->tipo != 'superAdmin') {
             $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
             $query = $query->where('id_empresa', $sucursalUser->id_empresa);
+            $empresa = Empresa::find($sucursalUser->id_empresa);
         }
         $sucursales = $query->latest()
         ->paginate(10);
 
+        $count = $query->get()->count();
+
         return Inertia::render('Sucursal/Sucursal', [
             'sucursales' => $sucursales,
+            'conteo' => $count,
+            'empresa' => $empresa
         ]);
     }
 

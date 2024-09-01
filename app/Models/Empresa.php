@@ -15,6 +15,7 @@ class Empresa extends Model
         'telefono',
         'email',
         'rfc',
-        'aviso'
+        'aviso',
+        'numero_sucursales'
     ];
 }

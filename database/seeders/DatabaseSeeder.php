@@ -33,7 +33,8 @@ class DatabaseSeeder extends Seeder
             'telefono' => '7228259581',
             'email' => 'meztlitechsolutions@gmail.com',
             'rfc' => 'JIDE930407AS4',
-            'aviso' => 'Si tiene algun requerimiento contactenos por whatsapp'
+            'aviso' => 'Si tiene algun requerimiento contactenos por whatsapp',
+            'numero_sucursales' => 1000
         ]);
 
         Sucursales::factory()->create([

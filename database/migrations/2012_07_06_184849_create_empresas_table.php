@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('rfc')->nullable();
             $table->text('aviso');
+            $table->unsignedBigInteger('numero_sucursales')->default(1);
             $table->timestamps();
         });
     }

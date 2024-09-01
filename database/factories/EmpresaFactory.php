@@ -23,6 +23,7 @@ class EmpresaFactory extends Factory
             'email' => $this->faker->unique()->safeEmail(),
             'rfc' => $this->faker->text(8),
             'aviso' => $this->faker->text(20),
+            'numero_sucursales' => $this->faker->numberBetween(1, 10),
         ];
     }
 }

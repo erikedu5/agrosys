@@ -13,6 +13,7 @@
         email: props.empresa !== undefined ? props.empresa.email : '',
         rfc: props.empresa !== undefined ? props.empresa.rfc : '',
         aviso: props.empresa !== undefined ? props.empresa.aviso : '',
+        numero_sucursales: props.empresa !== undefined ? props.empresa.numero_sucursales: 1,
     });
 
     const submit = () => {
@@ -82,6 +83,13 @@
                                 v-model="form.aviso"
                                 rows="6">
                             </textarea>
+                            <br>
+                            <br>
+
+                            <label class="block font-medium text-sm text-gray-700">Máximo número de sucursales</label>
+                            <input type="number"
+                                class="form-input w-full rounded-md shadow-sm"
+                                v-model="form.numero_sucursales">
                             <br>
                             <br>
 

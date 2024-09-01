@@ -8,7 +8,9 @@
         sucursales: {
             type: Array,
             default: []
-        }
+        },
+        conteo: Number,
+        empresa: Object
     });
 
     const q = ref('');
@@ -43,7 +45,7 @@
 
                         <div class="flex justify-between">
                             <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar sucursal...">
-                            <Link :href="route('sucursal.create')"
+                            <Link :href="route('sucursal.create')" v-if="conteo < empresa.numero_sucursales"
                                   class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
