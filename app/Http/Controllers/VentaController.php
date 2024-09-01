@@ -9,6 +9,7 @@ use App\Models\ProductoVenta;
 use App\Models\Venta;
 use App\Models\AbonoCuenta;
 use App\Models\AltaInventario;
+use App\Models\Factura;
 use App\Models\Sucursales;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -131,6 +132,10 @@ class VentaController extends Controller
         $cliente->abono_total += $abonado;
         $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
         $cliente->save();
+
+        if ($cliente->requiereFactura) {
+            $this->agregarFacturacion($venta, $cliente);
+        }
 
         if ($cliente->balance <= 0) {
             $this->limpiarCredito($cliente);
@@ -258,5 +263,13 @@ class VentaController extends Controller
         $cliente->abono_total = 0;
         $cliente->balance = 0;
         $cliente->save();
+    }
+
+    private function agregarFacturacion($venta, $cliente) {
+        Factura::Create([
+            'facturaCompleta' => false,
+            'id_venta' => $venta->id,
+            'id_cliente' => $cliente->id
+        ]);
     }
 }

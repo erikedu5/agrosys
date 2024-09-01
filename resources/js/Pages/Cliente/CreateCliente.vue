@@ -9,6 +9,7 @@
     const form = useForm({
         nombre: props.cliente !== undefined ? props.cliente.nombre : '',
         requiereFactura: props.cliente !== undefined ? props.cliente.requiereFactura: false,
+        rfc: props.cliente !== undefined ? props.cliente.rfc: null,
         porcentaje_descuento: props.cliente !== undefined ? props.cliente.porcentaje_descuento: 0,
         id: props.cliente !== undefined ? props.cliente.id: null,
     });
@@ -38,24 +39,29 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
+                            <input type="text" required
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
                             <br>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">porcentaje de Descuento</label>
-                            <input
+                            <input type="number"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.porcentaje_descuento">
                             <br>
                             <br>
                             <label class="block font-medium text-sm text-gray-700">
-                                <checkbox name="options" value="b" />
+                                <checkbox v-model="form.requiereFactura" value="false" />
                                 <span class="ml-2 text-sm">Require factura</span>
                             </label><br>
-                            <br>
 
+                            <label class="block font-medium text-sm text-gray-700">RFC</label>
+                            <input :required="form.requiereFactura"
+                                class="form-input w-full rounded-md shadow-sm"
+                                v-model="form.rfc">
+                            <br>
+                            <br>
 
                             <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                             hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700

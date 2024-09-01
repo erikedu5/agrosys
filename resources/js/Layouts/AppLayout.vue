@@ -20,6 +20,16 @@ const switchToTeam = (team) => {
     });
 };
 
+const minusDays = (date, days) => {
+    let result = new Date(date);
+    result.setDate(date.getDate() - days);
+    return result;
+}
+
+const fechaFin = new Date();
+const fechaInicio = minusDays(fechaFin, 1);
+
+
 const logout = () => {
     router.post(route('logout'));
 };
@@ -86,12 +96,36 @@ const logout = () => {
                                     </Dropdown>
                                 </div>
 
-                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
-                                               $page.props.auth.user.tipo == 'superAdmin' ||
-                                               $page.props.auth.user.tipo == 'admin' "
-                                    :href="route('cliente.index')" :active="route().current('cliente.*')">
-                                    Clientes
-                                </NavLink>
+                                <div v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                                           $page.props.auth.user.tipo == 'admin' ||
+                                           $page.props.auth.user.tipo == 'superAdmin'"
+                                    class="inline-flex items-center px-1 pt-1 border-b-2
+                                            border-transparent text-sm font-medium leading-5
+                                            text-gray-500 dark:text-gray-400 hover:text-gray-700
+                                            dark:hover:text-gray-300 hover:border-gray-300
+                                            dark:hover:border-gray-700 focus:outline-none focus:text-gray-700
+                                            dark:focus:text-gray-300 focus:border-gray-300
+                                            dark:focus:border-gray-700 transition
+                                            duration-150 ease-in-out">
+                                    <Dropdown>
+                                        <template #trigger >
+                                            <button type="button">
+                                                Clientes
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('cliente.index')" :active="route().current('cliente.*')">
+                                                Clientes
+                                            </DropdownLink>
+
+                                            <DropdownLink :href="route('facturas.index', {'fechaInicio': fechaInicio, 'fechaFin': fechaFin })" :active="route().current('cliente.*')">
+                                                Facturas de ventas
+                                            </DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
+
                                 <NavLink :href="route('reporte')" :active="route().current('reporte.*')">
                                     Reportes
                                 </NavLink>

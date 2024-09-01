@@ -49,7 +49,11 @@
         let fechaInicio = formReporte.datesReportVenta[0];
 
         let popup  = window.open( "_blank");
-        popup.location = '/reporte/ventaMarcaProducto?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        popup.location = '/reporte/ventaPorProductoMarca?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+
+        formReporte.id_marca_venta = 0;
+        formReporte.id_producto = 0;
+
         location.replace('/reporte');
     }
 

@@ -127,11 +127,12 @@ class ReporteController extends Controller
 
         foreach ($inventario as $producto) {
             $producto->marca = CatMarca::find($producto->id_marca);
-            $producto->alta = AltaInventario::where('id_producto', $producto->id)
+            $altaInventario = $producto->alta = AltaInventario::where('id_producto', $producto->id)
             ->where('id_sucursal',  Auth::user()->id_sucursal)
             ->orderBy('id', 'desc')
             ->limit(1)
             ->first();
+            $producto->cantidad = $altaInventario !== null ?  $altaInventario->cantidad_nueva: "0" ;
             $id_usuario = optional($producto->alta)->id_usuario;
             $producto->usuario = optional(User::where('id', $id_usuario)->first());
 
@@ -153,7 +154,7 @@ class ReporteController extends Controller
     public function ventaPorProductoMarca(Request $request)
     {
         $request->validate([
-            'fechainicio' => ['required'],
+            'fechaInicio' => ['required'],
             'fechaFin' => ['required']
         ]);
 

@@ -77,12 +77,18 @@ class ClientesController extends Controller
         $request->validate([
             'nombre' => 'required',
             'porcentaje_descuento' => 'required',
+            'requiereFactura' => 'required',
         ]);
 
-        $cliente = Clientes::where($request->id)
+        $cliente = Clientes::where('id', $request->id)
         ->where('activo', true)->first();
+        
         $cliente->nombre = $request->nombre;
         $cliente->porcentaje_descuento = $request->porcentaje_descuento;
+        $cliente->requiereFactura =  $request->requiereFactura;
+        if ($request->requiereFactura) {
+            $cliente->rfc = $request->rfc;
+        }
         $cliente->save();
         return redirect()->route('cliente.index');
     }

@@ -78,9 +78,18 @@ Route::get('/reporte/inventario', [App\Http\Controllers\ReporteController::class
 ->name("reporte.inventario")
 ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
 
-Route::get('/reporte/ventaMarcaProducto', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarca'])
-->name("reporte.ventaMarcaProducto")
+Route::get('/reporte/ventaPorProductoMarca', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarca'])
+->name("reporte.ventaPorProductoMarca")
 ->middleware('auth:sanctum', 'hasRoles:vendedor-admin-superAdmin');
 
 Route::resource('/compra', \App\Http\Controllers\ComprasController::class)
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/facturas/index', [\App\Http\Controllers\FacturaController::class, 'index'])
+->name("facturas.index")
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+
+Route::put('/facturas/update', [\App\Http\Controllers\FacturaController::class, 'update'])
+->name("facturas.update")
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
