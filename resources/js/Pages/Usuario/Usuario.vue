@@ -42,7 +42,7 @@
                     <div class="shadow bg-white md:rounded-md p-4">
 
                         <div class="flex justify-between">
-                            <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar cliente...">
+                            <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar usuario...">
                             <Link :href="route('usuario.create')"
                                   class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
