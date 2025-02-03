@@ -6,25 +6,28 @@
         "build": "vite build"
     },
     "devDependencies": {
-        "@inertiajs/vue3": "^1.0.0",
-        "@tailwindcss/forms": "^0.5.2",
-        "@tailwindcss/typography": "^0.5.2",
-        "@vitejs/plugin-vue": "^4.0.0",
-        "autoprefixer": "^10.4.7",
-        "axios": "^1.1.2",
-        "laravel-vite-plugin": "^0.7.5",
-        "postcss": "^8.4.14",
-        "tailwindcss": "^3.1.0",
-        "vite": "^4.0.0",
-        "vue": "^3.2.31"
+        "@inertiajs/vue3": "^1.0.14",
+        "@mdi/js": "^7.4.47",
+        "@tailwindcss/forms": "^0.5.7",
+        "@tailwindcss/typography": "^0.5.10",
+        "@vitejs/plugin-vue": "^5.0.0",
+        "autoprefixer": "^10.4.16",
+        "axios": "^1.6.4",
+        "laravel-vite-plugin": "^1.0",
+        "postcss": "^8.4.32",
+        "tailwindcss": "^3.4.0",
+        "vite": "^5.0",
+        "vue": "^3.3.13"
     },
     "dependencies": {
+        "@mdi/font": "^7.4.47",
         "@popperjs/core": "^2.11.8",
         "@vuepic/vue-datepicker": "^5.4.0",
-        "laravel-vue-pagination": "^4.1.0",
+        "laravel-vue-i18n": "^2.7.7",
+        "laravel-vue-pagination": "^4.1.3",
         "moment": "^2.30.1",
         "v-calendar": "^3.1.2",
-        "v-tooltip": "^2.1.3",
+        "v-tooltip": "^1.1.6",
         "vue-datepicker-ui": "^3.1.1",
         "vue3-tabs-component": "^1.3.2"
     }

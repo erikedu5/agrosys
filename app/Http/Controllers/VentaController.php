@@ -15,10 +15,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use PDF;
-use DateTime;
-use Illuminate\Support\Facades\Redirect;
-
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 
 class VentaController extends Controller
 {
@@ -27,7 +25,37 @@ class VentaController extends Controller
      */
     public function index(Request $request)
     {
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
+        $sucursal = Auth::user()->id_sucursal;
+        $productosSucursalFiltrado = [];
+        if ($request->b != null) {
+            $sucursales = Sucursales::where('id_empresa', function ($query) use ($sucursal) {
+                $query->select('id_empresa')
+                      ->from('sucursales')
+                      ->where('id', $sucursal);
+            })->where('id', '!=', $sucursal)->get()
+            ->pluck('id')
+            ->toArray();
+
+            $productosSucursal = Producto::where('productos.nombre', 'ILIKE', "%$request->b%")
+            ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
+            ->select('productos.*', 'cat_marcas.nombre as marca')
+            ->get();
+
+            foreach ($productosSucursal as $product) {
+                $actualStock = AltaInventario::where('id_producto', $product->id)
+                    ->whereIn('id_sucursal', $sucursales)
+                    ->orderBy('created_at', 'desc')->first();
+                if ($actualStock != null) {
+                    $product->sucursal = Sucursales::find($actualStock->id_sucursal);
+                    $product->cantidad = $actualStock !== null? $actualStock->cantidad_nueva: 0;
+                    if ($product->cantidad > 0) {
+                        array_push($productosSucursalFiltrado, $product);
+                    }
+                }
+            }
+        } 
+
+        $productos = Producto::where('nombre', 'ILIKE', "%$request->q%")
         ->get();
         $productoFiltrado = [];
 
@@ -47,6 +75,7 @@ class VentaController extends Controller
         return Inertia::render('Venta/Venta', [
             'productos' => $productoFiltrado,
             'clientes' => $clientes,
+            'productosSucursal' => $productosSucursalFiltrado
         ]);
     }
 
