@@ -37,6 +37,17 @@ class Producto extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function altasInventario()
+    {
+        return $this->hasMany(AltaInventario::class, 'id_producto');
+    }
+
+    public function ultimaAltaInventario()
+    {
+        return $this->hasOne(AltaInventario::class, 'id_producto')
+                    ->latestOfMany(); // Laravel 8+ para obtener el más reciente
+    }
+
     protected function getCreatedAtAttribute() {
         return $this->attributes['created_at'];
     }

@@ -1,6 +1,6 @@
 <script setup>
     import AppLayout from '@/Layouts/AppLayout.vue';
-    import { ref, watch } from 'vue';
+    import { ref, watch, onMounted, onUnmounted } from 'vue';
     import { router, useForm } from '@inertiajs/vue3';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { reactive } from 'vue';
@@ -22,7 +22,11 @@
         clientes: {
             type: Array,
             default: []
-        }
+        },
+        productosSucursal: {
+            type: Array,
+            default: []
+        },
     });
 
     let form = useForm({
@@ -46,6 +50,12 @@
 
     watch(q, (value) => {
         router.get( route( 'venta.index', { q: value } ), {}, { preserveState: true } );
+    });
+
+    const b = ref('');
+
+    watch(b, (value) => {
+        router.get( route( 'venta.index', { b: value } ), {}, { preserveState: true } );
     });
 
     const agregarVenta = () => {
@@ -147,7 +157,51 @@
         productoVenta.splice(index, 1);
     }
 
+    // Estado del modal
+    const isModalOpen = ref(false);
+
+    // Función para manejar la tecla F2
+    const handleKeydown = (event) => {
+        if (event.key === "F2") {
+            event.preventDefault(); // Evita acciones predeterminadas del navegador
+            isModalOpen.value = true;
+        }
+    };
+
+    // Agregar y remover el evento cuando el componente se monta/desmonta
+    onMounted(() => {
+    window.addEventListener("keydown", handleKeydown);
+    });
+
+    onUnmounted(() => {
+    window.removeEventListener("keydown", handleKeydown);
+    });
+
+    // Función para cerrar el modal
+    const closeModal = () => {
+    isModalOpen.value = false;
+    };
 </script>
+
+<style scoped>
+    .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    }
+
+    .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    }
+</style>
 
 <template>
     <AppLayout title="Dashboard">
@@ -155,9 +209,12 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Venta de agroquimicos
             </h2>
+            <br>
+            <span>F2: Buscar en sucursal</span>
         </template>
 
         <hr class="my-6">
+
 
         <div class="flex">
             <div class="flex-none w-14 h-14">
@@ -310,6 +367,55 @@
                 </div>
             </div>
             <div class="flex-none w-14 h-14">
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 w-lg">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-lg">
+                <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
+                
+                <!-- Input de búsqueda -->
+                <input
+                v-model="b"
+                type="text"
+                placeholder="Buscar producto..."
+                class="w-full p-2 border rounded-md focus:ring focus:ring-blue-300"
+                />
+
+                <!-- Tabla de productos -->
+                <div class="mt-4 overflow-x-auto">
+                <table class="w-full border-collapse border border-gray-200">
+                    <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border p-6">Producto</th>
+                        <th class="border p-6">Marca</th>
+                        <th class="border p-6">Sucursal</th>
+                        <th class="border p-6">Cantidad en stock</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="producto in props.productosSucursal" :key="producto.id">
+                        <td class="border p-6">{{ producto?.nombre }}</td>
+                        <td class="border p-6">{{ producto?.marca }}</td>
+                        <td class="border p-6">{{ producto?.sucursal?.nombre }}</td>
+                        <td class="border p-6 text-center">{{ producto?.cantidad }}</td>
+                    </tr>
+                    <tr v-if="props.productosSucursal.length === 0">
+                        <td colspan="4" class="border p-6 text-center text-gray-500">
+                            No se encontraron productos
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                </div>
+                
+                <!-- Botón para cerrar -->
+                <div class="mt-4 flex justify-end">
+                <button @click="closeModal" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+                    Cerrar
+                </button>
+                </div>
             </div>
         </div>
     </AppLayout>
