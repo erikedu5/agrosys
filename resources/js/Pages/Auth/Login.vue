@@ -41,6 +41,32 @@ const submit = () => {
             {{ status }}
         </div>
 
+        <div>
+            <div class="mb-4 text-center">
+            <h1 class="text-2xl md:text-4xl font-bold text-green-700">Bienvenido a Agrosys</h1>
+            </div>
+            <div class="text-gray-700">
+            <p class="mb-4 text-justify">
+                Agrosys es una plataforma diseñada para gestionar eficientemente el inventario
+                de tiendas de agroquímicos, donde puede:
+            </p>
+            <ul class="list-none  pl-5 mb-4">
+                    <li>📦 Registrar productos y controlar el inventario.</li>
+                    <li>📊 Generar ventas.</li>
+                    <li>🚜 Administrar clientes.</li>
+                    <li>⚡ Ayudar a personal detras de la vitrina con dosis y enfermedades.</li>
+            </ul>
+            <p>
+                Optimiza tu negocio con Agrosys y lleva el control de tu inventario de manera rápida y sencilla.
+            </p>
+            </div>
+        </div>
+        <br>
+        <p class="text-center">
+           <b> Inicia Sessión aquí </b>
+        </p>
+        <br>
+
         <form @submit.prevent="submit">
             <div>
                 <InputLabel for="email" value="Email" />

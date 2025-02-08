@@ -36,6 +36,11 @@
         form.dosis_tambo_ml = form.dosis_bomba_ml * 15;
     }
 
+    const addDosistambo = () => {
+        form.dosis_bomba_ml = form.dosis_tambo_ml / 15;
+    }
+
+
 </script>
 
 <template>
@@ -89,7 +94,7 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Dosis por tambo en Ml.</label>
-                            <input type="number" readonly
+                            <input type="number" @input="addDosistambo()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_tambo_ml">
                             <br>
