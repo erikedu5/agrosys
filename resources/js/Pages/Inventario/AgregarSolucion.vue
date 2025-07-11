@@ -87,14 +87,14 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Dosis por bomba en Ml.</label>
-                            <input type="number" @input="addDosisbomba()"
+                            <input type="number" step="0.01" @input="addDosisbomba()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_bomba_ml">
                             <br>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Dosis por tambo en Ml.</label>
-                            <input type="number" @input="addDosistambo()"
+                            <input type="number" step="0.01" @input="addDosistambo()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_tambo_ml">
                             <br>

@@ -45,7 +45,7 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Cantidad de productos a agregar</label>
-                            <input type="number" min="1"
+                            <input type="number" min="1" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.cantidad">
                                 <br>
