@@ -46,7 +46,7 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">porcentaje de Descuento</label>
-                            <input type="number"
+                            <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.porcentaje_descuento">
                             <br>

@@ -253,7 +253,7 @@
                         <br>
 
                         <label>Cantidad de productos: </label>
-                        <input type="number" min="1" v-model="form.cantidad"
+                        <input type="number" min="1" step="0.01" v-model="form.cantidad"
                                @input="changeQuantity($event)"
                                class="form-input rounded-md shadow-sm w-full"/>
                         <br><br>
@@ -265,12 +265,12 @@
                         <br><br>
 
                         <label>Precio unitario: </label>
-                        <input type="number" readonly v-model="form.precio_ieps_con_descuento"
+                        <input type="number" step="0.01" readonly v-model="form.precio_ieps_con_descuento"
                                class="form-input rounded-md shadow-sm w-full"/>
                         <br><br>
 
                         <label>importe: </label>
-                        <input type="number" readonly v-model="form.importe"
+                        <input type="number" step="0.01" readonly v-model="form.importe"
                                class="form-input rounded-md shadow-sm w-full"/>
                         <br><br>
 
@@ -347,7 +347,7 @@
 
                             <div v-if="formVenta.tipoVenta === 'Credito'">
                                 <label>abono a cuenta: </label>
-                                <input type="number" v-model="form.abono"
+                                <input type="number" step="0.01" v-model="form.abono"
                                     class="form-input rounded-md shadow-sm w-full"/>
                             </div>
                         </div>
