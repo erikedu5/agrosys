@@ -1,12 +1,15 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import RegisterModal from '@/Components/RegisterModal.vue';
 
 defineProps({
     canResetPassword: Boolean,
@@ -18,6 +21,8 @@ const form = useForm({
     password: '',
     remember: false,
 });
+
+const showRegisterModal = ref(false);
 
 const submit = () => {
     form.transform(data => ({
@@ -107,10 +112,16 @@ const submit = () => {
                     Forgot your password?
                 </Link>
 
+                <SecondaryButton type="button" class="ml-4" @click="showRegisterModal = true">
+                    Registrarse
+                </SecondaryButton>
+
                 <PrimaryButton class="ml-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                     Log in
                 </PrimaryButton>
             </div>
         </form>
     </AuthenticationCard>
+
+    <RegisterModal :show="showRegisterModal" @close="showRegisterModal = false" />
 </template>
