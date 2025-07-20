@@ -2,7 +2,6 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import NotificationsPanel from '@/Components/NotificationsPanel.vue';
 
 defineProps({
     pedidos: Array,
@@ -56,9 +55,6 @@ const filtrar = () => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
-            <div class="w-1/4">
-                <NotificationsPanel :sucursal-id="$page.props.auth.user.id_sucursal" />
             </div>
         </div>
     </AppLayout>
