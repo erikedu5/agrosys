@@ -129,6 +129,9 @@ const logout = () => {
                                 <NavLink :href="route('reporte')" :active="route().current('reporte.*')">
                                     Reportes
                                 </NavLink>
+                                <NavLink :href="route('pedidos.index')" :active="route().current('pedidos.index')">
+                                    Pedidos
+                                </NavLink>
                                 <div v-if="$page.props.auth.user.tipo == 'inventario' ||
                                            $page.props.auth.user.tipo == 'admin' ||
                                            $page.props.auth.user.tipo == 'superAdmin'"
@@ -300,6 +303,9 @@ const logout = () => {
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('reporte')" :active="route().current('reporte.*')">
                             Reportes
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('pedidos.index')" :active="route().current('pedidos.index')">
+                            Pedidos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario'  ||

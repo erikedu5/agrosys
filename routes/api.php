@@ -17,3 +17,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+use App\Http\Controllers\Api\SucursalesApiController;
+use App\Http\Controllers\Api\PedidoController as ApiPedidoController;
+
+Route::middleware('api.key')->get('/sucursales', [SucursalesApiController::class, 'index']);
+
+Route::post('/pedidos', [ApiPedidoController::class, 'store']);

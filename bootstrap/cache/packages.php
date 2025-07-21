@@ -10,17 +10,6 @@
       0 => 'GoogleMaps\\ServiceProvider\\GoogleMapsServiceProvider',
     ),
   ),
-  'barryvdh/laravel-debugbar' => 
-  array (
-    'aliases' => 
-    array (
-      'Debugbar' => 'Barryvdh\\Debugbar\\Facades\\Debugbar',
-    ),
-    'providers' => 
-    array (
-      0 => 'Barryvdh\\Debugbar\\ServiceProvider',
-    ),
-  ),
   'darkaonline/l5-swagger' => 
   array (
     'aliases' => 
