@@ -35,4 +35,10 @@ return [
         'key' => env('API_KEY'),
     ],
 
+    'reverb' => [
+        'key' => env('REVERB_APP_KEY'),
+        'secret' => env('REVERB_APP_SECRET'),
+        'app_id' => env('REVERB_APP_ID'),
+    ],
+
 ];
