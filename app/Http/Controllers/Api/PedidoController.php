@@ -24,6 +24,7 @@ class PedidoController extends Controller
             'cantidad' => $data['cantidad'],
             'nombre_solicitante' => $data['nombre_solicitante'],
             'numero_solicitante' => $data['numero_solicitante'],
+            'completado' => false,
         ]);
 
         return response()->json($pedido, 201);

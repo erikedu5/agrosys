@@ -15,6 +15,11 @@ class Pedido extends Model
         'cantidad',
         'nombre_solicitante',
         'numero_solicitante',
+        'completado',
+    ];
+
+    protected $casts = [
+        'completado' => 'boolean',
     ];
 
     public function sucursal()

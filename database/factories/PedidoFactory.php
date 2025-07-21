@@ -19,6 +19,7 @@ class PedidoFactory extends Factory
             'cantidad' => $this->faker->numberBetween(1, 10),
             'nombre_solicitante' => $this->faker->name(),
             'numero_solicitante' => $this->faker->phoneNumber(),
+            'completado' => false,
         ];
     }
 }

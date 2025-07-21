@@ -18,6 +18,7 @@ return new class extends Migration
             $table->integer('cantidad');
             $table->string('nombre_solicitante');
             $table->string('numero_solicitante');
+            $table->boolean('completado')->default(false);
             $table->foreign('id_sucursal')->references('id')->on('sucursales');
             $table->foreign('id_producto')->references('id')->on('productos');
             $table->timestamps();

@@ -97,3 +97,7 @@ Route::put('/facturas/update', [\App\Http\Controllers\FacturaController::class, 
 Route::get('/pedidos', [\App\Http\Controllers\PedidoController::class, 'index'])
     ->name('pedidos.index')
     ->middleware('auth:sanctum');
+
+Route::put('/pedidos/{pedido}/completar', [\App\Http\Controllers\PedidoController::class, 'complete'])
+    ->name('pedidos.complete')
+    ->middleware('auth:sanctum');
