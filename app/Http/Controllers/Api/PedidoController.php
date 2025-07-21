@@ -12,21 +12,25 @@ class PedidoController extends Controller
     {
         $data = $request->validate([
             'sucursal_id' => 'required|exists:sucursales,id',
-            'producto_id' => 'required|exists:productos,id',
-            'cantidad' => 'required|numeric',
+            'productos' => 'required|array|min:1',
+            'productos.*.producto_id' => 'required|exists:productos,id',
+            'productos.*.cantidad' => 'required|numeric|min:1',
             'nombre_solicitante' => 'required|string',
             'numero_solicitante' => 'required|string',
         ]);
 
-        $pedido = Pedido::create([
-            'id_sucursal' => $data['sucursal_id'],
-            'id_producto' => $data['producto_id'],
-            'cantidad' => $data['cantidad'],
-            'nombre_solicitante' => $data['nombre_solicitante'],
-            'numero_solicitante' => $data['numero_solicitante'],
-            'completado' => false,
-        ]);
+        $pedidos = [];
+        foreach ($data['productos'] as $item) {
+            $pedidos[] = Pedido::create([
+                'id_sucursal' => $data['sucursal_id'],
+                'id_producto' => $item['producto_id'],
+                'cantidad' => $item['cantidad'],
+                'nombre_solicitante' => $data['nombre_solicitante'],
+                'numero_solicitante' => $data['numero_solicitante'],
+                'completado' => false,
+            ]);
+        }
 
-        return response()->json($pedido, 201);
+        return response()->json($pedidos, 201);
     }
 }
