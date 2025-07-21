@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'null'),
+    'default' => env('BROADCAST_DRIVER', 'pusher'),
 
     /*
     |--------------------------------------------------------------------------
@@ -48,14 +48,6 @@ return [
             ],
         ],
 
-        'socketio' => [
-            'driver' => 'socket.io',
-            'host' => env('SOCKET_IO_HOST', 'localhost'),
-            'port' => env('SOCKET_IO_PORT', 6001),
-            'client_options' => [
-                // Additional options for socket.io connections
-            ],
-        ],
 
         'ably' => [
             'driver' => 'ably',
