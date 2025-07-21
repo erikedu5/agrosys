@@ -20,7 +20,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 use App\Http\Controllers\Api\SucursalesApiController;
 use App\Http\Controllers\Api\PedidoController as ApiPedidoController;
+use App\Http\Controllers\Api\SucursalProductosController;
 
 Route::middleware('api.key')->get('/sucursales', [SucursalesApiController::class, 'index']);
+
+Route::middleware('api.key')->get('/sucursales/{sucursal}/productos', [SucursalProductosController::class, 'index']);
 
 Route::post('/pedidos', [ApiPedidoController::class, 'store']);
