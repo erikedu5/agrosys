@@ -51,17 +51,19 @@ AWS_DEFAULT_REGION=us-east-1
 AWS_BUCKET=
 AWS_USE_PATH_STYLE_ENDPOINT=false
 
-REVERB_APP_ID=
-REVERB_APP_KEY=
-REVERB_APP_SECRET=
-REVERB_HOST=127.0.0.1
-REVERB_PORT=8080
-REVERB_SCHEME=http
+PUSHER_APP_ID=
+PUSHER_APP_KEY=
+PUSHER_APP_SECRET=
+PUSHER_HOST=
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+PUSHER_APP_CLUSTER=mt1
 
-VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
-VITE_REVERB_HOST="${REVERB_HOST}"
-VITE_REVERB_PORT="${REVERB_PORT}"
-VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
+VITE_PUSHER_HOST="${PUSHER_HOST}"
+VITE_PUSHER_PORT="${PUSHER_PORT}"
+VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
+VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
 
 ```
 
@@ -90,14 +92,12 @@ npm run dev
 ```
 
 
-iniciar el servicio de laravel
+iniciar el servicio de laravel 
 
 ```
 php artisan serve
 ```
-
-Iniciar el servidor de WebSockets con Reverb
-
-```
-php artisan reverb:start
-```
+=======
+# agrosys
+Sistema de inventario/ventas/asistente de agricola con laravel y vue3
+>>>>>>> ce8c08d (Initial commit)

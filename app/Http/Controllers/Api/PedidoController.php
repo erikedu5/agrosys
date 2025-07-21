@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pedido;
-use App\Events\PedidoCreado;
 use Illuminate\Http\Request;
 
 class PedidoController extends Controller
@@ -26,8 +25,6 @@ class PedidoController extends Controller
             'nombre_solicitante' => $data['nombre_solicitante'],
             'numero_solicitante' => $data['numero_solicitante'],
         ]);
-
-        event(new PedidoCreado($pedido));
 
         return response()->json($pedido, 201);
     }
