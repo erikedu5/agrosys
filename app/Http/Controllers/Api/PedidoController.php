@@ -13,8 +13,6 @@ class PedidoController extends Controller
         $data = $request->validate([
             'sucursal_id' => 'required|exists:sucursales,id',
             'productos' => 'required|array|min:1',
-            'productos.*.producto_id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|numeric|min:1',
             'nombre_solicitante' => 'required|string',
             'numero_solicitante' => 'required|string',
         ]);

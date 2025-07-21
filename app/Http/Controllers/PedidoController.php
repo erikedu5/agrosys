@@ -5,16 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use App\Models\Sucursales;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PedidoController extends Controller
 {
     public function index(Request $request)
     {
+        $sucursal = Auth::user()->sucursal_id;
         $query = Pedido::with(['sucursal', 'producto'])
-            ->when($request->sucursal, function($q) use ($request) {
-                $q->where('id_sucursal', $request->sucursal);
-            })
             ->when($request->filled('q'), function($q) use ($request) {
                 $q->where(function($sub) use ($request) {
                     $sub->whereHas('producto', function($p) use ($request) {
@@ -26,13 +25,13 @@ class PedidoController extends Controller
                 $q->where('completado', $request->completado);
             })
             ->latest();
-
+            
         $pedidos = $query->paginate(10)->withQueryString();
 
         return Inertia::render('Pedido/Index', [
             'pedidos' => $pedidos,
             'sucursales' => Sucursales::all(),
-            'filtroSucursal' => $request->sucursal,
+            'filtroSucursal' => $sucursal,
             'filtroCompletado' => $request->completado,
             'search' => $request->q,
         ]);
