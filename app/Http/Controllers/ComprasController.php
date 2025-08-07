@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatMarca;
+use App\Models\CatClasificacion;
 use App\Models\Compras;
 use App\Models\ComprasAbonos;
 use App\Models\ComprasProductos;
@@ -43,8 +44,13 @@ class ComprasController extends Controller
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
         }
 
+        $clasificaciones = CatClasificacion::get();
+        $marcas = CatMarca::get();
+
         return Inertia::render('Inventario/Compra/AddProductoCompra', [
-            'productos' => $productos
+            'productos' => $productos,
+            'clasificaciones' => $clasificaciones,
+            'marcas' => $marcas,
         ]);
     }
 
@@ -132,9 +138,14 @@ class ComprasController extends Controller
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
         }
 
+        $clasificaciones = CatClasificacion::get();
+        $marcas = CatMarca::get();
+
         return Inertia::render('Inventario/Compra/AddProductoCompra', [
             'productos' => $productos,
-            'compra'  => $compra
+            'compra'  => $compra,
+            'clasificaciones' => $clasificaciones,
+            'marcas' => $marcas,
         ]);
     }
 

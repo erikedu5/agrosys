@@ -1,5 +1,6 @@
 
 <script setup>
+    import { ref, reactive } from 'vue';
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import 'v-calendar/style.css';
@@ -7,6 +8,7 @@
     import moment from 'moment';
     import VCalendar from 'v-calendar';
     import InputError from '@/Components/InputError.vue';
+    import DialogModal from '@/Components/DialogModal.vue';
 
     const props=defineProps({
         compra: Object,
@@ -14,7 +16,17 @@
             type: Array,
             default: []
         },
+        clasificaciones: {
+            type: Array,
+            default: []
+        },
+        marcas: {
+            type: Array,
+            default: []
+        },
     });
+
+    const productoOptions = ref([...props.productos]);
 
     const form = useForm({
         id: props.compra !== undefined ? props.compra.id: null,
@@ -84,6 +96,58 @@
         });
     }
 
+    const showProductoModal = ref(false);
+    const productoForm = reactive({
+        nombre: '',
+        id_clasificacion: '',
+        id_marca: '',
+        precio_unitario: 0,
+        ieps: 3,
+        precio_ieps: 0,
+        tamano: '',
+        ingrediente_activo: '',
+    });
+    const productoErrors = ref({});
+
+    const openProductoModal = () => {
+        showProductoModal.value = true;
+    };
+
+    const closeProductoModal = () => {
+        showProductoModal.value = false;
+        productoForm.nombre = '';
+        productoForm.id_clasificacion = '';
+        productoForm.id_marca = '';
+        productoForm.precio_unitario = 0;
+        productoForm.ieps = 3;
+        productoForm.precio_ieps = 0;
+        productoForm.tamano = '';
+        productoForm.ingrediente_activo = '';
+        productoErrors.value = {};
+    };
+
+    const calcularIpsProducto = () => {
+        productoForm.precio_ieps = (((parseFloat(productoForm.precio_unitario) / 100) * parseFloat(productoForm.ieps)) + parseFloat(productoForm.precio_unitario)).toFixed(2);
+    };
+
+    const calcularPrecioCompraProducto = () => {
+        productoForm.precio_unitario = (parseFloat(productoForm.precio_ieps) - ((parseFloat(productoForm.precio_ieps) / 100) * parseFloat(productoForm.ieps))).toFixed(2);
+    };
+
+    const guardarProducto = () => {
+        axios.post(route('inventario.store'), productoForm, { headers: { Accept: 'application/json' } })
+            .then(response => {
+                productoOptions.value.push(response.data);
+                form.producto = response.data;
+                closeProductoModal();
+            })
+            .catch(error => {
+                if (error.response && error.response.status === 422) {
+                    productoErrors.value = error.response.data.errors;
+                }
+            });
+    };
+
     const agregarAbono = () => {
         form.abonoObj.cantidad_abonada = parseFloat(form.abono).toFixed(2);
         form.abonoObj.created_at = moment(new Date()).format('YYYY-MM-DD hh:mm:ss');
@@ -146,8 +210,12 @@
                                 v-model="form.producto"
                                 option-key="id"
                                 option-label="nombre"
-                                :options="productos">
+                                :options="productoOptions">
                             </vue-single-select>
+                            <button type="button" @click="openProductoModal"
+                                class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                Crear producto
+                            </button>
                             <br>
 
 
@@ -305,5 +373,83 @@
             <div class="flex-none w-14 h-14">
             </div>
         </div>
+        <DialogModal :show="showProductoModal" @close="closeProductoModal">
+            <template #title>
+                Crear producto
+            </template>
+
+            <template #content>
+                <div class="mt-4">
+                    <label class="block font-medium text-sm text-gray-700">Nombre</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.nombre">
+                    <InputError class="mt-2" :message="productoErrors.nombre" />
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Clasificacion</label>
+                    <select v-model="productoForm.id_clasificacion"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>Selecione</option>
+                        <option v-for="clasificacion in clasificaciones" :value="clasificacion.id" :key="clasificacion.id">
+                            {{ clasificacion.nombre }}
+                        </option>
+                    </select>
+                    <InputError class="mt-2" :message="productoErrors.id_clasificacion" />
+                    <br>
+
+                    <label class="block font-medium text-sm text-gray-700">Marca</label>
+                    <select v-model="productoForm.id_marca"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>Selecione</option>
+                        <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
+                            {{ marca.nombre }}
+                        </option>
+                    </select>
+                    <InputError class="mt-2" :message="productoErrors.id_marca" />
+                    <br>
+
+                    <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
+                    <input @change="calcularIpsProducto" class="form-input w-full rounded-md shadow-sm" v-model="productoForm.precio_unitario">
+                    <InputError class="mt-2" :message="productoErrors.precio_unitario" />
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">IEPS</label>
+                    <select v-model="productoForm.ieps" @change="calcularIpsProducto"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="" disabled>Selecione</option>
+                        <option value="0">0%</option>
+                        <option value="3">3%</option>
+                        <option value="6">6%</option>
+                        <option value="7">7%</option>
+                        <option value="9">9%</option>
+                    </select>
+                    <InputError class="mt-2" :message="productoErrors.ieps" />
+                    <br>
+
+                    <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
+                    <input @change="calcularPrecioCompraProducto" class="form-input w-full rounded-md shadow-sm" v-model="productoForm.precio_ieps">
+                    <InputError class="mt-2" :message="productoErrors.precio_ieps" />
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Tamaño</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.tamano">
+                    <InputError class="mt-2" :message="productoErrors.tamano" />
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Ingrediente activo</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.ingrediente_activo">
+                    <InputError class="mt-2" :message="productoErrors.ingrediente_activo" />
+                </div>
+            </template>
+
+            <template #footer>
+                <button @click="closeProductoModal"
+                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    Cancelar
+                </button>
+                <button @click="guardarProducto" class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    Guardar
+                </button>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

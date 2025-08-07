@@ -78,6 +78,11 @@ class ProductoController extends Controller
         $altaInventario->id_sucursal = Auth::user()->id_sucursal;
         $altaInventario->save();
 
+        if ($request->expectsJson()) {
+            $producto->marca = CatMarca::find($producto->id_marca);
+            return response()->json($producto);
+        }
+
         return redirect()->route('solucion.index', [
             'id_producto' => $producto->id
         ]);
