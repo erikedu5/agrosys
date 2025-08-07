@@ -96,6 +96,21 @@
         });
     }
 
+    const showAddProductoModal = ref(false);
+
+    const openAddProductoModal = () => {
+        showAddProductoModal.value = true;
+    };
+
+    const closeAddProductoModal = () => {
+        showAddProductoModal.value = false;
+    };
+
+    const handleAddProducto = () => {
+        addProducto();
+        closeAddProductoModal();
+    };
+
     const showProductoModal = ref(false);
     const productoForm = reactive({
         nombre: '',
@@ -197,41 +212,8 @@
 
                             <label>Productos: </label>
 
-                            <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                            <input :disabled="props.compra !== undefined"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.cantidad_pedido">
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
-                            <vue-single-select :disabled="props.compra !== undefined"
-                                placeholder="Seleccione un producto"
-                                v-model="form.producto"
-                                option-key="id"
-                                option-label="nombre"
-                                :options="productoOptions">
-                            </vue-single-select>
-                            <button type="button" @click="openProductoModal"
+                            <button type="button" @click="openAddProductoModal"
                                 class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Crear producto
-                            </button>
-                            <br>
-
-
-                            <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
-                            <input :disabled="props.compra !== undefined"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.precio_compra">
-                            <br>
-                            <br>
-
-                            <button :disabled="props.compra !== undefined"
-                            @click.prevent="addProducto($event)"
-                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                 Agregar producto
                             </button>
                             <br>
@@ -241,24 +223,16 @@
                                 <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                     <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                         <tr>
-                                        <th>Id</th>
                                         <th>Nombre del producto</th>
-                                        <th>Ingrediente activo</th>
-                                        <th>Tamaño</th>
-                                        <th>Marca</th>
                                         <th>Cantidad del pedido</th>
-                                        <th>Precio Compra</th>
+                                        <th>Precio compra</th>
                                         <th>Subtotal</th>
                                         <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr v-for="producto in form.productos" :key="producto.id">
-                                            <td class="px-4 py-2"> {{ producto.id }}</td>
                                             <td class="px-4 py-2"> {{ producto.nombre }} </td>
-                                            <td class="px-4 py-2"> {{ producto.ingrediente_activo }} </td>
-                                            <td class="px-4 py-2"> {{ producto.tamano }} </td>
-                                            <td class="px-4 py-2"> {{ producto.marca.nombre }}</td>
                                             <td class="px-4 py-2"> {{ producto.cantidad }}</td>
                                             <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
                                             <td class="px-4 py-2"> {{ producto.subtotal }}</td>
@@ -373,6 +347,45 @@
             <div class="flex-none w-14 h-14">
             </div>
         </div>
+        <DialogModal :show="showAddProductoModal" @close="closeAddProductoModal">
+            <template #title>
+                Agregar producto
+            </template>
+
+            <template #content>
+                <div class="mt-4">
+                    <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="form.cantidad_pedido">
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
+                    <vue-single-select placeholder="Seleccione un producto"
+                        v-model="form.producto"
+                        option-key="id"
+                        option-label="nombre"
+                        :options="productoOptions">
+                    </vue-single-select>
+                    <button type="button" @click="openProductoModal"
+                        class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        Crear producto
+                    </button>
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="form.precio_compra">
+                </div>
+            </template>
+
+            <template #footer>
+                <button @click="closeAddProductoModal"
+                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    Cancelar
+                </button>
+                <button @click="handleAddProducto" class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    Agregar
+                </button>
+            </template>
+        </DialogModal>
         <DialogModal :show="showProductoModal" @close="closeProductoModal">
             <template #title>
                 Crear producto
