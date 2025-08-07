@@ -6,6 +6,7 @@
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import moment from 'moment';
     import VCalendar from 'v-calendar';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         compra: Object,
@@ -126,6 +127,7 @@
                             <input type="text" :disabled="props.compra !== undefined"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.proveedor">
+                            <InputError class="mt-2" :message="form.errors.proveedor" />
                             <br>
                             <br>
 
@@ -210,40 +212,26 @@
                             </div>
                             <hr class="my-6">
 
-                            <div v-if="$page.props.errors.proveedor" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                <span class="block sm:inline"> {{ $page.props.errors.proveedor }}</span>
-                            </div>
-                            <br>
-
                             <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
                             <VDatePicker class="form-input w-full rounded-md shadow-sm"
                                 :max-date="props.compra !== undefined? form.fecha_compra: null"
                                 :min-date="props.compra !== undefined? form.fecha_compra: null"
                                 v-model="form.fecha_compra" expanded />
-                            <br>
-                            <div v-if="$page.props.errors.fecha_compra" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                <span class="block sm:inline"> {{ $page.props.errors.fecha_compra }}</span>
-                            </div>
+                            <InputError class="mt-2" :message="form.errors.fecha_compra" />
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
                             <input
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.total_compra" disabled>
-                            <br>
-                            <div v-if="$page.props.errors.total_compra" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                <span class="block sm:inline"> {{ $page.props.errors.total_compra }}</span>
-                            </div>
+                            <InputError class="mt-2" :message="form.errors.total_compra" />
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Total de credito</label>
                             <input
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.total_credito" disabled>
-                            <br>
-                            <div v-if="$page.props.errors.total_credito" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                <span class="block sm:inline"> {{ $page.props.errors.total_credito }}</span>
-                            </div>
+                            <InputError class="mt-2" :message="form.errors.total_credito" />
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
@@ -257,11 +245,7 @@
                             <option value="pagada">Pagada</option>
                             <option value="pagada" :disabled="form.compra == undefined">Retrasada</option>
                             </select>
-
-                            <div v-if="$page.props.errors.status" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                <br>
-                                <span class="block sm:inline"> {{ $page.props.errors.status }}</span>
-                            </div>
+                            <InputError class="mt-2" :message="form.errors.status" />
                             <br>
 
                             <hr class="my-6">

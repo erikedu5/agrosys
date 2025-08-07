@@ -3,6 +3,7 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import Checkbox from '@/Components/Checkbox.vue';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({cliente: Object});
 
@@ -42,6 +43,7 @@
                             <input type="text" required
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                             <br>
                             <br>
 
@@ -49,6 +51,7 @@
                             <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.porcentaje_descuento">
+                            <InputError class="mt-2" :message="form.errors.porcentaje_descuento" />
                             <br>
                             <br>
                             <label class="block font-medium text-sm text-gray-700">
@@ -60,6 +63,7 @@
                             <input :required="form.requiereFactura"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.rfc">
+                            <InputError class="mt-2" :message="form.errors.rfc" />
                             <br>
                             <br>
 

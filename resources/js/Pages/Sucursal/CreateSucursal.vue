@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         sucursal: Object,
@@ -55,6 +56,7 @@
                                 {{ empresa.nombre }}
                             </option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.id_empresa" />
 
                             <br>
                             <br>
@@ -63,6 +65,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                             <br>
                             <br>
 
@@ -70,6 +73,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.direccion">
+                            <InputError class="mt-2" :message="form.errors.direccion" />
                             <br>
                             <br>
 
@@ -77,6 +81,7 @@
                             <input type="tel"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.telefono">
+                            <InputError class="mt-2" :message="form.errors.telefono" />
                             <br>
                             <br>
 
@@ -84,6 +89,7 @@
                             <input type="email"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.email">
+                            <InputError class="mt-2" :message="form.errors.email" />
                             <br>
                             <br>
 

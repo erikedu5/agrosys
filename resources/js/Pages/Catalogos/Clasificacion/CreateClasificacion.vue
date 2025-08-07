@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({clasificacion: Object});
     
@@ -36,15 +37,16 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" 
+                            <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                                 <br>
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Criterio</label>
                             <select v-model="form.criterio" id="criterio" name="criterio"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm 
+                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                                     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             <option value="" disabled>Selecione</option>
                             <option value="Función">Por Función</option>
@@ -52,6 +54,7 @@
                             <option value="Persistencia">Por Persistencia</option>
                             <option value="Modo de Accion">Por Modo de Acción</option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.criterio" />
                                 <br>
                                 <br>
                             <button 

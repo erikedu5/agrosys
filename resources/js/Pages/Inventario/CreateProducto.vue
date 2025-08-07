@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         producto: Object,
@@ -60,6 +61,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                                 <br>
                                 <br>
 
@@ -72,6 +74,7 @@
                                     {{ clasificacion.nombre }}
                                 </option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.id_clasificacion" />
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Marca</label>
@@ -83,6 +86,7 @@
                                     {{ marca.nombre }}
                                 </option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.id_marca" />
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
@@ -90,6 +94,7 @@
                                 @change="calcularIps()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_unitario">
+                            <InputError class="mt-2" :message="form.errors.precio_unitario" />
                                 <br>
                                 <br>
 
@@ -105,6 +110,7 @@
                             <option value="7">7%</option>
                             <option value="9">9%</option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.ieps" />
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
@@ -112,6 +118,7 @@
                                 @change="calcularPrecioCompra()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_ieps">
+                            <InputError class="mt-2" :message="form.errors.precio_ieps" />
                                 <br>
                                 <br>
 
@@ -119,6 +126,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.tamano">
+                            <InputError class="mt-2" :message="form.errors.tamano" />
                             <br>
                             <br>
 
@@ -126,6 +134,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.ingrediente_activo">
+                            <InputError class="mt-2" :message="form.errors.ingrediente_activo" />
                             <br>
                             <br>
 

@@ -5,13 +5,13 @@
     import { router, useForm } from '@inertiajs/vue3';
     import Pagination from '@/Components/Pagination.vue'
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import InputError from '@/Components/InputError.vue';
 
     const props = defineProps({
         producto: Object,
         enfermedadesFlor: Array,
         solucion: Object,
         solucionesByProduct: Array,
-        errors: Array,
     });
 
     const form = useForm({
@@ -58,8 +58,8 @@
 
                 <div class="md-col-span-2 mt-5 md:mt-0">
 
-                    <div v-if="errors">
-                        <div v-for="(v, k) in errors" :key="k"
+                    <div v-if="Object.keys(form.errors).length">
+                        <div v-for="(v, k) in form.errors" :key="k"
                             class="bg-red-400 text-white rounded font-bold mb-4 shadow-lg py-2 px-4 pr-0">
                                 {{ v }}
                         </div>
@@ -67,15 +67,16 @@
 
                     <div class="shadow bg-white md:rounded-md p-4">
                         <label class="block font-medium text-sm text-gray-700">Enfermedad y flor que afecta</label>
-                        <vue-single-select
-                            id = "solucion"
-                            placeholder="Selecione enfermedad"
-                            v-model="form.id_enfermedad_tipo_flor"
-                            option-key="id"
-                            option-label="nombre"
-                            :class="selectClient ? 'pointer-events-none': '' "
-                            :options="enfermedadesFlor">
-                        </vue-single-select>
+        <vue-single-select
+            id = "solucion"
+            placeholder="Selecione enfermedad"
+            v-model="form.id_enfermedad_tipo_flor"
+            option-key="id"
+            option-label="nombre"
+            :class="selectClient ? 'pointer-events-none': '' "
+            :options="enfermedadesFlor">
+        </vue-single-select>
+        <InputError class="mt-2" :message="form.errors.id_enfermedad_tipo_flor" />
                         <br>
 
                         <form @submit.prevent="submit">
@@ -83,6 +84,7 @@
                             <textarea
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.condiciones"></textarea>
+                            <InputError class="mt-2" :message="form.errors.condiciones" />
                             <br>
                             <br>
 
@@ -90,6 +92,7 @@
                             <input type="number" step="0.01" @input="addDosisbomba()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_bomba_ml">
+                            <InputError class="mt-2" :message="form.errors.dosis_bomba_ml" />
                             <br>
                             <br>
 
@@ -97,6 +100,7 @@
                             <input type="number" step="0.01" @input="addDosistambo()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.dosis_tambo_ml">
+                            <InputError class="mt-2" :message="form.errors.dosis_tambo_ml" />
                             <br>
                             <br>
 

@@ -16,10 +16,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
-                                <br>
-                                <div v-if="$page.props.errors.nombre" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                    <span class="block sm:inline"> {{ $page.props.errors.nombre }}</span>
-                                </div>
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                                 <br>
                                 <label class="block font-medium text-sm text-gray-700">Enfermedades (Seleccione más de una con tecla ctrl/command)</label>
                                 <select multiple v-model="form.selectedOptions" class="w-full h-64 rounded-md shadow-sm">
@@ -27,10 +24,7 @@
                                         {{ enfermedad.nombre }}
                                     </option>
                                 </select>
-                                <br>
-                                <div v-if="$page.props.errors.selectedOptions" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                                    <span class="block sm:inline"> {{ $page.props.errors.selectedOptions }}</span>
-                                </div>
+                                <InputError class="mt-2" :message="form.errors.selectedOptions" />
                                 <br>
                             <button
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
@@ -53,6 +47,7 @@
 import AppLayout from'@/Layouts/AppLayout.vue';
 import{ useForm }from'@inertiajs/vue3';
 import { ref } from 'vue';
+import InputError from '@/Components/InputError.vue';
 
 
 const props=defineProps({

@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({empresa: Object});
 
@@ -46,6 +47,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                             <br>
                             <br>
 
@@ -53,6 +55,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.direccion">
+                            <InputError class="mt-2" :message="form.errors.direccion" />
                             <br>
                             <br>
 

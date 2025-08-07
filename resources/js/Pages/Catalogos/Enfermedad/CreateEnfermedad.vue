@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({enfermedad: Object});
     
@@ -36,18 +37,20 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" 
+                            <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.nombre">
+                            <InputError class="mt-2" :message="form.errors.nombre" />
                             <br>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Descripción</label>
-                            <textarea 
+                            <textarea
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.descripcion"
                                 rows="8">
                             </textarea>
+                            <InputError class="mt-2" :message="form.errors.descripcion" />
                             <br>
                             <br>
 
