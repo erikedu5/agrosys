@@ -58,13 +58,6 @@
 
                 <div class="md-col-span-2 mt-5 md:mt-0">
 
-                    <div v-if="Object.keys(form.errors).length">
-                        <div v-for="(v, k) in form.errors" :key="k"
-                            class="bg-red-400 text-white rounded font-bold mb-4 shadow-lg py-2 px-4 pr-0">
-                                {{ v }}
-                        </div>
-                    </div>
-
                     <div class="shadow bg-white md:rounded-md p-4">
                         <label class="block font-medium text-sm text-gray-700">Enfermedad y flor que afecta</label>
         <vue-single-select

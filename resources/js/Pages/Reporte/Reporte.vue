@@ -3,6 +3,8 @@
     import { useForm } from '@inertiajs/vue3';
     import VueDatePicker from '@vuepic/vue-datepicker';
     import '@vuepic/vue-datepicker/dist/main.css';
+    import InputError from '@/Components/InputError.vue';
+    import { ref } from 'vue';
 
     const props = defineProps({
         clasificaciones: Array,
@@ -10,7 +12,7 @@
         productos: Array
     });
 
-    let errors = [];
+    const errors = ref([]);
 
     const formReporte = useForm({
         datesReport: [],
@@ -29,8 +31,9 @@
     });
 
     const generarReporteVentas = () => {
+        errors.value = [];
         if (formReporte.datesReport.length == 0) {
-            errors.push('Debe seleccionar un rango de fecha');
+            errors.value.push('Debe seleccionar un rango de fecha');
             return;
         }
         let fechaFin = formReporte.datesReport[1];
@@ -42,6 +45,7 @@
     }
 
     const generarReporteVentasProducto = () => {
+        errors.value = [];
         let id_marca = formReporte.id_marca_venta;
         let id_producto = formReporte.id_producto;
 
@@ -58,6 +62,7 @@
     }
 
     const generarReporteInventario = () => {
+        errors.value = [];
         let query = "?";
         if (formReporte.id_clasificacion !== 0) {
             query = query + "id_clasificacion=" + formReporte.id_clasificacion + "&";
@@ -86,10 +91,8 @@
             <div class="flex-none w-14 h-14">
             </div>
             <div class="grow h-14">
-                <div v-show="errors.length > 0">
-                    <p v-for="error in errors" :value="error" :key="error">
-                        {{ error }}
-                    </p>
+                <div v-if="errors.length">
+                    <InputError v-for="(error, index) in errors" :key="index" class="mt-2" :message="error" />
                 </div>
                 <div class="shadow bg-white md:rounded-md p-4">
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
