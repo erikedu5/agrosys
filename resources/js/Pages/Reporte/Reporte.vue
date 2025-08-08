@@ -9,7 +9,8 @@
     const props = defineProps({
         clasificaciones: Array,
         marcas: Array,
-        productos: Array
+        productos: Array,
+        sucursales: Array,
     });
 
     const errors = ref([]);
@@ -28,6 +29,7 @@
         id_marca:  0,
         id_marca_venta: 0,
         id_producto: 0,
+        id_sucursal: 0,
     });
 
     const generarReporteVentas = () => {
@@ -39,7 +41,8 @@
         let fechaFin = formReporte.datesReport[1];
         let fechaInicio = formReporte.datesReport[0];
         let popup  = window.open( "_blank");
-        popup.location = '/reporte/venta?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        let sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        popup.location = '/reporte/venta?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
         location.replace('/reporte');
 
     }
@@ -53,7 +56,8 @@
         let fechaInicio = formReporte.datesReportVenta[0];
 
         let popup  = window.open( "_blank");
-        popup.location = '/reporte/ventaPorProductoMarca?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        let sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        popup.location = '/reporte/ventaPorProductoMarca?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
 
         formReporte.id_marca_venta = 0;
         formReporte.id_producto = 0;
@@ -71,6 +75,9 @@
             query = query + "id_marca=" + formReporte.id_marca + "&";
         }
         let popup  = window.open( "_blank");
+        if (formReporte.id_sucursal) {
+            query = query + 'id_sucursal=' + formReporte.id_sucursal + '&';
+        }
         popup.location = '/reporte/inventario' + query;
         location.replace('/reporte');
     }
@@ -95,6 +102,16 @@
                     <InputError v-for="(error, index) in errors" :key="index" class="mt-2" :message="error" />
                 </div>
                 <div class="shadow bg-white md:rounded-md p-4">
+                    <div v-if="props.sucursales.length > 0">
+                        <label class="block font-medium text-sm text-gray-700">Sucursal</label>
+                        <select v-model="formReporte.id_sucursal" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="0" disabled>Seleccione</option>
+                            <option v-for="sucursal in props.sucursales" :value="sucursal.id" :key="sucursal.id">
+                                {{ sucursal.nombre }}
+                            </option>
+                        </select>
+                        <br>
+                    </div>
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
                         v-if="$page.props.auth.user.tipo == 'vendedor' ||
                             $page.props.auth.user.tipo == 'admin' ||

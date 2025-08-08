@@ -59,12 +59,34 @@ const logout = () => {
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <NavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                                <div v-if="$page.props.auth.user.tipo == 'vendedor' ||
                                                $page.props.auth.user.tipo == 'superAdmin' ||
-                                               $page.props.auth.user.tipo == 'admin' "
-                                    :href="route('venta.index')" :active="route().current('venta.*')">
-                                    Venta
-                                </NavLink>
+                                               $page.props.auth.user.tipo == 'admin'"
+                                    class="inline-flex items-center px-1 pt-1 border-b-2
+                                            border-transparent text-sm font-medium leading-5
+                                            text-gray-500 dark:text-gray-400 hover:text-gray-700
+                                            dark:hover:text-gray-300 hover:border-gray-300
+                                            dark:hover:border-gray-700 focus:outline-none focus:text-gray-700
+                                            dark:focus:text-gray-300 focus:border-gray-300
+                                            dark:focus:border-gray-700 transition
+                                            duration-150 ease-in-out">
+                                    <Dropdown>
+                                        <template #trigger >
+                                            <button type="button">
+                                                Venta
+                                            </button>
+                                        </template>
+
+                                        <template #content>
+                                            <DropdownLink :href="route('venta.index')" :active="route().current('venta.index')">
+                                                Venta
+                                            </DropdownLink>
+                                            <DropdownLink :href="route('devoluciones.list')" :active="route().current('devoluciones.list')">
+                                                Devoluciones
+                                            </DropdownLink>
+                                        </template>
+                                    </Dropdown>
+                                </div>
 
                                 <div v-if="$page.props.auth.user.tipo == 'inventario' ||
                                            $page.props.auth.user.tipo == 'admin' ||
@@ -286,8 +308,14 @@ const logout = () => {
                         <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
                                                  $page.props.auth.user.tipo == 'admin' ||
                                                  $page.props.auth.user.tipo == 'superAdmin' "
-                                               :href="route('venta.index')" :active="route().current('venta.*')">
+                                               :href="route('venta.index')" :active="route().current('venta.index')">
                             Venta
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                                                 $page.props.auth.user.tipo == 'admin' ||
+                                                 $page.props.auth.user.tipo == 'superAdmin' "
+                                               :href="route('devoluciones.list')" :active="route().current('devoluciones.list')">
+                            Devoluciones
                         </ResponsiveNavLink>
                         <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' ||
                                                  $page.props.auth.user.tipo == 'admin' ||
