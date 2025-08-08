@@ -30,7 +30,7 @@ class ReporteController extends Controller
         $sucursales = [];
         $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
         if (Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursales = Sucursales::all();
+            $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
         return Inertia::render('Reporte/Reporte', [
@@ -58,7 +58,10 @@ class ReporteController extends Controller
         $idSucursal = Auth::user()->id_sucursal;
         $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
         if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $idSucursal = $request->id_sucursal;
+            $sucursal = Sucursales::find($request->id_sucursal);
+            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
+                $idSucursal = $request->id_sucursal;
+            }
         }
 
         $ventas = Venta::where('created_at', '>=', $fechaInicio)
@@ -129,7 +132,10 @@ class ReporteController extends Controller
         $idSucursal = Auth::user()->id_sucursal;
         $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
         if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $idSucursal = $request->id_sucursal;
+            $sucursal = Sucursales::find($request->id_sucursal);
+            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
+                $idSucursal = $request->id_sucursal;
+            }
         }
         if ($request->has('id_clasificacion')) {
             $inventario->where('id_clasificacion', $request->id_clasificacion);
@@ -184,12 +190,15 @@ class ReporteController extends Controller
 
         $ventas = [];
         $porProducto = $request->id_producto != 0;
-        $porMarca = $request->id_marca != 0;
-        $nameFilter = "";
-        $idSucursal = Auth::user()->id_sucursal;
-        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+       $porMarca = $request->id_marca != 0;
+       $nameFilter = "";
+       $idSucursal = Auth::user()->id_sucursal;
+       $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
         if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $idSucursal = $request->id_sucursal;
+            $sucursal = Sucursales::find($request->id_sucursal);
+            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
+                $idSucursal = $request->id_sucursal;
+            }
         }
 
         if($porProducto) {
