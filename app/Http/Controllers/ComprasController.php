@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatMarca;
+use App\Models\CatClasificacion;
 use App\Models\Compras;
 use App\Models\ComprasAbonos;
 use App\Models\ComprasProductos;
@@ -12,6 +13,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\AltaInventario;
+use Illuminate\Support\Facades\Log;
 
 class ComprasController extends Controller
 {
@@ -43,8 +45,13 @@ class ComprasController extends Controller
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
         }
 
+        $clasificaciones = CatClasificacion::get();
+        $marcas = CatMarca::get();
+
         return Inertia::render('Inventario/Compra/AddProductoCompra', [
-            'productos' => $productos
+            'productos' => $productos,
+            'clasificaciones' => $clasificaciones,
+            'marcas' => $marcas,
         ]);
     }
 
@@ -90,6 +97,7 @@ class ComprasController extends Controller
             $altaInventario->id_usuario = Auth::user()->id ;
             $altaInventario->id_producto = $producto['id'];
             $altaInventario->id_sucursal = Auth::user()->id_sucursal;
+            Log::info($altaInventario);
             $altaInventario->save();
         }
 
@@ -132,9 +140,14 @@ class ComprasController extends Controller
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
         }
 
+        $clasificaciones = CatClasificacion::get();
+        $marcas = CatMarca::get();
+
         return Inertia::render('Inventario/Compra/AddProductoCompra', [
             'productos' => $productos,
-            'compra'  => $compra
+            'compra'  => $compra,
+            'clasificaciones' => $clasificaciones,
+            'marcas' => $marcas,
         ]);
     }
 

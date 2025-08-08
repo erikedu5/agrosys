@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         usuario: Object,
@@ -50,6 +51,7 @@
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.name">
+                            <InputError class="mt-2" :message="form.errors.name" />
                             <br>
                             <br>
 
@@ -57,6 +59,7 @@
                             <input type="password"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.password">
+                            <InputError class="mt-2" :message="form.errors.password" />
                             <br>
                             <br>
 
@@ -64,6 +67,7 @@
                             <input type="email"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.email">
+                            <InputError class="mt-2" :message="form.errors.email" />
                             <br>
                             <br>
 
@@ -76,6 +80,7 @@
                             <option value="vendedor">Vendedor</option>
                             <option value="inventario">Inventario</option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.tipo" />
 
                             <br>
 
@@ -88,6 +93,7 @@
                                 {{ sucursal.nombre }}
                             </option>
                             </select>
+                            <InputError class="mt-2" :message="form.errors.id_sucursal" />
 
                             <br>
                             <br>

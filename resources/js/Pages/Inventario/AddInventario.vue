@@ -2,6 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
+    import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         producto: Object, 
@@ -48,6 +49,7 @@
                             <input type="number" min="1" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.cantidad">
+                            <InputError class="mt-2" :message="form.errors.cantidad" />
                                 <br>
                                 <br>
 

@@ -16,6 +16,7 @@ class Sucursales extends Model
         'email',
         'es_matriz',
         'id_empresa',
+        'ticket_width_mm',
     ];
 
     public function empresa()

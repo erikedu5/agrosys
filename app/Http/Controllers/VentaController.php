@@ -183,7 +183,7 @@ class VentaController extends Controller
         ]);
     }
 
-    public function ticket(Venta $venta) {
+    public function ticket(\Illuminate\Http\Request $request, Venta $venta) {
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
             $producto->detail = Producto::find($producto->id_producto);
@@ -200,13 +200,21 @@ class VentaController extends Controller
         ->where('is_active', true)
         ->get();
 
-        $pdf = app('dompdf.wrapper');
-        $pdf->getDomPDF()->set_option("enable_php", true);
-        $pdf->loadView('reportes/venta',
-            compact("venta", "productos", "cliente", 'empresa', 'abonos', 'usuario'));
-        $pdf->setOption('javascript-delay', 3000);
+        // Elegir ancho por parámetro ?size=80|58 (mm); por sucursal por defecto (80 si no definido)
+        $sucursalPref = optional(Sucursales::find(Auth::user()->id_sucursal))->ticket_width_mm ?? 80;
+        $ticketWidthMm = (int) $request->query('size', $sucursalPref);
+        $ticketWidthMm = in_array($ticketWidthMm, [58, 80]) ? $ticketWidthMm : 80;
+        $widthPoints = $ticketWidthMm * 2.83465; // mm a puntos
 
-        return $pdf->stream('venta.pdf');
+        $pdf = app('dompdf.wrapper');
+        $pdf->getDomPDF()->set_option('enable_php', true);
+        $pdf->loadView('reportes/venta_ticket_80mm', compact('venta', 'productos', 'cliente', 'empresa', 'abonos', 'usuario', 'ticketWidthMm'));
+        // Ancho según parámetro, alto largo para contenido
+        $customPaper = [0, 0, $widthPoints, 2834.65];
+        $pdf->setPaper($customPaper, 'portrait');
+        $pdf->setOption('javascript-delay', 500);
+
+        return $pdf->stream('ticket_venta.pdf');
     }
 
     /**

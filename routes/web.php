@@ -24,13 +24,31 @@ Route::get('/', function() {
 Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
 ->name('dashboard')
 ->middleware('auth:sanctum');
+Route::get('/venta/devoluciones/index', [App\Http\Controllers\DevolucionesController::class, 'index'])
+    ->name('venta.devoluciones.index')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/devoluciones/list', [App\Http\Controllers\DevolucionesController::class, 'list'])
+    ->name('devoluciones.list')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesController::class, 'create'])
+    ->name('venta.devoluciones.create')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
+
+Route::post('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesController::class, 'store'])
+    ->name('venta.devoluciones.store')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
 
 Route::resource('/venta', App\Http\Controllers\VentaController::class)
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
 Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'ticket'])
 ->name("ticket")
-->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
 
 Route::resource('/inventario', App\Http\Controllers\ProductoController::class)
 ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
@@ -82,6 +100,19 @@ Route::get('/reporte/ventaPorProductoMarca', [App\Http\Controllers\ReporteContro
 ->name("reporte.ventaPorProductoMarca")
 ->middleware('auth:sanctum', 'hasRoles:vendedor-admin-superAdmin');
 
+// Versiones para impresión térmica (80mm)
+Route::get('/reporte/venta-ticket', [App\Http\Controllers\ReporteController::class, 'ventaTicket'])
+->name('reporte.ventaTicket')
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/reporte/inventario-ticket', [App\Http\Controllers\ReporteController::class, 'inventarioTicket'])
+->name('reporte.inventarioTicket')
+->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
+
+Route::get('/reporte/ventaPorProductoMarca-ticket', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarcaTicket'])
+->name('reporte.ventaPorProductoMarcaTicket')
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
 Route::resource('/compra', \App\Http\Controllers\ComprasController::class)
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
@@ -94,7 +125,7 @@ Route::put('/facturas/update', [\App\Http\Controllers\FacturaController::class, 
 ->name("facturas.update")
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
-Route::get('/pedidos', [\App\Http\Controllers\PedidoController::class, 'index'])
+Route::get('/pedidos/index', [\App\Http\Controllers\PedidoController::class, 'index'])
     ->name('pedidos.index')
     ->middleware('auth:sanctum');
 

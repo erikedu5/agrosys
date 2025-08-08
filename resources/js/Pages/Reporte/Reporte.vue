@@ -3,14 +3,17 @@
     import { useForm } from '@inertiajs/vue3';
     import VueDatePicker from '@vuepic/vue-datepicker';
     import '@vuepic/vue-datepicker/dist/main.css';
+    import InputError from '@/Components/InputError.vue';
+    import { ref } from 'vue';
 
     const props = defineProps({
         clasificaciones: Array,
         marcas: Array,
-        productos: Array
+        productos: Array,
+        sucursales: Array,
     });
 
-    let errors = [];
+    const errors = ref([]);
 
     const formReporte = useForm({
         datesReport: [],
@@ -26,22 +29,26 @@
         id_marca:  0,
         id_marca_venta: 0,
         id_producto: 0,
+        id_sucursal: 0,
     });
 
     const generarReporteVentas = () => {
+        errors.value = [];
         if (formReporte.datesReport.length == 0) {
-            errors.push('Debe seleccionar un rango de fecha');
+            errors.value.push('Debe seleccionar un rango de fecha');
             return;
         }
         let fechaFin = formReporte.datesReport[1];
         let fechaInicio = formReporte.datesReport[0];
         let popup  = window.open( "_blank");
-        popup.location = '/reporte/venta?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        let sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        popup.location = '/reporte/venta?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
         location.replace('/reporte');
 
     }
 
     const generarReporteVentasProducto = () => {
+        errors.value = [];
         let id_marca = formReporte.id_marca_venta;
         let id_producto = formReporte.id_producto;
 
@@ -49,7 +56,8 @@
         let fechaInicio = formReporte.datesReportVenta[0];
 
         let popup  = window.open( "_blank");
-        popup.location = '/reporte/ventaPorProductoMarca?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin;
+        let sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        popup.location = '/reporte/ventaPorProductoMarca?id_marca=' + id_marca + '&id_producto=' + id_producto + '&fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
 
         formReporte.id_marca_venta = 0;
         formReporte.id_producto = 0;
@@ -58,6 +66,7 @@
     }
 
     const generarReporteInventario = () => {
+        errors.value = [];
         let query = "?";
         if (formReporte.id_clasificacion !== 0) {
             query = query + "id_clasificacion=" + formReporte.id_clasificacion + "&";
@@ -66,6 +75,9 @@
             query = query + "id_marca=" + formReporte.id_marca + "&";
         }
         let popup  = window.open( "_blank");
+        if (formReporte.id_sucursal) {
+            query = query + 'id_sucursal=' + formReporte.id_sucursal + '&';
+        }
         popup.location = '/reporte/inventario' + query;
         location.replace('/reporte');
     }
@@ -86,12 +98,20 @@
             <div class="flex-none w-14 h-14">
             </div>
             <div class="grow h-14">
-                <div v-show="errors.length > 0">
-                    <p v-for="error in errors" :value="error" :key="error">
-                        {{ error }}
-                    </p>
+                <div v-if="errors.length">
+                    <InputError v-for="(error, index) in errors" :key="index" class="mt-2" :message="error" />
                 </div>
                 <div class="shadow bg-white md:rounded-md p-4">
+                    <div v-if="props.sucursales.length > 0">
+                        <label class="block font-medium text-sm text-gray-700">Sucursal</label>
+                        <select v-model="formReporte.id_sucursal" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="0" disabled>Seleccione</option>
+                            <option v-for="sucursal in props.sucursales" :value="sucursal.id" :key="sucursal.id">
+                                {{ sucursal.nombre }}
+                            </option>
+                        </select>
+                        <br>
+                    </div>
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
                         v-if="$page.props.auth.user.tipo == 'vendedor' ||
                             $page.props.auth.user.tipo == 'admin' ||
