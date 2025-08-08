@@ -67,6 +67,7 @@ class ProductoController extends Controller
         ]);
 
         $data['id_usuario'] = Auth::user()->id;
+        $data['cantidad'] = 0;
         $request->merge($data);
         $producto = Producto::create($request->all());
 

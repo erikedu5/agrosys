@@ -75,7 +75,7 @@
         }
         form.producto.cantidad = form.cantidad_pedido;
         form.producto.precio_compra = form.precio_compra;
-        form.producto.subtotal = form.cantidad_pedido *  form.precio_compra;
+        form.producto.subtotal = (form.cantidad_pedido *  form.precio_compra).toFixed(2);
         form.total_compra += form.producto.subtotal;
         form.total_credito += form.producto.subtotal;
         parseFloat(form.producto.precio_compra).toFixed(2);
@@ -117,7 +117,7 @@
         id_clasificacion: '',
         id_marca: '',
         precio_unitario: 0,
-        ieps: 3,
+        ieps: 0,
         precio_ieps: 0,
         tamano: '',
         ingrediente_activo: '',
@@ -134,7 +134,7 @@
         productoForm.id_clasificacion = '';
         productoForm.id_marca = '';
         productoForm.precio_unitario = 0;
-        productoForm.ieps = 3;
+        productoForm.ieps = 0;
         productoForm.precio_ieps = 0;
         productoForm.tamano = '';
         productoForm.ingrediente_activo = '';
@@ -167,7 +167,6 @@
         form.abonoObj.cantidad_abonada = parseFloat(form.abono).toFixed(2);
         form.abonoObj.created_at = moment(new Date()).format('YYYY-MM-DD hh:mm:ss');
         form.abonos.push(form.abonoObj);
-        console.table(form.abonos);
         form.total_credito -= form.abono;
         if (form.total_credito == 0) {
             form.status = 'pagada';
@@ -355,7 +354,7 @@
             <template #content>
                 <div class="mt-4">
                     <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="form.cantidad_pedido">
+                    <input  type="number" min="1" class="form-input w-full rounded-md shadow-sm" v-model="form.cantidad_pedido">
                     <br><br>
 
                     <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
@@ -372,7 +371,7 @@
                     <br><br>
 
                     <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="form.precio_compra">
+                    <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.precio_compra">
                 </div>
             </template>
 
@@ -429,7 +428,7 @@
                     <select v-model="productoForm.ieps" @change="calcularIpsProducto"
                         class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                         <option value="" disabled>Selecione</option>
-                        <option value="0">0%</option>
+                        <option value="0" default>0%</option>
                         <option value="3">3%</option>
                         <option value="6">6%</option>
                         <option value="7">7%</option>

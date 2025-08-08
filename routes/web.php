@@ -94,7 +94,7 @@ Route::put('/facturas/update', [\App\Http\Controllers\FacturaController::class, 
 ->name("facturas.update")
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
-Route::get('/pedidos', [\App\Http\Controllers\PedidoController::class, 'index'])
+Route::get('/pedidos/index', [\App\Http\Controllers\PedidoController::class, 'index'])
     ->name('pedidos.index')
     ->middleware('auth:sanctum');
 

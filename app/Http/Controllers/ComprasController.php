@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\AltaInventario;
+use Illuminate\Support\Facades\Log;
 
 class ComprasController extends Controller
 {
@@ -96,6 +97,7 @@ class ComprasController extends Controller
             $altaInventario->id_usuario = Auth::user()->id ;
             $altaInventario->id_producto = $producto['id'];
             $altaInventario->id_sucursal = Auth::user()->id_sucursal;
+            Log::info($altaInventario);
             $altaInventario->save();
         }
 
