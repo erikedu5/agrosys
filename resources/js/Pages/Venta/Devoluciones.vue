@@ -13,7 +13,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('venta.devolucion.store', props.venta.id));
+    form.post(route('venta.devoluciones.store', props.venta.id));
 };
 </script>
 

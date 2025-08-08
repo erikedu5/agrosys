@@ -4,18 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\AltaInventario;
 use App\Models\Clientes;
-use App\Models\Devolucion;
-use App\Models\DevolucionDetalle;
+use App\Models\Devoluciones;
+use App\Models\DevolucionesDetalle;
 use App\Models\Producto;
 use App\Models\ProductoVenta;
-use App\Models\Sucursales;
 use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class DevolucionController extends Controller
+class DevolucionesController extends Controller
 {
     public function index()
     {
@@ -31,14 +30,15 @@ class DevolucionController extends Controller
             ];
         });
 
-        return Inertia::render('Venta/BuscarDevolucion', [
+        return Inertia::render('Venta/BuscarDevoluciones', [
             'ventasHoy' => $ventas,
         ]);
     }
 
     public function list()
     {
-        $devoluciones = Devolucion::where('id_sucursal', Auth::user()->id_sucursal)
+        $devoluciones = Devoluciones::where('id_sucursal', Auth::user()->id_sucursal)
+            ->with('detalles', 'detalles.producto')
             ->orderByDesc('created_at')
             ->get(['id', 'id_venta', 'total_devuelto', 'created_at']);
 
@@ -48,6 +48,7 @@ class DevolucionController extends Controller
                 'venta_id' => $d->id_venta,
                 'total' => $d->total_devuelto,
                 'fecha' => $d->created_at->toDateTimeString(),
+                'detalles' => $d->detalles,
             ];
         });
 
@@ -60,7 +61,7 @@ class DevolucionController extends Controller
     {
         $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get();
 
-        $devueltos = Devolucion::where('id_venta', $venta->id)
+        $devueltos = Devoluciones::where('id_venta', $venta->id)
             ->with('detalles')
             ->get()
             ->flatMap->detalles
@@ -81,7 +82,7 @@ class DevolucionController extends Controller
             ];
         }
 
-        return Inertia::render('Venta/Devolucion', [
+        return Inertia::render('Venta/Devoluciones', [
             'venta' => $venta,
             'items' => $items,
         ]);
@@ -97,7 +98,7 @@ class DevolucionController extends Controller
         ]);
 
         $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get()->keyBy('id_producto');
-        $devueltos = Devolucion::where('id_venta', $venta->id)
+        $devueltos = Devoluciones::where('id_venta', $venta->id)
             ->with('detalles')
             ->get()
             ->flatMap->detalles
@@ -135,10 +136,10 @@ class DevolucionController extends Controller
             }
 
             if (empty($detallesValidos)) {
-                abort(422, 'No hay devoluciones válidas.');
+                abort(422, 'No hay Devoluciones válidas.');
             }
 
-            $devolucion = Devolucion::create([
+            $Devoluciones = Devoluciones::create([
                 'id_venta' => $venta->id,
                 'id_usuario' => Auth::id(),
                 'id_sucursal' => Auth::user()->id_sucursal,
@@ -147,8 +148,8 @@ class DevolucionController extends Controller
             ]);
 
             foreach ($detallesValidos as $det) {
-                DevolucionDetalle::create([
-                    'id_devolucion' => $devolucion->id,
+                DevolucionesDetalle::create([
+                    'id_devolucion' => $Devoluciones->id,
                     'id_producto' => $det['id_producto'],
                     'cantidad' => $det['cantidad'],
                     'total' => $det['total'],
@@ -188,7 +189,7 @@ class DevolucionController extends Controller
             }
         });
 
-        return redirect()->route('devolucion.list')->with('success', 'Devolución registrada correctamente');
+        return redirect()->route('devoluciones.list')->with('success', 'Devolución registrada correctamente');
     }
 }
 

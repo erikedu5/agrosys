@@ -12,7 +12,7 @@ const venta = ref(null);
 
 const buscar = () => {
     if (venta.value) {
-        router.get(route('venta.devolucion.create', venta.value.id));
+        router.get(route('venta.devoluciones.create', venta.value.id));
     }
 };
 </script>

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DevolucionDetalle extends Model
+class DevolucionesDetalle extends Model
 {
     use HasFactory;
 
@@ -17,5 +17,10 @@ class DevolucionDetalle extends Model
     protected $fillable = [
         'id_devolucion', 'id_producto', 'cantidad', 'total'
     ];
+
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto');
+    }
 }
 
