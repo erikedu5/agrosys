@@ -102,6 +102,7 @@ class WebRoutes
 
     /**
      * @OA\Get(path="/venta/devoluciones", summary="Ventas - búsqueda de devoluciones", tags={"Web"}, security={{"SessionAuth":{}}})
+     * @OA\Get(path="/devoluciones", summary="Ventas - listado de devoluciones", tags={"Web"}, security={{"SessionAuth":{}}})
      * @OA\Get(path="/venta/{venta}/devolucion", summary="Ventas - formulario de devolución", tags={"Web"}, security={{"SessionAuth":{}}},
      *   @OA\Parameter(name="venta", in="path", required=true, @OA\Schema(type="integer")))
      * @OA\Post(path="/venta/{venta}/devolucion", summary="Ventas - guardar devolución", tags={"Web"}, security={{"SessionAuth":{}}},

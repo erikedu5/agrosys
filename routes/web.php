@@ -28,6 +28,10 @@ Route::get('/venta/devoluciones', [App\Http\Controllers\DevolucionController::cl
     ->name('venta.devolucion.index')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
+Route::get('/devoluciones', [App\Http\Controllers\DevolucionController::class, 'list'])
+    ->name('devolucion.list')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
 Route::get('/venta/{venta}/devolucion', [App\Http\Controllers\DevolucionController::class, 'create'])
     ->name('venta.devolucion.create')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])

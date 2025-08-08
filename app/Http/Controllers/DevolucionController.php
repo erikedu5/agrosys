@@ -36,6 +36,26 @@ class DevolucionController extends Controller
         ]);
     }
 
+    public function list()
+    {
+        $devoluciones = Devolucion::where('id_sucursal', Auth::user()->id_sucursal)
+            ->orderByDesc('created_at')
+            ->get(['id', 'id_venta', 'total_devuelto', 'created_at']);
+
+        $devoluciones = $devoluciones->map(function ($d) {
+            return [
+                'id' => $d->id,
+                'venta_id' => $d->id_venta,
+                'total' => $d->total_devuelto,
+                'fecha' => $d->created_at->toDateTimeString(),
+            ];
+        });
+
+        return Inertia::render('Venta/ListadoDevoluciones', [
+            'devoluciones' => $devoluciones,
+        ]);
+    }
+
     public function create(Venta $venta)
     {
         $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get();
@@ -168,7 +188,7 @@ class DevolucionController extends Controller
             }
         });
 
-        return redirect()->route('venta.show', $venta->id)->with('success', 'Devolución registrada correctamente');
+        return redirect()->route('devolucion.list')->with('success', 'Devolución registrada correctamente');
     }
 }
 

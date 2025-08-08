@@ -84,6 +84,9 @@ const logout = () => {
                                             <DropdownLink :href="route('venta.devolucion.index')" :active="route().current('venta.devolucion.*')">
                                                 Devolución
                                             </DropdownLink>
+                                            <DropdownLink :href="route('devolucion.list')" :active="route().current('devolucion.list')">
+                                                Listado de devoluciones
+                                            </DropdownLink>
                                         </template>
                                     </Dropdown>
                                 </div>
@@ -316,6 +319,12 @@ const logout = () => {
                                                  $page.props.auth.user.tipo == 'superAdmin' "
                                                :href="route('venta.devolucion.index')" :active="route().current('venta.devolucion.*')">
                             Devolución
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                                                 $page.props.auth.user.tipo == 'admin' ||
+                                                 $page.props.auth.user.tipo == 'superAdmin' "
+                                               :href="route('devolucion.list')" :active="route().current('devolucion.list')">
+                            Listado de devoluciones
                         </ResponsiveNavLink>
                         <ResponsiveNavLink v-if="$page.props.auth.user.tipo == 'inventario' ||
                                                  $page.props.auth.user.tipo == 'admin' ||
