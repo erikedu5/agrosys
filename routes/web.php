@@ -82,6 +82,19 @@ Route::get('/reporte/ventaPorProductoMarca', [App\Http\Controllers\ReporteContro
 ->name("reporte.ventaPorProductoMarca")
 ->middleware('auth:sanctum', 'hasRoles:vendedor-admin-superAdmin');
 
+// Versiones para impresión térmica (80mm)
+Route::get('/reporte/venta-ticket', [App\Http\Controllers\ReporteController::class, 'ventaTicket'])
+->name('reporte.ventaTicket')
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/reporte/inventario-ticket', [App\Http\Controllers\ReporteController::class, 'inventarioTicket'])
+->name('reporte.inventarioTicket')
+->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
+
+Route::get('/reporte/ventaPorProductoMarca-ticket', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarcaTicket'])
+->name('reporte.ventaPorProductoMarcaTicket')
+->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
 Route::resource('/compra', \App\Http\Controllers\ComprasController::class)
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 

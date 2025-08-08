@@ -20,6 +20,7 @@
         email: props.sucursal !== undefined ? props.sucursal.email: '',
         es_matriz: props.sucursal !== undefined ? props.sucursal.es_matriz? true: false : false,
         id_empresa: props.sucursal !== undefined ? props.sucursal.id_empresa : props.empresas[0].id,
+        ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? props.sucursal.ticket_width_mm : 80,
 });
 
     const submit = () => {
@@ -96,6 +97,15 @@
                             <label class="block font-medium text-sm text-gray-700">Es Matriz</label>
                             <input type="checkbox" class="form-input rounded-md shadow-sm"
                                 v-model="form.es_matriz">
+                            <br>
+                            <br>
+
+                            <label class="block font-medium text-sm text-gray-700">Ancho de Ticket (mm)</label>
+                            <select v-model.number="form.ticket_width_mm" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option :value="80">80 mm (recomendado)</option>
+                                <option :value="58">58 mm</option>
+                            </select>
+                            <InputError class="mt-2" :message="form.errors.ticket_width_mm" />
                             <br>
                             <br>
 

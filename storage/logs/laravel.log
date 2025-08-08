@@ -98577,3 +98577,32 @@ DETAIL:  Key (id_producto)=(5) is not present in table \"productos\". at /Users/
 #55 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('/Users/erikjime...')
 #56 {main}
 "} 
+[2025-08-07 23:11:31] local.ERROR: Skipping unknown App\Swagger\EmpresaSchema {"exception":"[object] (ErrorException(code: 0): Skipping unknown App\\Swagger\\EmpresaSchema at /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Loggers/DefaultLogger.php:31)
+[stacktrace]
+#0 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(256): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError(512, 'Skipping unknow...', '/Users/erikjime...', 31)
+#1 [internal function]: Illuminate\\Foundation\\Bootstrap\\HandleExceptions->{closure:Illuminate\\Foundation\\Bootstrap\\HandleExceptions::forwardsTo():255}(512, 'Skipping unknow...', '/Users/erikjime...', 31)
+#2 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Loggers/DefaultLogger.php(31): trigger_error('Skipping unknow...', 512)
+#3 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/psr/log/src/LoggerTrait.php(61): OpenApi\\Loggers\\DefaultLogger->log('warning', 'Skipping unknow...', Array)
+#4 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Analysers/ReflectionAnalyser.php(89): Psr\\Log\\AbstractLogger->warning('Skipping unknow...')
+#5 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Analysers/ReflectionAnalyser.php(63): OpenApi\\Analysers\\ReflectionAnalyser->analyzeFqdn('App\\\\Swagger\\\\Emp...', Object(OpenApi\\Analysis), Array)
+#6 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Generator.php(537): OpenApi\\Analysers\\ReflectionAnalyser->fromFile('/Users/erikjime...', Object(OpenApi\\Context))
+#7 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/zircote/swagger-php/src/Generator.php(497): OpenApi\\Generator->scanSources(Object(Symfony\\Component\\Finder\\Finder), Object(OpenApi\\Analysis), Object(OpenApi\\Context))
+#8 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/darkaonline/l5-swagger/src/Generator.php(191): OpenApi\\Generator->generate(Object(Symfony\\Component\\Finder\\Finder), Object(OpenApi\\Analysis))
+#9 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/darkaonline/l5-swagger/src/Generator.php(132): L5Swagger\\Generator->scanFilesForDocumentation()
+#10 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/darkaonline/l5-swagger/src/Console/GenerateDocsCommand.php(72): L5Swagger\\Generator->generateDocs()
+#11 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/darkaonline/l5-swagger/src/Console/GenerateDocsCommand.php(58): L5Swagger\\Console\\GenerateDocsCommand->generateDocumentation(Object(L5Swagger\\GeneratorFactory), 'default')
+#12 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): L5Swagger\\Console\\GenerateDocsCommand->handle(Object(L5Swagger\\GeneratorFactory))
+#13 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::{closure:Illuminate\\Container\\BoundMethod::call():35}()
+#14 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(95): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#15 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))
+#16 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Container/Container.php(696): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)
+#17 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Console/Command.php(213): Illuminate\\Container\\Container->call(Array)
+#18 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/symfony/console/Command/Command.php(318): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#19 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Console/Command.php(182): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))
+#20 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/symfony/console/Application.php(1092): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#21 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/symfony/console/Application.php(341): Symfony\\Component\\Console\\Application->doRunCommand(Object(L5Swagger\\Console\\GenerateDocsCommand), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#22 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/symfony/console/Application.php(192): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#23 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#24 /Users/erikjimenez/Documents/workspace-tecualoyanSys/agrosys/artisan(35): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))
+#25 {main}
+"} 

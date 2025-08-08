@@ -15,11 +15,17 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, $role): Response
     {
-        $roles =  explode("-", $role);
+        // Requiere usuario autenticado antes de validar roles
+        if (!$request->user()) {
+            abort(401, 'No autenticado.');
+        }
+
+        $roles = explode('-', $role);
         $hasRole = false;
-        foreach($roles as $rol) {
-            if (!$request->user() || $request->user()->tipo == $rol) {
-                $hasRole=true;
+
+        foreach ($roles as $rol) {
+            if ($request->user()->tipo === $rol) {
+                $hasRole = true;
                 break;
             }
         }

@@ -60,6 +60,7 @@ class SucursalController extends Controller
         $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+            'ticket_width_mm' => 'nullable|in:58,80',
         ]);
 
         Sucursales::create([
@@ -69,6 +70,7 @@ class SucursalController extends Controller
             'email' => $request->email,
             'id_empresa' => $request->id_empresa,
             'es_matriz' => $request->es_matriz,
+            'ticket_width_mm' => $request->ticket_width_mm ?? 80,
         ]);
 
         return redirect()->route('sucursal.index');
@@ -99,6 +101,7 @@ class SucursalController extends Controller
         $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+            'ticket_width_mm' => 'nullable|in:58,80',
         ]);
 
         $sucursal = Sucursales::find($request->id);
@@ -108,6 +111,9 @@ class SucursalController extends Controller
         $sucursal->email= $request->email;
         $sucursal->es_matriz = $request->es_matriz;
         $sucursal->id_empresa = $request->id_empresa;
+        if ($request->filled('ticket_width_mm')) {
+            $sucursal->ticket_width_mm = (int) $request->ticket_width_mm;
+        }
         $sucursal->save();
         return redirect()->route('sucursal.index');
     }
