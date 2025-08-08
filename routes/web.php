@@ -28,6 +28,14 @@ Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
 Route::resource('/venta', App\Http\Controllers\VentaController::class)
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
+Route::get('/venta/{venta}/devolucion', [App\Http\Controllers\DevolucionController::class, 'create'])
+    ->name('venta.devolucion.create')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::post('/venta/{venta}/devolucion', [App\Http\Controllers\DevolucionController::class, 'store'])
+    ->name('venta.devolucion.store')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
 Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'ticket'])
 ->name("ticket")
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
