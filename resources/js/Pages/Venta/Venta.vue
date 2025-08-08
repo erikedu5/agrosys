@@ -1,9 +1,8 @@
 <script setup>
     import AppLayout from '@/Layouts/AppLayout.vue';
-    import { ref, watch, onMounted, onUnmounted } from 'vue';
+    import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue';
     import { router, useForm } from '@inertiajs/vue3';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
-    import { reactive } from 'vue';
 
     const productoVenta = reactive([]);
     let total = 0.0;
@@ -46,6 +45,12 @@
         total: 0
     });
 
+    const canAddProducto = computed(() =>
+        form.cliente && form.cliente.id &&
+        form.producto && form.producto.id &&
+        form.cantidad >= 1
+    );
+
     const q = ref('');
 
     watch(q, (value) => {
@@ -59,6 +64,10 @@
     });
 
     const agregarVenta = () => {
+        if (!canAddProducto.value) {
+            alert('Seleccione un cliente, un producto y una cantidad mínima de 1.');
+            return false;
+        }
         if (form.producto.cantidad < form.cantidad) {
             alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
             return false;
@@ -277,6 +286,8 @@
                     </div>
                     <div>
                         <button @click="agregarVenta()"
+                        :class="{ 'opacity-25': !canAddProducto }"
+                        :disabled="!canAddProducto"
                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
