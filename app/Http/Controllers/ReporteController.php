@@ -27,11 +27,17 @@ class ReporteController extends Controller
         $marca = CatMarca::get();
         $productos = Producto::get();
 
+        $sucursales = [];
+        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+        if (Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
+            $sucursales = Sucursales::all();
+        }
 
         return Inertia::render('Reporte/Reporte', [
             'clasificaciones' => $clasificaciones,
             'marcas' => $marca,
             'productos' =>$productos,
+            'sucursales' => $sucursales,
         ]);
     }
 
@@ -49,10 +55,15 @@ class ReporteController extends Controller
         $fechaFin = new DateTime($request->fechaFin);
         $fechaFin->setTime(23,59,59);
         $fechaFin->format('Y-m-d h:i:s a');
+        $idSucursal = Auth::user()->id_sucursal;
+        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
+            $idSucursal = $request->id_sucursal;
+        }
 
         $ventas = Venta::where('created_at', '>=', $fechaInicio)
         ->where('created_at', '<=', $fechaFin)
-        ->where('id_sucursal', Auth::user()->id_sucursal)
+        ->where('id_sucursal', $idSucursal)
         ->get();
 
         $montoContado = 0;
@@ -80,12 +91,12 @@ class ReporteController extends Controller
             $venta->usuario = $usuario;
         }
 
-        $sucursalUser = Sucursales::where('id', Auth::user()->id_sucursal)->first();
+        $sucursalUser = Sucursales::where('id', $idSucursal)->first();
         $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $abonos = AbonoCuenta::where('created_at', '>=', $fechaInicio)
         ->where('created_at', '<=', $fechaFin)
-        ->where('id_sucursal', Auth::user()->id_sucursal)
+        ->where('id_sucursal', $idSucursal)
         ->get();
 
         $totalAbonadoRango = 0;
@@ -115,6 +126,11 @@ class ReporteController extends Controller
         $fechaCreacion = Date('Y-m-d h:i:s a');
         $clasificacion = null;
         $marca = null;
+        $idSucursal = Auth::user()->id_sucursal;
+        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
+            $idSucursal = $request->id_sucursal;
+        }
         if ($request->has('id_clasificacion')) {
             $inventario->where('id_clasificacion', $request->id_clasificacion);
             $clasificacion = CatClasificacion::find($request->id_clasificacion);
@@ -128,7 +144,7 @@ class ReporteController extends Controller
         foreach ($inventario as $producto) {
             $producto->marca = CatMarca::find($producto->id_marca);
             $altaInventario = $producto->alta = AltaInventario::where('id_producto', $producto->id)
-            ->where('id_sucursal',  Auth::user()->id_sucursal)
+            ->where('id_sucursal',  $idSucursal)
             ->orderBy('id', 'desc')
             ->limit(1)
             ->first();
@@ -137,7 +153,7 @@ class ReporteController extends Controller
             $producto->usuario = optional(User::where('id', $id_usuario)->first());
 
         }
-        $sucursalUser = Sucursales::where('id', Auth::user()->id_sucursal)->first();
+        $sucursalUser = Sucursales::where('id', $idSucursal)->first();
         $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $pdf = app('dompdf.wrapper');
@@ -170,13 +186,18 @@ class ReporteController extends Controller
         $porProducto = $request->id_producto != 0;
         $porMarca = $request->id_marca != 0;
         $nameFilter = "";
+        $idSucursal = Auth::user()->id_sucursal;
+        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
+            $idSucursal = $request->id_sucursal;
+        }
 
         if($porProducto) {
             $ventas = Venta::select('ventas.*')
             ->where('producto_ventas.id_producto', $request->id_producto)
             ->where('ventas.created_at', '>=', $fechaInicio)
             ->where('ventas.created_at', '<=', $fechaFin)
-            ->where('ventas.id_sucursal', Auth::user()->id_sucursal)
+            ->where('ventas.id_sucursal', $idSucursal)
             ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
             ->get();
 
@@ -190,7 +211,7 @@ class ReporteController extends Controller
             ->where('productos.id_marca', $request->id_marca)
             ->where('ventas.created_at', '>=', $fechaInicio)
             ->where('ventas.created_at', '<=', $fechaFin)
-            ->where('ventas.id_sucursal', Auth::user()->id_sucursal)
+            ->where('ventas.id_sucursal', $idSucursal)
             ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
             ->join('productos', 'productos.id', 'producto_ventas.id_producto')
             ->get();
@@ -224,7 +245,7 @@ class ReporteController extends Controller
             $venta->usuario = $usuario;
         }
 
-        $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+        $sucursalUser = Sucursales::where('id',  $idSucursal)->first();
         $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $pdf = app('dompdf.wrapper');
