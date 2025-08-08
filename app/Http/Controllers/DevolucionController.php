@@ -19,7 +19,21 @@ class DevolucionController extends Controller
 {
     public function index()
     {
-        return Inertia::render('Venta/BuscarDevolucion');
+        $ventas = Venta::where('id_sucursal', Auth::user()->id_sucursal)
+            ->whereDate('created_at', now()->toDateString())
+            ->orderByDesc('created_at')
+            ->get(['id', 'total']);
+
+        $ventas = $ventas->map(function ($v) {
+            return [
+                'id' => $v->id,
+                'label' => 'Venta #' . $v->id . ' - $' . $v->total,
+            ];
+        });
+
+        return Inertia::render('Venta/BuscarDevolucion', [
+            'ventasHoy' => $ventas,
+        ]);
     }
 
     public function create(Venta $venta)

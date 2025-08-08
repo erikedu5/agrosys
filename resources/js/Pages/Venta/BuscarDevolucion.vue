@@ -1,25 +1,45 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 
-const ventaId = ref('');
+const props = defineProps({
+    ventasHoy: { type: Array, default: () => [] },
+});
+
+const venta = ref(null);
 
 const buscar = () => {
-    if (ventaId.value) {
-        router.get(route('venta.devolucion.create', ventaId.value));
+    if (venta.value) {
+        router.get(route('venta.devolucion.create', venta.value.id));
     }
 };
 </script>
 
 <template>
     <AppLayout title="Devolución">
-        <h1 class="text-xl font-bold mb-4">Buscar venta para devolución</h1>
-        <div class="mb-4">
-            <label class="block mb-1">ID de la venta</label>
-            <input type="number" v-model="ventaId" class="border rounded px-2 py-1" />
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Devoluciones</h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
+                    <label class="block mb-2">Venta de hoy</label>
+                    <vue-single-select
+                        v-model="venta"
+                        :options="ventasHoy"
+                        option-key="id"
+                        option-label="label"
+                        placeholder="Seleccione una venta"
+                    />
+                    <div class="mt-4">
+                        <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" @click="buscar">Continuar</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded" @click="buscar">Buscar</button>
     </AppLayout>
 </template>
 
