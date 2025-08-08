@@ -17,6 +17,11 @@ use Inertia\Inertia;
 
 class DevolucionController extends Controller
 {
+    public function index()
+    {
+        return Inertia::render('Venta/BuscarDevolucion');
+    }
+
     public function create(Venta $venta)
     {
         $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get();

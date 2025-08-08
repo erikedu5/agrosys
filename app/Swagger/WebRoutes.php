@@ -101,6 +101,16 @@ class WebRoutes
     public function ventas() {}
 
     /**
+     * @OA\Get(path="/venta/devoluciones", summary="Ventas - búsqueda de devoluciones", tags={"Web"}, security={{"SessionAuth":{}}})
+     * @OA\Get(path="/venta/{venta}/devolucion", summary="Ventas - formulario de devolución", tags={"Web"}, security={{"SessionAuth":{}}},
+     *   @OA\Parameter(name="venta", in="path", required=true, @OA\Schema(type="integer")))
+     * @OA\Post(path="/venta/{venta}/devolucion", summary="Ventas - guardar devolución", tags={"Web"}, security={{"SessionAuth":{}}},
+     *   @OA\Parameter(name="venta", in="path", required=true, @OA\Schema(type="integer")),
+     *   @OA\Response(response=302, description="Redirección"))
+     */
+    public function devoluciones() {}
+
+    /**
      * @OA\Get(path="/cliente", summary="Clientes - listado", tags={"Web"}, security={{"SessionAuth":{}}},
      *   @OA\Parameter(name="page", in="query", description="Número de página (paginación)", @OA\Schema(type="integer", minimum=1, default=1)),
      *   @OA\Response(
