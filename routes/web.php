@@ -24,13 +24,31 @@ Route::get('/', function() {
 Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
 ->name('dashboard')
 ->middleware('auth:sanctum');
+Route::get('/venta/devoluciones/index', [App\Http\Controllers\DevolucionesController::class, 'index'])
+    ->name('venta.devoluciones.index')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/devoluciones/list', [App\Http\Controllers\DevolucionesController::class, 'list'])
+    ->name('devoluciones.list')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+Route::get('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesController::class, 'create'])
+    ->name('venta.devoluciones.create')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
+
+Route::post('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesController::class, 'store'])
+    ->name('venta.devoluciones.store')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
 
 Route::resource('/venta', App\Http\Controllers\VentaController::class)
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
 Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'ticket'])
 ->name("ticket")
-->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
+    ->whereNumber('venta');
 
 Route::resource('/inventario', App\Http\Controllers\ProductoController::class)
 ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
