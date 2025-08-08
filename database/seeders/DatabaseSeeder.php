@@ -55,6 +55,15 @@ class DatabaseSeeder extends Seeder
 
        ]);
 
+       User::factory()->create([
+            'name' => 'Jesus Casstro',
+            'email' => 'jesfirewall@gmail.com',
+            'password' => bcrypt('12345678'),
+            'tipo' => 'superAdmin',
+            'id_sucursal' => 1
+
+       ]);
+
        CatClasificacion::factory()->create([
             'nombre' => 'Herbicida',
             'criterio' => 'Función'
