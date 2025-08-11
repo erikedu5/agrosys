@@ -17,3 +17,9 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+/bootstrap/cache/packages.php
+/bootstrap/cache/services.php
+/composer.json
+/composer.lock
+/storage/logs/laravel.log
