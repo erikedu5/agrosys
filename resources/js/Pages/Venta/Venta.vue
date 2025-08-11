@@ -28,6 +28,8 @@
         },
     });
 
+    const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
+
     let form = useForm({
         cantidad: 1,
         importe: 0,
@@ -254,10 +256,10 @@
                         <vue-single-select
                             placeholder="Seleccione un producto"
                             v-model="form.producto"
-                            option-key="id"
+                            option-key="barcode"
                             option-label="nombre"
                             @input="handleSelectChange($event)"
-                            :options="productos">
+                            :options="productosFiltrados">
                         </vue-single-select>
                         <br>
 
