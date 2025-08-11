@@ -18,6 +18,7 @@ class ProductoController extends Controller
     public function index(Request $request)
     {
         $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
+        ->orWhere('barcode','LIKE',"%$request->q%")
         ->orWhere('ingrediente_activo','LIKE',"%$request->q%")
         ->latest()
         ->paginate(10);
@@ -64,6 +65,7 @@ class ProductoController extends Controller
             'precio_ieps' => 'required',
             'ieps' => 'required',
             'tamano' => 'required',
+            'barcode' => 'nullable',
         ]);
 
         $data['id_usuario'] = Auth::user()->id;
@@ -121,6 +123,7 @@ class ProductoController extends Controller
             'tamano' => 'required',
             'precio_ieps' => 'required',
             'ieps' => 'required',
+            'barcode' => 'nullable',
         ]);
 
         $catProducto = Producto::find($request->id);
@@ -132,6 +135,7 @@ class ProductoController extends Controller
         $catProducto->precio_ieps = $request->precio_ieps;
         $catProducto->tamano = $request->tamano;
         $catProducto->ingrediente_activo = $request->ingrediente_activo;
+        $catProducto->barcode = $request->barcode;
         $catProducto->id_usuario = Auth::user()->id;
         $catProducto->save();
 

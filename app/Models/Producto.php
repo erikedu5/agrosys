@@ -19,7 +19,8 @@ class Producto extends Model
         'precio_ieps',
         'tamano',
         'id_usuario',
-        'ingrediente_activo'
+        'ingrediente_activo',
+        'barcode'
     ];
 
     public function clasificacion()
