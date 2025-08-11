@@ -36,7 +36,10 @@ class VentaController extends Controller
             ->pluck('id')
             ->toArray();
 
-            $productosSucursal = Producto::where('productos.nombre', 'LIKE', "%$request->b%")
+            $productosSucursal = Producto::where(function ($query) use ($request) {
+                $query->where('productos.nombre', 'LIKE', "%$request->b%")
+                      ->orWhere('productos.id', $request->b);
+            })
             ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
             ->select('productos.*', 'cat_marcas.nombre as marca')
             ->get();
@@ -55,7 +58,10 @@ class VentaController extends Controller
             }
         } 
 
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
+        $productos = Producto::where(function ($query) use ($request) {
+            $query->where('nombre', 'LIKE', "%$request->q%")
+                  ->orWhere('id', $request->q);
+        })
         ->get();
         $productoFiltrado = [];
 

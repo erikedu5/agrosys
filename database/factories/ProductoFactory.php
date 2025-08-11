@@ -17,6 +17,7 @@ class ProductoFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => $this->faker->unique()->numberBetween(100000, 999999),
             'nombre' => $this->faker->text(120),
             'id_clasificacion' => $this->faker->numberBetween(1, 10),
             'id_marca' => $this->faker->numberBetween(1, 10),

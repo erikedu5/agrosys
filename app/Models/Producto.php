@@ -9,7 +9,11 @@ class Producto extends Model
 {
     use HasFactory;
 
+    public $incrementing = false;
+    protected $keyType = 'int';
+
     protected $fillable = [
+        'id',
         'nombre',
         'id_clasificacion',
         'id_marca',

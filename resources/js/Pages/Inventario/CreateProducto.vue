@@ -57,6 +57,15 @@
                 <div class="md-col-span-2 mt-5 md:mt-0">
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
+                            <label class="block font-medium text-sm text-gray-700">Id / Código de barras</label>
+                            <input type="text"
+                                class="form-input w-full rounded-md shadow-sm"
+                                v-model="form.id"
+                                :disabled="props.producto !== undefined">
+                            <InputError class="mt-2" :message="form.errors.id" />
+                                <br>
+                                <br>
+
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
                             <input type="text"
                                 class="form-input w-full rounded-md shadow-sm"

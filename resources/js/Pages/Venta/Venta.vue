@@ -251,6 +251,9 @@
                         <br>
 
                         <label>Productos: </label>
+                        <input type="text" v-model="q" placeholder="Buscar por código de barras o nombre"
+                               class="form-input rounded-md shadow-sm w-full"/>
+                        <br>
                         <vue-single-select
                             placeholder="Seleccione un producto"
                             v-model="form.producto"
@@ -399,6 +402,7 @@
                 <table class="w-full border-collapse border border-gray-200">
                     <thead>
                     <tr class="bg-gray-100">
+                        <th class="border p-6">Id</th>
                         <th class="border p-6">Producto</th>
                         <th class="border p-6">Marca</th>
                         <th class="border p-6">Sucursal</th>
@@ -407,13 +411,14 @@
                     </thead>
                     <tbody>
                     <tr v-for="producto in props.productosSucursal" :key="producto.id">
+                        <td class="border p-6 text-center">{{ producto?.id }}</td>
                         <td class="border p-6">{{ producto?.nombre }}</td>
                         <td class="border p-6">{{ producto?.marca }}</td>
                         <td class="border p-6">{{ producto?.sucursal?.nombre }}</td>
                         <td class="border p-6 text-center">{{ producto?.cantidad }}</td>
                     </tr>
                     <tr v-if="props.productosSucursal.length === 0">
-                        <td colspan="4" class="border p-6 text-center text-gray-500">
+                        <td colspan="5" class="border p-6 text-center text-gray-500">
                             No se encontraron productos
                         </td>
                     </tr>
