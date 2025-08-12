@@ -126,10 +126,10 @@ class UsuarioController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     */
+    */
     public function destroy(User $usuario)
     {
-        $usuario->delete();
+        $usuario->delete(); // Soft delete
         return redirect()->route('usuario.index');
     }
 }

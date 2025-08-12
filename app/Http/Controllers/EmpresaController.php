@@ -81,4 +81,13 @@ class EmpresaController extends Controller
             'empresas' => $empresas
         ]);
     }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Empresa $empresa)
+    {
+        $empresa->delete(); // Soft delete
+        return redirect()->route('empresa.index');
+    }
 }

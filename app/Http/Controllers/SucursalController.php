@@ -120,10 +120,10 @@ class SucursalController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     */
+    */
     public function destroy(Sucursales $sucursal)
     {
-        $sucursal->delete();
+        $sucursal->delete(); // Soft delete
         return redirect()->route('sucursal.index');
     }
 }
