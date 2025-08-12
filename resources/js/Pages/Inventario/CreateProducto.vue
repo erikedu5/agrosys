@@ -22,6 +22,7 @@
         tamano: props.producto !== undefined ? props.producto.tamano: '',
         cantidad: props.producto !== undefined ? props.producto.cantidad: 0,
         ingrediente_activo: props.producto !== undefined ? props.producto.ingrediente_activo: null,
+        barcode: props.producto !== undefined ? props.producto.barcode : '',
         id_usuario: 0,
     });
 
@@ -135,6 +136,14 @@
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.ingrediente_activo">
                             <InputError class="mt-2" :message="form.errors.ingrediente_activo" />
+                            <br>
+                            <br>
+
+                            <label class="block font-medium text-sm text-gray-700">Código de barras</label>
+                            <input type="text"
+                                class="form-input w-full rounded-md shadow-sm"
+                                v-model="form.barcode">
+                            <InputError class="mt-2" :message="form.errors.barcode" />
                             <br>
                             <br>
 

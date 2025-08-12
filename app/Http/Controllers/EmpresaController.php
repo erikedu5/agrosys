@@ -14,12 +14,18 @@ class EmpresaController extends Controller
      */
     public function index(Request $request)
     {
-        $empresas = Empresa::where('nombre', 'LIKE', "%$request->q%")
-        ->latest()
-        ->paginate(10);
+        $query = Empresa::query()
+            ->where('nombre', 'LIKE', "%$request->q%");
+
+        if ($request->boolean('deleted')) {
+            $query->onlyTrashed();
+        }
+
+        $empresas = $query->latest()->paginate(10);
 
         return Inertia::render('Empresa/Empresa', [
             'empresas' => $empresas,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 
@@ -80,5 +86,21 @@ class EmpresaController extends Controller
         return redirect()->route('empresa.index', [
             'empresas' => $empresas
         ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Empresa $empresa)
+    {
+        $empresa->delete(); // Soft delete
+        return redirect()->route('empresa.index');
+    }
+
+    public function restore($id)
+    {
+        $empresa = Empresa::onlyTrashed()->findOrFail($id);
+        $empresa->restore();
+        return redirect()->route('empresa.index');
     }
 }
