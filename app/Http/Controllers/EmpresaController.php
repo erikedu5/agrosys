@@ -25,6 +25,7 @@ class EmpresaController extends Controller
 
         return Inertia::render('Empresa/Empresa', [
             'empresas' => $empresas,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 

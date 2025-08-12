@@ -36,7 +36,8 @@ class SucursalController extends Controller
         return Inertia::render('Sucursal/Sucursal', [
             'sucursales' => $sucursales,
             'conteo' => $count,
-            'empresa' => $empresa
+            'empresa' => $empresa,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 

@@ -3,25 +3,40 @@
     import { ref, watch } from 'vue';
     import { router, Link, useForm } from '@inertiajs/vue3';
     import Pagination from '@/Components/Pagination.vue'
-
-    defineProps({
+    const props = defineProps({
         usuarios: {
             type: Array,
             default: []
+        },
+        showDeleted: {
+            type: Boolean,
+            default: false
         }
     });
 
     const q = ref('');
+    const showDeleted = ref(props.showDeleted);
 
     watch(q, (value) => {
-        router.get( route( 'usuario.index', { q: value } ), {}, { preserveState: true } );
+        router.get(route('usuario.index', { q: value, deleted: showDeleted.value }), {}, { preserveState: true });
     });
+
+    const toggleDeleted = () => {
+        showDeleted.value = !showDeleted.value;
+        router.get(route('usuario.index', { q: q.value, deleted: showDeleted.value }), {}, { preserveState: true });
+    };
 
     const desactivar = (id) => {
         if (confirm("¿Desea desactivar el usuario?")) {
             useForm({}).delete(route('usuario.destroy', id));
         }
-    }
+    };
+
+    const restaurar = (id) => {
+        if (confirm("¿Desea restaurar el usuario?")) {
+            useForm({}).put(route('usuario.restore', id));
+        }
+    };
 </script>
 
 <template>
@@ -43,13 +58,22 @@
 
                         <div class="flex justify-between">
                             <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar usuario...">
-                            <Link :href="route('usuario.create')"
-                                  class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Crear usuario
-                            </Link>
+                            <div class="flex space-x-2">
+                                <Link :href="route('usuario.create')"
+                                      class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                           hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                           focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                           dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    Crear usuario
+                                </Link>
+                                <button @click="toggleDeleted"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                               hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                               focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                               dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    {{ showDeleted ? 'Ver activos' : 'Ver eliminados' }}
+                                </button>
+                            </div>
                         </div>
 
                         <hr class="my-6">
@@ -73,7 +97,7 @@
                                         <td class="px-4 py-2"> {{ usuario.tipo }} </td>
                                         <td class="px-4 py-2"> {{ usuario.updated_at }} </td>
                                         <td class="px-4 py-2">
-                                            <div class="inline-flex rounded-md shadow-sm" role="group">
+                                            <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">
                                                 <Link :href="route('usuario.edit', usuario.id)"
                                                       class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Actualizar
@@ -81,6 +105,13 @@
                                                 <Link href="" @click.prevent="desactivar(usuario.id)"
                                                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md  hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Desactivar
+                                                </Link>
+                                            </div>
+                        
+                                            <div v-else>
+                                                <Link href="" @click.prevent="restaurar(usuario.id)"
+                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                                    Restaurar
                                                 </Link>
                                             </div>
                                         </td>

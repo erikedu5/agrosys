@@ -33,6 +33,7 @@ class UsuarioController extends Controller
 
         return Inertia::render('Usuario/Usuario', [
             'usuarios' => $usuarios,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 
