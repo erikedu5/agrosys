@@ -3,27 +3,42 @@
     import { ref, watch } from 'vue';
     import { router, Link, useForm } from '@inertiajs/vue3';
     import Pagination from '@/Components/Pagination.vue'
-
-    defineProps({
+    const props = defineProps({
         sucursales: {
             type: Array,
             default: []
         },
         conteo: Number,
-        empresa: Object
+        empresa: Object,
+        showDeleted: {
+            type: Boolean,
+            default: false
+        }
     });
 
     const q = ref('');
+    const showDeleted = ref(props.showDeleted);
 
     watch(q, (value) => {
-        router.get( route( 'sucursal.index', { q: value } ), {}, { preserveState: true } );
+        router.get(route('sucursal.index', { q: value, deleted: showDeleted.value }), {}, { preserveState: true });
     });
+
+    const toggleDeleted = () => {
+        showDeleted.value = !showDeleted.value;
+        router.get(route('sucursal.index', { q: q.value, deleted: showDeleted.value }), {}, { preserveState: true });
+    };
 
     const desactivar = (id) => {
         if (confirm("¿Desea desactivar la sucursal?")) {
             useForm({}).delete(route('sucursal.destroy', id));
         }
-    }
+    };
+
+    const restaurar = (id) => {
+        if (confirm("¿Desea restaurar la sucursal?")) {
+            useForm({}).put(route('sucursal.restore', id));
+        }
+    };
 </script>
 
 <template>
@@ -45,13 +60,22 @@
 
                         <div class="flex justify-between">
                             <input type="text" class="form-input rounded-md shadow-sm w-5/6" v-model="q" placeholder="Buscar sucursal...">
-                            <Link :href="route('sucursal.create')" v-if="conteo < empresa.numero_sucursales"
-                                  class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Crear sucursal
-                            </Link>
+                            <div class="flex space-x-2">
+                                <Link :href="route('sucursal.create')" v-if="conteo < empresa.numero_sucursales"
+                                      class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                           hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                           focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                           dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    Crear sucursal
+                                </Link>
+                                <button @click="toggleDeleted"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                               hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                               focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                               dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    {{ showDeleted ? 'Ver activas' : 'Ver eliminadas' }}
+                                </button>
+                            </div>
                         </div>
 
                         <hr class="my-6">
@@ -77,7 +101,7 @@
                                         <td class="px-4 py-2"> {{ sucursal.email }} </td>
                                         <td class="px-4 py-2"> {{ sucursal.es_matriz == 1? 'Si': 'No' }} </td>
                                         <td class="px-4 py-2">
-                                            <div class="inline-flex rounded-md shadow-sm" role="group">
+                                            <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">
                                                 <Link :href="route('sucursal.edit', sucursal.id)"
                                                       class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Actualizar
@@ -85,6 +109,12 @@
                                                 <Link href="" @click.prevent="desactivar(sucursal.id)"
                                                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md  hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Desactivar
+                                                </Link>
+                                            </div>
+                                            <div v-else>
+                                                <Link href="" @click.prevent="restaurar(sucursal.id)"
+                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                                    Restaurar
                                                 </Link>
                                             </div>
                                         </td>

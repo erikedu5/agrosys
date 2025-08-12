@@ -23,6 +23,11 @@ class SucursalController extends Controller
             $query = $query->where('id_empresa', $sucursalUser->id_empresa);
             $empresa = Empresa::find($sucursalUser->id_empresa);
         }
+
+        if ($request->boolean('deleted')) {
+            $query->onlyTrashed();
+        }
+
         $sucursales = $query->latest()
         ->paginate(10);
 
@@ -31,7 +36,8 @@ class SucursalController extends Controller
         return Inertia::render('Sucursal/Sucursal', [
             'sucursales' => $sucursales,
             'conteo' => $count,
-            'empresa' => $empresa
+            'empresa' => $empresa,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 
@@ -120,10 +126,17 @@ class SucursalController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     */
+    */
     public function destroy(Sucursales $sucursal)
     {
-        $sucursal->delete();
+        $sucursal->delete(); // Soft delete
+        return redirect()->route('sucursal.index');
+    }
+
+    public function restore($id)
+    {
+        $sucursal = Sucursales::onlyTrashed()->findOrFail($id);
+        $sucursal->restore();
         return redirect()->route('sucursal.index');
     }
 }
