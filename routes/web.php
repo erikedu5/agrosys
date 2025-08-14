@@ -81,13 +81,25 @@ Route::resource('/cliente', \App\Http\Controllers\ClientesController::class)
 ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
 
 Route::resource('/empresa', \App\Http\Controllers\EmpresaController::class)
-->middleware(['auth:sanctum', 'hasRoles:superAdmin']);
+    ->middleware(['auth:sanctum', 'hasRoles:superAdmin']);
+
+Route::put('/empresa/{id}/restore', [\App\Http\Controllers\EmpresaController::class, 'restore'])
+    ->name('empresa.restore')
+    ->middleware(['auth:sanctum', 'hasRoles:superAdmin']);
 
 Route::resource('/usuario', \App\Http\Controllers\UsuarioController::class)
-->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
+    ->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
+
+Route::put('/usuario/{id}/restore', [\App\Http\Controllers\UsuarioController::class, 'restore'])
+    ->name('usuario.restore')
+    ->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
 
 Route::resource('/sucursal', \App\Http\Controllers\SucursalController::class)
-->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
+    ->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
+
+Route::put('/sucursal/{id}/restore', [\App\Http\Controllers\SucursalController::class, 'restore'])
+    ->name('sucursal.restore')
+    ->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin']);
 
 Route::get('/reporte', [App\Http\Controllers\ReporteController::class, 'index'])
 ->name("reporte")

@@ -36,10 +36,13 @@ class VentaController extends Controller
                 ->pluck('id')
                 ->toArray();
 
-            $productosSucursal = Producto::where('productos.nombre', 'LIKE', "%$request->b%")
-                ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
-                ->select('productos.*', 'cat_marcas.nombre as marca')
-                ->get();
+            $productosSucursal = Producto::where(function($query) use ($request) {
+                $query->where('productos.nombre', 'LIKE', "%$request->b%")
+                      ->orWhere('productos.barcode', 'LIKE', "%$request->b%");
+            })
+            ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
+            ->select('productos.*', 'cat_marcas.nombre as marca')
+            ->get();
 
             foreach ($productosSucursal as $product) {
                 $actualStock = AltaInventario::where('id_producto', $product->id)
@@ -55,8 +58,11 @@ class VentaController extends Controller
             }
         }
 
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-            ->get();
+        $productos = Producto::where(function($query) use ($request) {
+            $query->where('nombre', 'LIKE', "%$request->q%")
+                  ->orWhere('barcode', 'LIKE', "%$request->q%");
+        })
+        ->get();
         $productoFiltrado = [];
 
         foreach ($productos as $product) {

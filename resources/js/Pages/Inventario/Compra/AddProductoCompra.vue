@@ -26,7 +26,7 @@
         },
     });
 
-    const productoOptions = ref([...props.productos]);
+    const productoOptions = ref(props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
 
     const form = useForm({
         id: props.compra !== undefined ? props.compra.id: null,
@@ -34,7 +34,7 @@
         fecha_compra: props.compra !== undefined ? new Date(props.compra.fecha_compra).toLocaleString('en-US', { timeZone: 'UTC' }) : new Date(),
         total_compra: props.compra !== undefined ? props.compra.total_compra: 0,
         status: props.compra !== undefined ? props.compra.status: '',
-        productos: props.compra !== undefined ? props.compra.productos: [],
+        productos: props.compra !== undefined ? props.compra.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })) : [],
         abonos: props.compra !== undefined ? props.compra.abonos: [],
         total_credito: props.compra !== undefined ? props.compra.total_credito: 0,
         fecha_credito: props.compra !== undefined ? props.compra.fecha_credito: null,
@@ -121,6 +121,7 @@
         precio_ieps: 0,
         tamano: '',
         ingrediente_activo: '',
+        barcode: '',
     });
     const productoErrors = ref({});
 
@@ -138,6 +139,7 @@
         productoForm.precio_ieps = 0;
         productoForm.tamano = '';
         productoForm.ingrediente_activo = '';
+        productoForm.barcode = '';
         productoErrors.value = {};
     };
 
@@ -152,8 +154,9 @@
     const guardarProducto = () => {
         axios.post(route('inventario.store'), productoForm, { headers: { Accept: 'application/json' } })
             .then(response => {
-                productoOptions.value.push(response.data);
-                form.producto = response.data;
+                const newProducto = { ...response.data, barcode: response.data.barcode ?? '' };
+                productoOptions.value.push(newProducto);
+                form.producto = newProducto;
                 closeProductoModal();
             })
             .catch(error => {
@@ -360,7 +363,7 @@
                     <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
                     <vue-single-select placeholder="Seleccione un producto"
                         v-model="form.producto"
-                        option-key="id"
+                        option-key="barcode"
                         option-label="nombre"
                         :options="productoOptions">
                     </vue-single-select>
@@ -450,6 +453,11 @@
                     <label class="block font-medium text-sm text-gray-700">Ingrediente activo</label>
                     <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.ingrediente_activo">
                     <InputError class="mt-2" :message="productoErrors.ingrediente_activo" />
+                    <br><br>
+
+                    <label class="block font-medium text-sm text-gray-700">Código de barras</label>
+                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.barcode">
+                    <InputError class="mt-2" :message="productoErrors.barcode" />
                 </div>
             </template>
 

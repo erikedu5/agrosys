@@ -21,7 +21,11 @@ class UsuarioController extends Controller
         $query = User::where('name', 'LIKE', "%$request->q%");
 
         if (Auth::user()->tipo !== 'superAdmin') {
-           $usuarios = $query->where('id_sucursal',  Auth::user()->id_sucursal);
+           $query = $query->where('id_sucursal',  Auth::user()->id_sucursal);
+        }
+
+        if ($request->boolean('deleted')) {
+            $query->onlyTrashed();
         }
 
         $usuarios = $query->latest()
@@ -29,6 +33,7 @@ class UsuarioController extends Controller
 
         return Inertia::render('Usuario/Usuario', [
             'usuarios' => $usuarios,
+            'showDeleted' => $request->boolean('deleted'),
         ]);
     }
 
@@ -126,10 +131,17 @@ class UsuarioController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     */
+    */
     public function destroy(User $usuario)
     {
-        $usuario->delete();
+        $usuario->delete(); // Soft delete
+        return redirect()->route('usuario.index');
+    }
+
+    public function restore($id)
+    {
+        $usuario = User::onlyTrashed()->findOrFail($id);
+        $usuario->restore();
         return redirect()->route('usuario.index');
     }
 }
