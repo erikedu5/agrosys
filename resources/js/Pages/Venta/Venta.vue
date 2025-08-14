@@ -110,9 +110,15 @@
             {
                 preserveState: true,
                 onSuccess: (data) => {
-                    let popup  = window.open( "_blank");
-                    popup.location = '/ticket/' + data.props.venta.id;
+
+                    const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
+                    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+                    // Redirige inmediatamente la pantalla principal
                     location.replace('/dashboard');
+
+                    // let popup  = window.open( "_blank");
+                    // popup.location = '/ticket/' + data.props.venta.id;
+                    // location.replace('/dashboard');
                 },
                 onError: (errors) => {
                     console.error(errors);
@@ -385,7 +391,7 @@
         <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 w-lg">
             <div class="bg-white p-6 rounded-lg shadow-lg w-lg">
                 <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
-                
+
                 <!-- Input de búsqueda -->
                 <input
                 v-model="b"
@@ -420,7 +426,7 @@
                     </tbody>
                 </table>
                 </div>
-                
+
                 <!-- Botón para cerrar -->
                 <div class="mt-4 flex justify-end">
                 <button @click="closeModal" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
