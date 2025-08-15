@@ -29,6 +29,8 @@ const minusDays = (date, days) => {
 const fechaFin = new Date();
 const fechaInicio = minusDays(fechaFin, 1);
 
+const showingNavigationDropdown = ref(false);
+
 
 const logout = () => {
     router.post(route('logout'));
