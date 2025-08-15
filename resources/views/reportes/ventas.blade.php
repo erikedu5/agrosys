@@ -54,9 +54,9 @@
     <div style="margin-bottom:25px;"><strong>Fecha de Venta:</strong> {{ $venta->created_at }}</div>
     <div style="margin-bottom:25px;"><strong>Tipo de venta:</strong> {{ $venta->tipo_venta }}</div>
     
-    <div>
+    <div style="overflow-x:auto;">
         <table>
-            <thead>          
+            <thead>
                 <tr>
                     <th>Id</th>
                     <th>Nombre del producto</th>

@@ -40,7 +40,7 @@
     <div style="margin-bottom:25px;"><strong>Tipo de venta:</strong> {{ $venta->tipo_venta }}</div>
     <div style="margin-bottom:25px;"><strong>Folio: </strong> {{ $venta->id }}</div>
 
-    <div>
+    <div style="overflow-x:auto;">
         <table>
             <thead>
                 <tr>
