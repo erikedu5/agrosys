@@ -99,7 +99,7 @@
         form.importe = form.importe.toFixed(2);
     }
 
-    const printTicketSilently = (url) => {
+    const printTicketSilently = (url, callback = () => {}) => {
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
         iframe.style.right = '0';
@@ -114,6 +114,7 @@
                 iframe.contentWindow.print();
                 iframe.contentWindow.onafterprint = () => {
                     document.body.removeChild(iframe);
+                    callback();
                 };
             }
         };
@@ -134,9 +135,9 @@
                 preserveState: true,
                 onSuccess: (data) => {
                     const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
-                    printTicketSilently(url);
-                    // Redirige inmediatamente la pantalla principal
-                    location.replace('/dashboard');
+                    printTicketSilently(url, () => {
+                        location.replace('/dashboard');
+                    });
                 },
                 onError: (errors) => {
                     console.error(errors);
