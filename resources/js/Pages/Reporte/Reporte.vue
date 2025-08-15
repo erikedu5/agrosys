@@ -94,10 +94,8 @@
 
         <hr class="my-6">
 
-        <div class="flex">
-            <div class="flex-none w-14 h-14">
-            </div>
-            <div class="grow h-14">
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grow">
                 <div v-if="errors.length">
                     <InputError v-for="(error, index) in errors" :key="index" class="mt-2" :message="error" />
                 </div>
@@ -237,8 +235,6 @@
                             Reporte de inventario</button>
                     </div>
                 </div>
-            </div>
-            <div class="flex-none w-14 h-14">
             </div>
         </div>
     </AppLayout>

@@ -197,9 +197,7 @@
         </template>
 
         <div class="flex font-semibold text-xl dark:text-white-200 leading-tight">
-            <div class="flex-none w-14 h-14">
-            </div>
-            <div class="grow h-14">
+            <div class="grow">
                 <div class="md-col-span-2 mt-5 md:mt-0">
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
@@ -345,8 +343,6 @@
                         </form>
                     </div>
                 </div>
-            </div>
-            <div class="flex-none w-14 h-14">
             </div>
         </div>
         <DialogModal :show="showAddProductoModal" @close="closeAddProductoModal">
