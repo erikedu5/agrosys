@@ -46,9 +46,9 @@
         <div>Con fecha de creación del reporte {{ $fechaCreacion }}</div>
     </div>
         <br><br>
-    <div>
+    <div style="overflow-x:auto;">
         <table>
-            <thead>          
+            <thead>
                 <tr>
                     <th>Id</th>
                     <th>Nombre del producto</th>
