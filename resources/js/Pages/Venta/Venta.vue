@@ -99,6 +99,27 @@
         form.importe = form.importe.toFixed(2);
     }
 
+    const printTicketSilently = (url) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = url;
+        iframe.onload = () => {
+            if (iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                iframe.contentWindow.onafterprint = () => {
+                    document.body.removeChild(iframe);
+                };
+            }
+        };
+        document.body.appendChild(iframe);
+    };
+
     const finalizeSale = () => {
         if (productoVenta.length !== 0) {
             form.post(route('venta.store',
@@ -112,15 +133,10 @@
             {
                 preserveState: true,
                 onSuccess: (data) => {
-
                     const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
-                    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+                    printTicketSilently(url);
                     // Redirige inmediatamente la pantalla principal
                     location.replace('/dashboard');
-
-                    // let popup  = window.open( "_blank");
-                    // popup.location = '/ticket/' + data.props.venta.id;
-                    // location.replace('/dashboard');
                 },
                 onError: (errors) => {
                     console.error(errors);
