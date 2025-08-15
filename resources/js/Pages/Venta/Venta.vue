@@ -135,9 +135,8 @@
                 preserveState: true,
                 onSuccess: (data) => {
                     const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
-                    printTicketSilently(url, () => {
-                        location.replace('/dashboard');
-                    });
+                    printTicketSilently(url);
+                    location.replace('/venta');
                 },
                 onError: (errors) => {
                     console.error(errors);
