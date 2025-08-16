@@ -90,14 +90,36 @@ const agregarVenta = () => {
     selectClient = true;
 };
 
-const changeQuantity = () => {
-    if (form.cantidad > form.producto.cantidad) {
-        alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
-        return false;
+    const changeQuantity = () => {
+        if (form.cantidad > form.producto.cantidad) {
+            alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
+            return false;
+        }
+        form.importe = form.cantidad * form.precio_ieps_con_descuento;
+        form.importe = form.importe.toFixed(2);
     }
-    form.importe = form.cantidad * form.precio_ieps_con_descuento;
-    form.importe = form.importe.toFixed(2);
-}
+
+    const printTicketSilently = (url, callback = () => {}) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = url;
+        iframe.onload = () => {
+            if (iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                iframe.contentWindow.onafterprint = () => {
+                    document.body.removeChild(iframe);
+                    callback();
+                };
+            }
+        };
+        document.body.appendChild(iframe);
+    };
 
 const finalizeSale = () => {
     if (productoVenta.length !== 0) {
@@ -112,15 +134,10 @@ const finalizeSale = () => {
             {
                 preserveState: true,
                 onSuccess: (data) => {
-
                     const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
-                    const popup = window.open(url, '_blank', 'noopener,noreferrer');
-                    // Redirige inmediatamente la pantalla principal
-                    location.replace('/dashboard');
-
-                    // let popup  = window.open( "_blank");
-                    // popup.location = '/ticket/' + data.props.venta.id;
-                    // location.replace('/dashboard');
+                    printTicketSilently(url, () => {
+                        location.replace('/venta');
+                    });
                 },
                 onError: (errors) => {
                     console.error(errors);
