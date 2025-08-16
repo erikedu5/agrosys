@@ -231,7 +231,7 @@ const closeModal = () => {
         <hr class="my-6">
 
 
-         <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grow">
                 <div class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
 
@@ -317,7 +317,8 @@ const closeModal = () => {
                             <br><br>
 
 
-                            <hr></hr>
+                            <hr>
+                            </hr>
                             <div class="w-full flex justify-between mb-4 mt-4 px-4">
                                 <label>Total final: {{ total }} </label>
                                 <button @click="finalizeSale()"
@@ -370,10 +371,7 @@ const closeModal = () => {
                         <div>
                             <button @click="agregarVenta()" :class="{ 'opacity-25': !canAddProducto }"
                                 :disabled="!canAddProducto"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white w-full">
+                                class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800 w-full">
                                 Agregar producto
                             </button>
                         </div>
