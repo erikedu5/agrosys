@@ -43,7 +43,7 @@ const submit = () => {
 
         <div>
             <div class="mb-4 text-center">
-            <h1 class="text-2xl md:text-4xl font-bold text-green-700">Bienvenido a Agrosys</h1>
+            <h1 class="text-2xl md:text-4xl font-bold text-green-700">Bienvenido</h1>
             </div>
             <div class="text-gray-700">
             <p class="mb-4 text-justify">
