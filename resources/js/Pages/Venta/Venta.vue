@@ -90,36 +90,36 @@ const agregarVenta = () => {
     selectClient = true;
 };
 
-    const changeQuantity = () => {
-        if (form.cantidad > form.producto.cantidad) {
-            alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
-            return false;
-        }
-        form.importe = form.cantidad * form.precio_ieps_con_descuento;
-        form.importe = form.importe.toFixed(2);
+const changeQuantity = () => {
+    if (form.cantidad > form.producto.cantidad) {
+        alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
+        return false;
     }
+    form.importe = form.cantidad * form.precio_ieps_con_descuento;
+    form.importe = form.importe.toFixed(2);
+}
 
-    const printTicketSilently = (url, callback = () => {}) => {
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        iframe.src = url;
-        iframe.onload = () => {
-            if (iframe.contentWindow) {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-                iframe.contentWindow.onafterprint = () => {
-                    document.body.removeChild(iframe);
-                    callback();
-                };
-            }
-        };
-        document.body.appendChild(iframe);
+const printTicketSilently = (url, callback = () => { }) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = url;
+    iframe.onload = () => {
+        if (iframe.contentWindow) {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            iframe.contentWindow.onafterprint = () => {
+                document.body.removeChild(iframe);
+                callback();
+            };
+        }
     };
+    document.body.appendChild(iframe);
+};
 
 const finalizeSale = () => {
     if (productoVenta.length !== 0) {
@@ -296,9 +296,8 @@ const closeModal = () => {
                         </div>
                         <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
                             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                <thead
-                                    class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                    <tr>
+                                <thead class="text-xs uppercase bg-gray-50">
+                                    <tr class="[&>th]:px-4 [&>th]:py-3">
                                         <th>Id</th>
                                         <th>Nombre del producto</th>
                                         <th>Cantidad</th>
@@ -337,7 +336,6 @@ const closeModal = () => {
                             <hr>
                             </hr>
                             <div class="w-full flex justify-between mb-4 mt-4 px-4">
-                                <label>Total final: {{ total }} </label>
                                 <button @click="finalizeSale()"
                                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                     hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
@@ -345,6 +343,8 @@ const closeModal = () => {
                                     dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                     Terminar venta
                                 </button>
+                                <label class="font-bold">Total final: $ {{ total }} </label>
+
                             </div>
 
                         </div>

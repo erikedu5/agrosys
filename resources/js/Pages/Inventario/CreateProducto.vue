@@ -47,7 +47,7 @@
     <AppLayout title="CrearProducto">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Crear Nuevo Producto
+                    Crear Nuevo Producto +
             </h2>
         </template>
 
