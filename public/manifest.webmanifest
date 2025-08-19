@@ -1,18 +1,18 @@
 {
-  "name": "Agrosys",
-  "short_name": "Agrosys",
+  "name": "AgroSys",
+  "short_name": "AgroSys",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#4bb7c0",
   "theme_color": "#4bb7c0",
   "icons": [
     {
-      "src": "/agrosyslogo-word.png",
+      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/agrosyslogo-word.png",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
