@@ -258,17 +258,18 @@ const closeModal = () => {
 
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label>Cliente: </label>
-                        <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
-                            option-key="id" option-label="nombre" @input="changeClient($event)"
-                            :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
-                        </vue-single-select>
-
-                        <label>Porcentaje de descuento para cliente: </label>
-                        <input type="text" readonly v-model="form.porcentaje_descuento" :disabled="true"
-                            class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
-                        <br>
-
+                        <div>
+                            <label>Cliente: </label>
+                            <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
+                                option-key="id" option-label="nombre" @input="changeClient($event)"
+                                :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
+                            </vue-single-select>
+                        </div>
+                        <div>
+                            <label>Porcentaje de descuento para cliente: </label>
+                            <input type="text" readonly v-model="form.porcentaje_descuento" :disabled="true"
+                                class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
+                        </div>
                     </div>
 
                     <div>
@@ -278,21 +279,6 @@ const closeModal = () => {
                             <h6>Ticket de venta</h6>
                         </div>
                         <br>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
-                            <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                            <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full max-w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="" disabled>Selecione</option>
-                                <option value="Contado">Contado</option>
-                                <option value="Credito">Credito</option>
-                            </select>
-                            <br>
-
-                            <div v-if="formVenta.tipoVenta === 'Credito'">
-                                <label>abono a cuenta: </label>
-                                <input type="number" step="0.01" v-model="form.abono"
-                                    class="form-input rounded-md shadow-sm w-full max-w-full" />
-                            </div>
-                        </div>
                         <div class="md:hidden grid grid-cols-1 gap-4 w-full mb-4">
                             <div v-for="producto in productoVenta" :key="producto.producto.id" class="rounded-lg boder p-4 bg-white shadow-lg">
                                 <div class="text-sm text-gray-500">Nombre del producto</div>
@@ -362,10 +348,23 @@ const closeModal = () => {
                                     </tr>
                                 </tbody>
                             </table>
-                          </div>
-
-                        <br><br>
-
+                        </div>
+                        <br>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
+                            <div>
+                                <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
+                                <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full max-w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                    <option value="" disabled>Selecione</option>
+                                    <option value="Contado">Contado</option>
+                                    <option value="Credito">Credito</option>
+                                </select>
+                            </div>
+                            <div v-if="formVenta.tipoVenta === 'Credito'">
+                                <label>abono a cuenta: </label>
+                                <input type="number" step="0.01" v-model="form.abono"
+                                    class="form-input rounded-md shadow-sm w-full max-w-full" />
+                            </div>
+                        </div>
                         <hr>
                         </hr>
                         <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
