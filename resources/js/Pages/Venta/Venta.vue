@@ -384,7 +384,7 @@ const closeModal = () => {
                                 <h6>Agregar productos de venta</h6>
                                 <span>F2: Buscar en sucursal</span>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label>Productos: </label>
                                     <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
