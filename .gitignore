@@ -1,3 +1,4 @@
+
 /.phpunit.cache
 /node_modules
 /public/build
@@ -23,3 +24,6 @@ yarn-error.log
 /composer.json
 /composer.lock
 /storage/logs/laravel.log
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+/storage/logs/*
