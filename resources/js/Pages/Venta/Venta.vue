@@ -257,16 +257,16 @@ const closeModal = () => {
                     </div>
 
 
-                    <div class="columns-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label>Cliente: </label>
                         <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
                             option-key="id" option-label="nombre" @input="changeClient($event)"
-                            :class="selectClient ? 'pointer-events-none' : ''" :options="clientes">
+                            :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
                         </vue-single-select>
 
                         <label>Porcentaje de descuento para cliente: </label>
                         <input type="text" readonly v-model="form.porcentaje_descuento" :disabled="true"
-                            class="orm-input rounded-md shadow-sm w-full bg-gray-100 cursor-not-allowed" />
+                            class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
                         <br>
 
                     </div>
@@ -278,10 +278,9 @@ const closeModal = () => {
                             <h6>Ticket de venta</h6>
                         </div>
                         <br>
-                        <div class="columns-2 mb-5 ml-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
                             <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                            <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full max-w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                 <option value="" disabled>Selecione</option>
                                 <option value="Contado">Contado</option>
                                 <option value="Credito">Credito</option>
@@ -291,10 +290,43 @@ const closeModal = () => {
                             <div v-if="formVenta.tipoVenta === 'Credito'">
                                 <label>abono a cuenta: </label>
                                 <input type="number" step="0.01" v-model="form.abono"
-                                    class="form-input rounded-md shadow-sm w-full" />
+                                    class="form-input rounded-md shadow-sm w-full max-w-full" />
                             </div>
                         </div>
-                        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+                        <div class="md:hidden grid grid-cols-1 gap-4 w-full mb-4">
+                            <div v-for="producto in productoVenta" :key="producto.producto.id" class="rounded-lg boder p-4 bg-white shadow-lg">
+                                <div class="text-sm text-gray-500">Nombre del producto</div>
+                                <div class="font-semibold text-gray-900">{{ producto.producto.nombre }}</div>
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <div class="text-gray-500">Cantidad</div>
+                                        <div>{{ producto.cantidad }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-gray-500">Precio unitario</div>
+                                        <div>{{ producto.precio_unitario }}</div>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <div class="text-gray-500">Importe</div>
+                                        <div>{{ producto.importe }}</div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end mt-3">
+                                    <div class="inline-flex rounded-md shadow-sm" role="group">
+                                        <button @click="actualizarProducto(producto)"
+                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                            Actualizar
+                                        </button>
+                                        <button @click="eliminarProducto(producto)"
+                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                            Eliminar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="relative overflow-x-auto hidden md:block w-full shadow-md sm:rounded-lg">
                             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50">
                                     <tr class="[&>th]:px-4 [&>th]:py-3">
@@ -330,60 +362,59 @@ const closeModal = () => {
                                     </tr>
                                 </tbody>
                             </table>
-                            <br><br>
+                          </div>
 
+                        <br><br>
 
-                            <hr>
-                            </hr>
-                            <div class="w-full flex justify-between mb-4 mt-4 px-4">
-                                <button @click="finalizeSale()"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Terminar venta
-                                </button>
-                                <label class="font-bold">Total final: $ {{ total }} </label>
-
-                            </div>
+                        <hr>
+                        </hr>
+                        <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
+                            <button @click="finalizeSale()"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                Terminar venta
+                            </button>
+                            <label class="font-bold">Total final: $ {{ total }} </label>
 
                         </div>
 
-                        <div style=" text-align: left;" class="mb-4 mt-3 w-full flex justify-between">
-                            <h6>Agregar productos de venta</h6>
-                            <span>F2: Buscar en sucursal</span>
-                        </div>
-                        <div class="md:columns-4 columns-2">
-                            <div>
-                                <label>Productos: </label>
-                                <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
-                                    option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
-                                    :options="productosFiltrados">
-                                </vue-single-select>
+                            <div style=" text-align: left;" class="mb-4 mt-3 w-full flex flex-col md:flex-row justify-between">
+                                <h6>Agregar productos de venta</h6>
+                                <span>F2: Buscar en sucursal</span>
                             </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label>Productos: </label>
+                                    <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
+                                      option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
+                                      :options="productosFiltrados" class="w-full max-w-full">
+                                  </vue-single-select>
+                              </div>
 
-                            <div>
-                                <label>Cantidad de productos: </label>
-                                <input type="number" min="1" step="0.01" v-model="form.cantidad"
-                                    @input="changeQuantity($event)" class="form-input rounded-md shadow-sm w-full" />
-                                <br>
-                            </div>
+                              <div>
+                                  <label>Cantidad de productos: </label>
+                                  <input type="number" min="1" step="0.01" v-model="form.cantidad"
+                                      @input="changeQuantity($event)" class="form-input rounded-md shadow-sm w-full max-w-full" />
+                                  <br>
+                              </div>
 
-                            <div>
-                                <label>Precio unitario: </label>
-                                <input type="number" step="0.01" readonly v-model="form.precio_ieps_con_descuento"
-                                    :disabled="true"
-                                    class="orm-input rounded-md shadow-sm w-full bg-gray-100 cursor-not-allowed" />
-                                <br>
-                            </div>
+                              <div>
+                                  <label>Precio unitario: </label>
+                                  <input type="number" step="0.01" readonly v-model="form.precio_ieps_con_descuento"
+                                      :disabled="true"
+                                      class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
+                                  <br>
+                              </div>
 
-                            <div>
-                                <label>importe: </label>
-                                <input type="number" step="0.01" readonly v-model="form.importe" :disabled="true"
-                                    class="orm-input rounded-md shadow-sm w-full bg-gray-100 cursor-not-allowed" />
-                                <br>
-                            </div>
-                        </div>
+                              <div>
+                                  <label>importe: </label>
+                                  <input type="number" step="0.01" readonly v-model="form.importe" :disabled="true"
+                                      class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
+                                  <br>
+                              </div>
+                          </div>
                         <br>
                         <div>
                             <button @click="agregarVenta()" :class="{ 'opacity-25': !canAddProducto }"
@@ -407,8 +438,8 @@ const closeModal = () => {
                 <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
 
                 <!-- Input de búsqueda -->
-                <input v-model="b" type="text" placeholder="Buscar producto..."
-                    class="w-full p-2 border rounded-md focus:ring focus:ring-blue-300" />
+                 <input v-model="b" type="text" placeholder="Buscar producto..."
+                    class="w-full max-w-full p-2 border rounded-md focus:ring focus:ring-blue-300" />
 
                 <!-- Tabla de productos -->
                 <div class="mt-4 overflow-x-auto">
