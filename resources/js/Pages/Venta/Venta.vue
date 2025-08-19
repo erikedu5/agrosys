@@ -257,7 +257,7 @@ const closeModal = () => {
                     </div>
 
 
-                    <div class="columns-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label>Cliente: </label>
                         <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
                             option-key="id" option-label="nombre" @input="changeClient($event)"
@@ -278,7 +278,7 @@ const closeModal = () => {
                             <h6>Ticket de venta</h6>
                         </div>
                         <br>
-                        <div class="columns-2 mb-5 ml-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
                             <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
                             <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
                                     focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
@@ -335,28 +335,28 @@ const closeModal = () => {
 
                             <hr>
                             </hr>
-                            <div class="w-full flex justify-between mb-4 mt-4 px-4">
-                                <button @click="finalizeSale()"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Terminar venta
-                                </button>
-                                <label class="font-bold">Total final: $ {{ total }} </label>
+                              <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
+                                  <button @click="finalizeSale()"
+                                      class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                      hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                      focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                      dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                      Terminar venta
+                                  </button>
+                                  <label class="font-bold">Total final: $ {{ total }} </label>
 
-                            </div>
+                              </div>
 
                         </div>
 
-                        <div style=" text-align: left;" class="mb-4 mt-3 w-full flex justify-between">
-                            <h6>Agregar productos de venta</h6>
-                            <span>F2: Buscar en sucursal</span>
-                        </div>
-                        <div class="md:columns-4 columns-2">
-                            <div>
-                                <label>Productos: </label>
-                                <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
+                          <div style=" text-align: left;" class="mb-4 mt-3 w-full flex flex-col md:flex-row justify-between">
+                              <h6>Agregar productos de venta</h6>
+                              <span>F2: Buscar en sucursal</span>
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div>
+                                  <label>Productos: </label>
+                                  <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
                                     option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
                                     :options="productosFiltrados">
                                 </vue-single-select>
