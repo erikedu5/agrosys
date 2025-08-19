@@ -45,6 +45,9 @@ class EmpresaController extends Controller
         $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+        ],[
+            'nombre.required' => 'Agregar un nombre de empresa.',
+            'direccion.required' => 'Agregar una dirección de la empresa.',
         ]);
 
         $empresas = Empresa::create($request->all());
@@ -70,6 +73,9 @@ class EmpresaController extends Controller
         $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+        ],[
+            'nombre.required' => 'Agregar un nombre de empresa.',
+            'direccion.required' => 'Agregar una dirección de la empresa.',
         ]);
 
         $empresa = Empresa::find($request->id);

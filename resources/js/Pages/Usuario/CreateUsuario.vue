@@ -40,10 +40,8 @@
             </h2>
         </template>
 
-        <div class="flex">
-            <div class="flex-none w-14 h-14">
-            </div>
-            <div class="grow h-14">
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+            <div class="grow">
                 <div class="md-col-span-2 mt-5 md:mt-0">
                     <div class="shadow bg-white md:rounded-md p-4">
                         <form @submit.prevent="submit">
@@ -107,8 +105,6 @@
                         </form>
                     </div>
                 </div>
-            </div>
-            <div class="flex-none w-14 h-14">
             </div>
         </div>
     </AppLayout>

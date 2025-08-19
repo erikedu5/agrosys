@@ -4,7 +4,7 @@ import { ref, watch, computed } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 
-const props =defineProps({
+const props = defineProps({
     pedidos: Object,
     sucursales: Array,
     filtroSucursal: { type: [Number, String], default: null },
@@ -52,66 +52,94 @@ const completar = (id) => {
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Pedidos
             </h2>
+            <br>
+            <input type="text" v-model="q" class="form-input rounded-md shadow-sm w-full" placeholder="Buscar..." />
         </template>
 
         <hr class="my-6" />
-
-        <div class="flex">
-            <div class="flex-none w-14 h-14"></div>
-            <div class="grow h-14">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <div class="flex justify-between mb-4 gap-2">
-                            <input type="text" v-model="q" class="form-input rounded-md shadow-sm w-1/3" placeholder="Buscar..." />
-                            
-                            <select v-model="estado" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="0">Pendiente</option>
-                                <option value="1">Completado</option>
-                            </select>
-                        </div>
-
-                        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                    <tr>
-                                        <th class="px-4 py-2">Producto</th>
-                                        <th class="px-4 py-2">Cantidad</th>
-                                        <th class="px-4 py-2">Estado</th>
-                                        <th class="px-4 py-2">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template v-for="g in groupedPedidos" :key="g.uuid">
-                                        <tr class="bg-gray-100">
-                                            <td colspan="7" class="px-4 py-2 font-semibold">
-                                                Pedido {{ g.uuid }} - Sucursal: {{ g.items[0].sucursal.nombre }} - Solicitante: {{ g.items[0].nombre_solicitante }} ({{ g.items[0].numero_solicitante }})
-                                            </td>
-                                        </tr>
-                                        <tr v-for="p in g.items" :key="p.id">
-                                            <td class="px-4 py-2">{{ p.producto.nombre }}</td>
-                                            <td class="px-4 py-2">{{ p.cantidad }}</td>
-                                            <td class="px-4 py-2">
-                                                <span v-if="p.completado" class="text-green-600">Completado</span>
-                                                <span v-else class="text-yellow-600">Pendiente</span>
-                                            </td>
-                                            <td class="px-4 py-2">
-                                                <button v-if="!p.completado" @click="completar(p.id)"
-                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                    Completar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <Pagination class="mt-6" :links="pedidos.links" />
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
+            <select v-model="estado" class="form-select">
+                <option value="">Todos</option>
+                <option value="0">Pendiente</option>
+                <option value="1">Completado</option>
+            </select>
+        </div>
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+            <!-- Vista en tarjetas -->
+            <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <template v-for="g in groupedPedidos" :key="g.uuid">
+                    <div class="bg-gray-100">
+                        <td colspan="7" class="px-4 py-2 font-semibold">
+                            Pedido {{ g.uuid }} - Sucursal: {{ g.items[0].sucursal.nombre }} -
+                            Solicitante: {{ g.items[0].nombre_solicitante }} ({{
+                                g.items[0].numero_solicitante }})
+                        </td>
                     </div>
-                </div>
+                    <div v-for="p in g.items" :key="p.id">
+                        <div class="text-sm text-gray-500">Producto</div>
+                        <div class="font-semibold text-gray-900">{{ p.producto.nombre }}</div>
+                        <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-gray-500">Cantidad</div>
+                                <div>{{ p.cantidad }}</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-500">Estado</div>
+                                <div>
+                                    <span v-if="p.completado" class="text-green-600">Completado</span>
+                                    <span v-else class="text-yellow-600">Pendiente</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-3">
+                            <button v-if="!p.completado" @click="completar(p.id)"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                Completar
+                            </button>
+                        </div>
+                    </div>
+                </template>
+                <Pagination class="mt-6" :links="pedidos.links" :prefix="''" />
             </div>
-            <div class="flex-none w-14 h-14"></div>
+            <!-- Vista en tabla (md y arriba) -->
+            <div class="relative overflow-x-auto hidden md:block w-full">
+                <table class="w-full table-auto text-sm text-left text-gray-600">
+                    <thead class="text-xs uppercase bg-gray-50">
+                        <tr class="[&>th]:px-4 [&>th]:py-3">
+                            <th class="px-4 py-2">Producto</th>
+                            <th class="px-4 py-2">Cantidad</th>
+                            <th class="px-4 py-2">Estado</th>
+                            <th class="px-4 py-2">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="[&>tr>:is(td)]:px-4 [&>tr>:is(td)]:py-2">
+                        <template v-for="g in groupedPedidos" :key="g.uuid">
+                            <tr class="bg-gray-100">
+                                <td colspan="7" class="px-4 py-2 font-semibold">
+                                    Pedido {{ g.uuid }} - Sucursal: {{ g.items[0].sucursal.nombre }} -
+                                    Solicitante: {{ g.items[0].nombre_solicitante }} ({{
+                                        g.items[0].numero_solicitante }})
+                                </td>
+                            </tr>
+                            <tr v-for="p in g.items" :key="p.id" class="border-b">
+                                <td class="px-4 py-2">{{ p.producto.nombre }}</td>
+                                <td class="px-4 py-2">{{ p.cantidad }}</td>
+                                <td class="px-4 py-2">
+                                    <span v-if="p.completado" class="text-green-600">Completado</span>
+                                    <span v-else class="text-yellow-600">Pendiente</span>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <button v-if="!p.completado" @click="completar(p.id)"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                        Completar
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+                <Pagination class="mt-6" :links="pedidos.links" :prefix="''" />
+            </div>
         </div>
     </AppLayout>
 </template>

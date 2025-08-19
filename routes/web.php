@@ -50,6 +50,11 @@ Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'tic
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin'])
     ->whereNumber('venta');
 
+Route::get('/ticket/print/{venta}', [App\Http\Controllers\VentaController::class, 'ticketHtml'])
+    ->name('venta.ticket.html')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin']);
+
+
 Route::resource('/inventario', App\Http\Controllers\ProductoController::class)
 ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin']);
 

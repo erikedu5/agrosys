@@ -67,6 +67,10 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
+        ],[
+            'nombre.required' => 'Agregar un nombre de sucursal.',
+            'direccion.required' => 'Agregar una dirección.',
+            'ticket_width_mm' => 'Agregar un formato de ticket valido.'
         ]);
 
         Sucursales::create([
@@ -108,8 +112,11 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
+        ],[
+            'nombre.required' => 'Agregar un nombre de sucursal.',
+            'direccion.required' => 'Agregar una dirección.',
+            'ticket_width_mm.required' => 'Agregar un formato de ticket valido.'
         ]);
-
         $sucursal = Sucursales::find($request->id);
         $sucursal->nombre = $request->nombre;
         $sucursal->direccion = $request->direccion;

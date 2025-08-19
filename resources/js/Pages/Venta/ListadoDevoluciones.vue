@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
-  devoluciones: { type: Array, default: [] }
+    devoluciones: { type: Array, default: [] }
 });
 </script>
 <template>
@@ -15,64 +15,74 @@ const props = defineProps({
         </template>
 
         <hr class="my-6">
-
-        <div class="flex">
-            <div class="flex-none w-14 h-14">
-            </div>
-            <div class="grow h-14">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <div class="flex justify-between">
-                            <Link :href="route('venta.devoluciones.index')"
-                                  class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
+            <Link :href="route('venta.devoluciones.index')"
+                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                         hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                         focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                         dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Crear una devolución
-                            </Link>
+            Crear una devolución
+            </Link>
+        </div>
+        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+            <!-- Vista en tarjetas -->
+            <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div v-for="d in devoluciones" :key="d.id" class="rounded-lg boder p-4 bg-white shadow-lg">
+                    <div class="text-sm text-gray-500">Venta</div>
+                    <div class="font-semibold text-gray-900">{{ d.venta_id }}</div>
+                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                            <div class="text-gray-500">Total devuelto</div>
+                            <div>$ {{ d.total }}</div>
                         </div>
-                      </div>
+                        <div>
+                            <div class="text-gray-500">Fecha</div>
+                            <div>{{ d.fecha }}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-end mt-3">
+                        <div class="text-gray-500">Productos</div>
+                        <ul>
+                            <li v-for="detalle in d.detalles" :key="detalle.id">
+                                {{ detalle.producto.nombre }} - {{ detalle.cantidad }} unidades
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
 
-                    <hr class="my-6">
-
-                    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                      <table class="min-w-full bg-white">
-                        <thead>
-                          <tr class="text-left">
+            <div class="relative overflow-x-auto hidden md:block w-full">
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead class="text-xs uppercase bg-gray-50">
+                        <tr class="[&>th]:px-4 [&>th]:py-3">
                             <th class="px-2 py-1">ID</th>
                             <th class="px-2 py-1">Venta</th>
                             <th class="px-2 py-1">Total devuelto</th>
                             <th class="px-2 py-1">Fecha</th>
                             <th class="px-2 py-1">Productos</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="d in devoluciones" :key="d.id" class="border-t">
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="d in devoluciones" :key="d.id" class="border-t">
                             <td class="px-2 py-1">{{ d.id }}</td>
                             <td class="px-2 py-1">{{ d.venta_id }}</td>
                             <td class="px-2 py-1">${{ d.total }}</td>
                             <td class="px-2 py-1">{{ d.fecha }}</td>
                             <td class="px-2 py-1">
-                              <ul>
-                                <li v-for="detalle in d.detalles" :key="detalle.id">
-                                  {{ detalle.producto.nombre }} - {{ detalle.cantidad }} unidades
-                                </li>
-                              </ul>
+                                <ul>
+                                    <li v-for="detalle in d.detalles" :key="detalle.id">
+                                        {{ detalle.producto.nombre }} - {{ detalle.cantidad }} unidades
+                                    </li>
+                                </ul>
                             </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                  <div name="Pagination">
+            <div name="Pagination">
 
-                  </div>
-              </div>
-          </div>
-      </div>
-      <div class="flex-none w-14 h-14">
-      </div>
+            </div>
+        </div>
     </AppLayout>
 </template>
-
-

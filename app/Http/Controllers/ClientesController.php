@@ -15,10 +15,10 @@ class ClientesController extends Controller
     public function index(Request $request)
     {
         $clientes = Clientes::where('nombre', 'LIKE', "%$request->q%")
-        ->where('id_sucursal', Auth::user()->id_sucursal)
-        ->where('activo', true)
-        ->latest()
-        ->paginate(10);
+            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('activo', true)
+            ->latest()
+            ->paginate(10);
 
         return Inertia::render('Cliente/Cliente', [
             'clientes' => $clientes,
@@ -39,11 +39,18 @@ class ClientesController extends Controller
     public function store(Request $request)
     {
 
-        $request->validate([
-            'nombre' => 'required',
-            'porcentaje_descuento' => 'required',
-            'requiereFactura' => 'required',
-        ]);
+        $request->validate(
+            [
+                'nombre' => 'required',
+                'porcentaje_descuento' => 'required',
+                'requiereFactura' => 'required',
+            ],
+            [
+                'nombre.required' => 'Por favor ingresa el nombre del cliente.',
+                'porcentaje_descuento.required' => 'Agregar un porcentage para el cliente.',
+                'requiereFactura.required' => 'Favor de validar si require factura.',
+            ]
+        );
 
         $cliente = [
             'nombre' => $request->nombre,
@@ -81,11 +88,11 @@ class ClientesController extends Controller
         ]);
 
         $cliente = Clientes::where('id', $request->id)
-        ->where('activo', true)->first();
-        
+            ->where('activo', true)->first();
+
         $cliente->nombre = $request->nombre;
         $cliente->porcentaje_descuento = $request->porcentaje_descuento;
-        $cliente->requiereFactura =  $request->requiereFactura;
+        $cliente->requiereFactura = $request->requiereFactura;
         if ($request->requiereFactura) {
             $cliente->rfc = $request->rfc;
         }
@@ -96,10 +103,10 @@ class ClientesController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(String $idCliente)
+    public function destroy(string $idCliente)
     {
         $cliente = Clientes::where($idCliente)
-        ->where('activo', true)->first();
+            ->where('activo', true)->first();
         $cliente->activo = false;
         $cliente->save();
         return redirect()->route('cliente.index');

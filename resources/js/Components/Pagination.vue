@@ -28,7 +28,9 @@ defineProps({
                 <div
                     v-if="link.url === null"
                     class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-400 border rounded"
-                    v-html="link.label"
+                    v-html="link.label === 'pagination.previous'
+                            ? 'Anterior' : link.label === 'pagination.next'
+                            ? 'Siguiente' : link.label"
                 />
 
                 <Link
@@ -36,7 +38,9 @@ defineProps({
                     class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border rounded hover:bg-white focus:border-primary focus:text-primary"
                     :class="{ 'bg-blue-700 text-white': link.active }"
                     :href="link.url + prefix"
-                    v-html="link.label"
+                    v-html="link.label === 'pagination.previous'
+                            ? 'Anterior' : link.label === 'pagination.next'
+                            ? 'Siguiente' : link.label"
                 />
             </template>
         </div>

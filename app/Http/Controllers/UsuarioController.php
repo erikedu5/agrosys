@@ -71,6 +71,11 @@ class UsuarioController extends Controller
             'email' => 'required|email',
             'tipo' => 'required',
             'password' => 'required',
+        ],[
+            'name.required' => 'Agregar un nombre de usuario.',
+            'email.required' => 'Agregar un correo electrónico.',
+            'tipo.required' => 'Agregar un Rol.',
+            'password.required'  => 'Agregar una contraseña.',
         ]);
 
         if ($request->password !== null) {
@@ -115,6 +120,10 @@ class UsuarioController extends Controller
             'name' => 'required',
             'email' => 'required|email',
             'tipo' => 'required'
+        ],[
+            'name.required' => 'Agregar un nombre de usuario.',
+            'email.required' => 'Agregar un correo electrónico.',
+            'tipo.required' => 'Agregar un Rol.',
         ]);
 
         $usuario = User::find($request->id);

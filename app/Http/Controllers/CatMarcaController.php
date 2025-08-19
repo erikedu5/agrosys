@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class CatMarcaController extends Controller
 {
-        
+
     public function index(Request $request)
     {
         return Inertia::render('Catalogos/Marca/Marca', [
@@ -27,6 +27,8 @@ class CatMarcaController extends Controller
     {
         $request->validate([
             'nombre' => 'required'
+        ], [
+            'nombre' => 'Agregar un nombre de marca.'
         ]);
 
         CatMarca::create($request->all());
@@ -45,11 +47,13 @@ class CatMarcaController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
         $request->validate([
             'nombre' => 'required',
+        ],[
+            'nombre' => 'Agregar un nombre de marca.'
         ]);
-        
+
         $catMarca = CatMarca::find($request->id);
         $catMarca->nombre = $request->nombre;
         $catMarca->save();
