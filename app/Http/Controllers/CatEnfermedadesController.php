@@ -37,6 +37,9 @@ class CatEnfermedadesController extends Controller
         $request->validate([
             'nombre' => 'required',
             'descripcion' => 'required|',
+        ], [
+            'nombre.required' => 'Agregar un nombre de enfermedad.',
+            'descripcion.required' => 'Agregar un descripción a la enferemedad.'
         ]);
 
         $enfermedad = CatEnfermedades::create($request->all());
@@ -55,10 +58,13 @@ class CatEnfermedadesController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request)
-    {  
+    {
         $request->validate([
             'nombre' => 'required',
             'descripcion' => 'required',
+        ], [
+            'nombre.required' => 'Agregar un nombre de enfermedad.',
+            'descripcion.required' => 'Agregar un descripción a la enferemedad.'
         ]);
 
         $catEnfermedades = CatEnfermedades::find($request->id);

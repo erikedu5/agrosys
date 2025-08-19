@@ -54,6 +54,9 @@ class CatTipoFlorController extends Controller
         $request->validate([
             'nombre' => 'required',
             'selectedOptions' => 'required'
+        ], [
+            'nombre.required' => 'Agregar un nombre al tipo de flor.',
+            'selectedOptions.required' => 'Selección al menos una enfermedad'
         ]);
 
         $tipoFlor = CatTipoFlor::create($request->all());
@@ -92,6 +95,8 @@ class CatTipoFlorController extends Controller
     {
         $request->validate([
             'nombre' => 'required'
+        ], [
+            'nombre.required' => 'Agregar un nombre al tipo de flor.',
         ]);
 
         $catTipoFlor = CatTipoFlor::find($request->id);

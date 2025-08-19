@@ -28,6 +28,9 @@ class CatClasificacionController extends Controller
         $request->validate([
             'nombre' => 'required',
             'criterio' => 'required',
+        ],[
+            'nombre.required' => 'Agregar un nombre de clacificación.',
+            'criterio.required' => 'Agregar un criterio a la clacificación.',
         ]);
 
         CatClasificacion::create($request->all());
@@ -50,6 +53,9 @@ class CatClasificacionController extends Controller
         $request->validate([
             'nombre' => 'required',
             'criterio' => 'required',
+        ],[
+            'nombre.required' => 'Agregar un nombre de clacificación.',
+            'criterio.required' => 'Agregar un criterio a la clacificación.',
         ]);
 
         $catClasificacion = CatClasificacion::find($request->id);

@@ -12,28 +12,28 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductoController extends Controller
 {
-      /**
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
-        ->orWhere('barcode','LIKE',"%$request->q%")
-        ->orWhere('ingrediente_activo','LIKE',"%$request->q%")
-        ->latest()
-        ->paginate(10);
+            ->orWhere('barcode', 'LIKE', "%$request->q%")
+            ->orWhere('ingrediente_activo', 'LIKE', "%$request->q%")
+            ->latest()
+            ->paginate(10);
 
         foreach ($productos as $producto) {
             $marca = CatMarca::where('id', $producto->id_marca)->first();
             $producto->marca = $marca;
             $altaInventario = AltaInventario::where('id_producto', $producto->id)
-            ->where('id_sucursal',  Auth::user()->id_sucursal)
-            ->orderBy('created_at', 'desc')->first();
-            $producto->cantidad = $altaInventario !== null ?  $altaInventario->cantidad_nueva: "0" ;
+                ->where('id_sucursal', Auth::user()->id_sucursal)
+                ->orderBy('created_at', 'desc')->first();
+            $producto->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
         }
 
         return Inertia::render('Inventario/Inventario', [
-             'productos' => $productos
+            'productos' => $productos
         ]);
     }
 
@@ -57,16 +57,27 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required',
-            'id_clasificacion' => 'required',
-            'id_marca' => 'required',
-            'precio_unitario' => 'required',
-            'precio_ieps' => 'required',
-            'ieps' => 'required',
-            'tamano' => 'required',
-            'barcode' => 'nullable',
-        ]);
+        $request->validate(
+            [
+                'nombre' => 'required',
+                'id_clasificacion' => 'required',
+                'id_marca' => 'required',
+                'precio_unitario' => 'required',
+                'precio_ieps' => 'required',
+                'ieps' => 'required',
+                'tamano' => 'required',
+                'barcode' => 'nullable',
+            ],
+            [
+                'nombre.required' => 'Por favor ingresa el nombre del producto.',
+                'id_clasificacion.required' => 'Selecciona una clasificación.',
+                'id_marca.required' => 'Selecciona una marca.',
+                'precio_unitario.required' => 'Ingresa el precio unitario.',
+                'precio_ieps.required' => 'Ingresa el precio con IEPS.',
+                'ieps.required' => 'Indica el valor de IEPS.',
+                'tamano.required' => 'Indica el tamaño del producto.',
+            ]
+        );
 
         $data['id_usuario'] = Auth::user()->id;
         $data['cantidad'] = 0;
@@ -76,7 +87,7 @@ class ProductoController extends Controller
         $altaInventario = new AltaInventario();
         $altaInventario->cantidad_actual = 0;
         $altaInventario->cantidad_nueva = 0;
-        $altaInventario->id_usuario = Auth::user()->id ;
+        $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $producto->id;
         $altaInventario->id_sucursal = Auth::user()->id_sucursal;
         $altaInventario->save();
@@ -97,16 +108,16 @@ class ProductoController extends Controller
     public function edit(Producto $inventario)
     {
         $altaInventario = AltaInventario::where('id_producto', $inventario->id)
-            ->where('id_sucursal',  Auth::user()->id_sucursal)
+            ->where('id_sucursal', Auth::user()->id_sucursal)
             ->orderBy('created_at', 'desc')->first();
-        $inventario->cantidad = $altaInventario !== null ?  $altaInventario->cantidad_nueva: "0" ;
+        $inventario->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
 
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
         return Inertia::render('Inventario/CreateProducto', [
             'clasificaciones' => $clasificaciones,
             'marcas' => $marca,
-            'producto' =>$inventario
+            'producto' => $inventario
         ]);
     }
 
@@ -147,11 +158,11 @@ class ProductoController extends Controller
     public function show(Producto $inventario)
     {
         $altaInventario = AltaInventario::where('id_producto', $inventario->id)
-            ->where('id_sucursal',  Auth::user()->id_sucursal)
+            ->where('id_sucursal', Auth::user()->id_sucursal)
             ->orderBy('created_at', 'desc')->first();
-        $inventario->cantidad = $altaInventario !== null ?  $altaInventario->cantidad_nueva: "0" ;
+        $inventario->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
         return Inertia::render('Inventario/AddInventario', [
-            'producto' =>$inventario
+            'producto' => $inventario
         ]);
     }
 
@@ -162,14 +173,14 @@ class ProductoController extends Controller
         $catProducto = Producto::find($request->id);
 
         $actualStock = AltaInventario::where('id_producto', $request->id)
-        ->where('id_sucursal',  Auth::user()->id_sucursal)
-        ->orderBy('created_at', 'desc')->first();
+            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->orderBy('created_at', 'desc')->first();
 
         $altaInventario = new AltaInventario();
-        $cantidad = $actualStock !== null? $actualStock->cantidad_nueva: 0;
+        $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
         $altaInventario->cantidad_actual = $cantidad;
         $altaInventario->cantidad_nueva = $cantidad + $request->cantidad;
-        $altaInventario->id_usuario = Auth::user()->id ;
+        $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $catProducto->id;
         $altaInventario->id_sucursal = Auth::user()->id_sucursal;
         $altaInventario->save();

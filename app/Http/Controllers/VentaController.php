@@ -96,6 +96,11 @@ class VentaController extends Controller
                 'total' => ['required'],
                 'tipo_venta' => ['required'],
                 'producto_venta' => ['required']
+            ], [
+                'id_cliente.required' => 'El cliente es requerido',
+                'total.required' => 'El total es requerido.',
+                'tipo_venta.required' => 'El tipo de venta es requerido.',
+                'producto_venta.required' => 'Agregar al menos un producto para la venta.'
             ]
         );
         $id_usuario = Auth::user()->id;
