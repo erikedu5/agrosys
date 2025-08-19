@@ -55,6 +55,8 @@ const canAddProducto = computed(() =>
 
 const q = ref('');
 
+const clientSelected = ref(true);
+
 watch(q, (value) => {
     router.get(route('venta.index', { q: value }), {}, { preserveState: true });
 });
@@ -169,6 +171,7 @@ const handleSelectChange = (event) => {
 
 const changeClient = (event) => {
     if (event !== null) {
+        clientSelected.value = false;
         form.porcentaje_descuento = form.cliente.porcentaje_descuento;
         if (form.producto !== null) {
             form.precio_ieps_con_descuento = (form.producto.precio_ieps
@@ -242,7 +245,8 @@ const closeModal = () => {
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Venta de agroquimicos
-            </h2>
+            </h2>                    
+            <span>F2: Buscar en sucursal</span>
         </template>
 
         <hr class="my-6">
@@ -368,7 +372,7 @@ const closeModal = () => {
                         <hr>
                         </hr>
                         <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
-                            <button @click="finalizeSale()"
+                            <button @click="finalizeSale()" :disabled="clientSelected"
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                         hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                         focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
@@ -381,20 +385,19 @@ const closeModal = () => {
 
                             <div style=" text-align: left;" class="mb-4 mt-3 w-full flex flex-col md:flex-row justify-between">
                                 <h6>Agregar productos de venta</h6>
-                                <span>F2: Buscar en sucursal</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label>Productos: </label>
                                     <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
                                       option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
-                                      :options="productosFiltrados" class="w-full max-w-full">
+                                      :options="productosFiltrados" class="w-full max-w-full" :disabled="clientSelected">
                                   </vue-single-select>
                               </div>
 
                               <div>
                                   <label>Cantidad de productos: </label>
-                                  <input type="number" min="1" step="0.01" v-model="form.cantidad"
+                                  <input type="number" min="1" step="0.01" v-model="form.cantidad" :disabled="clientSelected"
                                       @input="changeQuantity($event)" class="form-input rounded-md shadow-sm w-full max-w-full" />
                                   <br>
                               </div>
