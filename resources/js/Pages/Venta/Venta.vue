@@ -433,8 +433,8 @@ const closeModal = () => {
         </div>
 
         <!-- Modal -->
-        <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-4xl overflow-y-auto max-h-full">
+        <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-lg overflow-y-auto max-h-full">
                 <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
 
                 <!-- Input de búsqueda -->
@@ -446,21 +446,21 @@ const closeModal = () => {
                     <table class="w-full border-collapse border border-gray-200 text-sm sm:text-base">
                         <thead>
                             <tr class="bg-gray-100">
-                                <th class="border p-2 sm:p-4">Producto</th>
-                                <th class="border p-2 sm:p-4">Marca</th>
-                                <th class="border p-2 sm:p-4">Sucursal</th>
-                                <th class="border p-2 sm:p-4">Cantidad en stock</th>
+                                <th class="border p-2 sm:p-6">Producto</th>
+                                <th class="border p-2 sm:p-6">Marca</th>
+                                <th class="border p-2 sm:p-6">Sucursal</th>
+                                <th class="border p-2 sm:p-6">Cantidad en stock</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="producto in props.productosSucursal" :key="producto.id">
-                                <td class="border p-2 sm:p-4">{{ producto?.nombre }}</td>
-                                <td class="border p-2 sm:p-4">{{ producto?.marca }}</td>
-                                <td class="border p-2 sm:p-4">{{ producto?.sucursal?.nombre }}</td>
-                                <td class="border p-2 sm:p-4 text-center">{{ producto?.cantidad }}</td>
+                                <td class="border p-2 sm:p-6">{{ producto?.nombre }}</td>
+                                <td class="border p-2 sm:p-6">{{ producto?.marca }}</td>
+                                <td class="border p-2 sm:p-6">{{ producto?.sucursal?.nombre }}</td>
+                                <td class="border p-2 sm:p-6 text-center">{{ producto?.cantidad }}</td>
                             </tr>
                             <tr v-if="props.productosSucursal.length === 0">
-                                <td colspan="4" class="border p-2 sm:p-4 text-center text-gray-500">
+                                <td colspan="4" class="border p-2 sm:p-6 text-center text-gray-500">
                                     No se encontraron productos
                                 </td>
                             </tr>
