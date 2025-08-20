@@ -3,11 +3,12 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import Pagination from '@/Components/Pagination.vue';
+    import { notify } from '@/utils/notify';
 
     const props = defineProps({
-        ventas: Array,
+        ventas: Object,
         cliente: Object,
-        abonos: Array,
+        abonos: Object,
     });
 
     const form = useForm({
@@ -20,7 +21,7 @@
         if (form.abono > 0) {
             form.put(route('venta.update', props.cliente.id), form);
         } else {
-            alert("No puedes abonar 0 pesos a una nota");
+            notify('No puedes abonar 0 pesos a una nota', 'error');
         }
     }
 
