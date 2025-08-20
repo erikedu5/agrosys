@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -9,10 +10,12 @@ const props = defineProps({
     status: String,
 });
 
-const form = useForm({});
+const { form, reset } = usePersistedForm('verifyEmailForm', {});
 
 const submit = () => {
-    form.post(route('verification.send'));
+    form.post(route('verification.send'), {
+        onSuccess: reset,
+    });
 };
 
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent');

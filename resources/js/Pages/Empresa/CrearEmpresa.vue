@@ -1,12 +1,12 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({empresa: Object});
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('empresaForm', {
         id: props.empresa !== undefined ? props.empresa.id: null,
         nombre: props.empresa !== undefined ? props.empresa.nombre : '',
         direccion: props.empresa !== undefined ? props.empresa.direccion : '',
@@ -19,9 +19,13 @@
 
     const submit = () => {
         if (props.empresa == null) {
-            form.post(route('empresa.store'), form);
+            form.post(route('empresa.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('empresa.update', props.empresa.id), form);
+            form.put(route('empresa.update', props.empresa.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

@@ -2,7 +2,7 @@
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
     import { ref, watch, defineProps } from 'vue';
-    import { router, useForm } from '@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import Pagination from '@/Components/Pagination.vue'
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import InputError from '@/Components/InputError.vue';
@@ -14,7 +14,7 @@
         solucionesByProduct: Array,
     });
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('agregarSolucionForm', {
         id_producto: props.solucion != null ? props.solucion.id_producto : props.producto.id,
         id_enfermedad_tipo_flor: props.solucion != null ? props.solucion.id_enfermedad_tipo_flor : 0,
         dosis_bomba_ml: props.solucion != null ? props.solucion.dosis_bomba_ml: 0,
@@ -25,11 +25,14 @@
 
     const submit = async() => {
         if (props.solucion == undefined) {
-            form.post(route('solucion.store'), form);
+            form.post(route('solucion.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('solucion.update', props.solucion.id), form);
+            form.put(route('solucion.update', props.solucion.id), {
+                onSuccess: reset,
+            });
         }
-        form.reset();
     }
 
     const addDosisbomba = () => {

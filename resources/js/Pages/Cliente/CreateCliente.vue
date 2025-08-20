@@ -1,13 +1,13 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import Checkbox from '@/Components/Checkbox.vue';
     import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({cliente: Object});
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('clienteForm', {
         nombre: props.cliente !== undefined ? props.cliente.nombre : '',
         requiereFactura: props.cliente !== undefined ? props.cliente.requiereFactura: false,
         rfc: props.cliente !== undefined ? props.cliente.rfc: null,
@@ -17,9 +17,13 @@
 
     const submit = () => {
         if (props.cliente == undefined) {
-            form.post(route('cliente.store'), form);
+            form.post(route('cliente.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('cliente.update', props.cliente.id), form);
+            form.put(route('cliente.update', props.cliente.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

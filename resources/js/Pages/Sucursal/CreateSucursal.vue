@@ -1,7 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { ref, watch } from 'vue';
@@ -14,7 +14,7 @@
         }
     });
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('sucursalForm', {
         id: props.sucursal !== undefined ? props.sucursal.id: null,
         nombre: props.sucursal !== undefined ? props.sucursal.nombre: '',
         direccion: props.sucursal !== undefined ? props.sucursal.direccion: '',
@@ -41,9 +41,13 @@
 
     const submit = () => {
         if (props.sucursal == undefined) {
-            form.post(route('sucursal.store'), form);
+            form.post(route('sucursal.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('sucursal.update', props.sucursal.id), form);
+            form.put(route('sucursal.update', props.sucursal.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

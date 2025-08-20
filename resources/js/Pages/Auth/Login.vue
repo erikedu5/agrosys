@@ -1,5 +1,6 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -13,7 +14,7 @@ defineProps({
     status: String,
 });
 
-const form = useForm({
+const { form, reset } = usePersistedForm('loginForm', {
     email: '',
     password: '',
     remember: false,
@@ -24,7 +25,7 @@ const submit = () => {
         ...data,
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: reset,
     });
 };
 </script>
@@ -56,9 +57,6 @@ const submit = () => {
                     <li>🚜 Administrar clientes.</li>
                     <li>⚡ Ayudar a personal detras de la vitrina con dosis y enfermedades.</li>
             </ul>
-            <p>
-                Optimiza tu negocio con Agrosys y lleva el control de tu inventario de manera rápida y sencilla.
-            </p>
             </div>
         </div>
         <br>
