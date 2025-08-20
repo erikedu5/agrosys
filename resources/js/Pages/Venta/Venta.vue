@@ -72,7 +72,6 @@ const recalculateTotal = () => {
 
 const agregarVenta = () => {
     if (!canAddProducto.value) {
-        alert('Seleccione un cliente y un producto.');
         return false;
     }
     if (form.producto.cantidad < form.cantidad) {
@@ -165,6 +164,7 @@ const handleSelectChange = (event) => {
             - ((form.producto.precio_ieps / 100)
                 * form.cliente.porcentaje_descuento)).toFixed(2);
         form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
+        agregarVenta();
     } else {
         let cliente = form.cliente;
         form.reset();
@@ -255,13 +255,10 @@ const closeModal = () => {
         <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grow">
                 <div class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
-
                     <div style=" text-align: left;">
                         <h6>Selecciona un cliente</h6>
                     </div>
-
-
-                    <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label>Cliente: </label>
                             <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
@@ -269,6 +266,15 @@ const closeModal = () => {
                                 :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
                             </vue-single-select>
                             <label class="block mt-2 text-sm text-gray-700">Porcentaje de descuento: {{ form.porcentaje_descuento }}%</label>
+                        </div>
+                        <div >
+                            <div>
+                                <label>Productos: </label>
+                                <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
+                                    option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
+                                    :options="productosFiltrados" class="w-full max-w-full" :disabled="clientSelected">
+                                </vue-single-select>
+                            </div>
                         </div>
                     </div>
 
@@ -369,33 +375,7 @@ const closeModal = () => {
                                 Terminar venta
                             </button>
                             <label class="font-bold">Total final: $ {{ total }} </label>
-
                         </div>
-
-                            <div style=" text-align: left;" class="mb-4 mt-3 w-full flex flex-col md:flex-row justify-between">
-                                <h6>Agregar productos de venta</h6>
-                            </div>
-                            <div class="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label>Productos: </label>
-                                    <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
-                                      option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
-                                      :options="productosFiltrados" class="w-full max-w-full" :disabled="clientSelected">
-                                  </vue-single-select>
-                                </div>
-                            </div>
-                        <br>
-                        <div>
-                            <button @click="agregarVenta()" :class="{ 'opacity-25': !canAddProducto }"
-                                :disabled="!canAddProducto"
-                                class="text-blue-700 hover:text-white border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800 w-full">
-                                Agregar producto
-                            </button>
-                        </div>
-
-                        <br>
-
-                        <br>
                     </div>
                 </div>
             </div>
