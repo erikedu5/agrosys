@@ -49,8 +49,7 @@ const formVenta = useForm({
 
 const canAddProducto = computed(() =>
     form.cliente && form.cliente.id &&
-    form.producto && form.producto.id &&
-    form.cantidad >= 1
+    form.producto && form.producto.id
 );
 
 const q = ref('');
@@ -67,9 +66,13 @@ watch(b, (value) => {
     router.get(route('venta.index', { b: value }), {}, { preserveState: true });
 });
 
+const recalculateTotal = () => {
+    total = productoVenta.reduce((sum, p) => sum + parseFloat(p.importe), 0).toFixed(2);
+};
+
 const agregarVenta = () => {
     if (!canAddProducto.value) {
-        alert('Seleccione un cliente, un producto y una cantidad mínima de 1.');
+        alert('Seleccione un cliente y un producto.');
         return false;
     }
     if (form.producto.cantidad < form.cantidad) {
@@ -83,7 +86,7 @@ const agregarVenta = () => {
         'importe': form.importe
     };
     productoVenta.push(venta);
-    total = (parseFloat(total) + parseFloat(form.importe)).toFixed(2);
+    recalculateTotal();
     let cliente = form.cliente;
     form.reset();
     form.producto = 0;
@@ -92,14 +95,17 @@ const agregarVenta = () => {
     selectClient = true;
 };
 
-const changeQuantity = () => {
-    if (form.cantidad > form.producto.cantidad) {
-        alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
-        return false;
+const updateQuantity = (producto) => {
+    if (producto.cantidad > producto.producto.cantidad) {
+        alert("No tienes esa cantidad en stock, tu tienes " + producto.producto.cantidad + " en bodega");
+        producto.cantidad = producto.producto.cantidad;
     }
-    form.importe = form.cantidad * form.precio_ieps_con_descuento;
-    form.importe = form.importe.toFixed(2);
-}
+    if (producto.cantidad < 1) {
+        producto.cantidad = 1;
+    }
+    producto.importe = (producto.cantidad * producto.precio_unitario).toFixed(2);
+    recalculateTotal();
+};
 
 const printTicketSilently = (url, callback = () => { }) => {
     const iframe = document.createElement('iframe');
@@ -182,16 +188,10 @@ const changeClient = (event) => {
     }
 }
 
-const actualizarProducto = (producto) => {
-    form.producto = producto.producto;
-    form.cantidad = producto.cantidad;
-    eliminarProducto(producto);
-}
-
 const eliminarProducto = (producto) => {
-    total = (total - parseFloat(producto.importe)).toFixed(2);
     const index = productoVenta.indexOf(producto);
     productoVenta.splice(index, 1);
+    recalculateTotal();
 }
 
 // Estado del modal
@@ -261,18 +261,14 @@ const closeModal = () => {
                     </div>
 
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4">
                         <div>
                             <label>Cliente: </label>
                             <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
                                 option-key="id" option-label="nombre" @input="changeClient($event)"
                                 :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
                             </vue-single-select>
-                        </div>
-                        <div>
-                            <label>Porcentaje de descuento para cliente: </label>
-                            <input type="text" readonly v-model="form.porcentaje_descuento" :disabled="true"
-                                class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
+                            <label class="block mt-2 text-sm text-gray-700">Porcentaje de descuento: {{ form.porcentaje_descuento }}%</label>
                         </div>
                     </div>
 
@@ -283,44 +279,40 @@ const closeModal = () => {
                             <h6>Ticket de venta</h6>
                         </div>
                         <br>
-                        <div class="md:hidden grid grid-cols-1 gap-4 w-full mb-4">
-                            <div v-for="producto in productoVenta" :key="producto.producto.id" class="rounded-lg boder p-4 bg-white shadow-lg">
-                                <div class="text-sm text-gray-500">Nombre del producto</div>
-                                <div class="font-semibold text-gray-900">{{ producto.producto.nombre }}</div>
-                                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <div class="text-gray-500">Cantidad</div>
-                                        <div>{{ producto.cantidad }}</div>
+                            <div class="md:hidden grid grid-cols-1 gap-4 w-full mb-4">
+                                <div v-for="producto in productoVenta" :key="producto.producto.id" class="rounded-lg boder p-4 bg-white shadow-lg">
+                                    <div class="text-sm text-gray-500">Nombre del producto</div>
+                                    <div class="font-semibold text-gray-900">{{ producto.producto.nombre }}</div>
+                                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <div class="text-gray-500">Cantidad</div>
+                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                                class="w-full border rounded-md p-1" />
+                                        </div>
+                                        <div>
+                                            <div class="text-gray-500">Precio unitario</div>
+                                            <div>{{ producto.precio_unitario }}</div>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <div class="text-gray-500">Importe</div>
+                                            <div>{{ producto.importe }}</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div class="text-gray-500">Precio unitario</div>
-                                        <div>{{ producto.precio_unitario }}</div>
-                                    </div>
-                                    <div class="col-span-2">
-                                        <div class="text-gray-500">Importe</div>
-                                        <div>{{ producto.importe }}</div>
-                                    </div>
-                                </div>
-                                <div class="flex justify-end mt-3">
-                                    <div class="inline-flex rounded-md shadow-sm" role="group">
-                                        <button @click="actualizarProducto(producto)"
-                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                            Actualizar
-                                        </button>
-                                        <button @click="eliminarProducto(producto)"
-                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                            Eliminar
-                                        </button>
+                                    <div class="flex justify-end mt-3">
+                                        <div class="inline-flex rounded-md shadow-sm" role="group">
+                                            <button @click="eliminarProducto(producto)"
+                                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                                Eliminar
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
                         <div class="relative overflow-x-auto hidden md:block w-full shadow-md sm:rounded-lg">
                             <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50">
                                     <tr class="[&>th]:px-4 [&>th]:py-3">
-                                        <th>Id</th>
                                         <th>Nombre del producto</th>
                                         <th>Cantidad</th>
                                         <th>Precio unitario</th>
@@ -331,20 +323,17 @@ const closeModal = () => {
                                 <tbody>
                                     <tr v-for="producto in productoVenta" :value="producto.producto.id"
                                         :key="producto.producto.id">
-                                        <td class="px-4 py-2"> {{ producto.producto.id }}</td>
                                         <td class="px-4 py-2"> {{ producto.producto.nombre }} </td>
-                                        <td class="px-4 py-2"> {{ producto.cantidad }} </td>
+                                        <td class="px-4 py-2">
+                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                                class="w-20 border rounded-md p-1" />
+                                        </td>
                                         <td class="px-4 py-2"> {{ producto.precio_unitario }} </td>
                                         <td class="px-4 py-2"> {{ producto.importe }} </td>
                                         <td class="px-4 py-2">
                                             <div class="inline-flex rounded-md shadow-sm" role="group">
-                                                <button @click="actualizarProducto(producto)"
-                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                    Actualizar
-                                                </button>
-
                                                 <button @click="eliminarProducto(producto)"
-                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                                     Eliminar
                                                 </button>
                                             </div>
@@ -386,37 +375,15 @@ const closeModal = () => {
                             <div style=" text-align: left;" class="mb-4 mt-3 w-full flex flex-col md:flex-row justify-between">
                                 <h6>Agregar productos de venta</h6>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 gap-4">
                                 <div>
                                     <label>Productos: </label>
                                     <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
                                       option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
                                       :options="productosFiltrados" class="w-full max-w-full" :disabled="clientSelected">
                                   </vue-single-select>
-                              </div>
-
-                              <div>
-                                  <label>Cantidad de productos: </label>
-                                  <input type="number" min="1" step="0.01" v-model="form.cantidad" :disabled="clientSelected"
-                                      @input="changeQuantity($event)" class="form-input rounded-md shadow-sm w-full max-w-full" />
-                                  <br>
-                              </div>
-
-                              <div>
-                                  <label>Precio unitario: </label>
-                                  <input type="number" step="0.01" readonly v-model="form.precio_ieps_con_descuento"
-                                      :disabled="true"
-                                      class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
-                                  <br>
-                              </div>
-
-                              <div>
-                                  <label>importe: </label>
-                                  <input type="number" step="0.01" readonly v-model="form.importe" :disabled="true"
-                                      class="orm-input rounded-md shadow-sm w-full max-w-full bg-gray-100 cursor-not-allowed" />
-                                  <br>
-                              </div>
-                          </div>
+                                </div>
+                            </div>
                         <br>
                         <div>
                             <button @click="agregarVenta()" :class="{ 'opacity-25': !canAddProducto }"
