@@ -109,7 +109,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">IEPS</label>
-                            <vue-single-select v-model="iepsSeleccionado" :options="iepsOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
+                            <vue-single-select v-model="iepsSeleccionado" :options="iepsOptions" option-label="label" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.ieps" />
                                 <br>
 
