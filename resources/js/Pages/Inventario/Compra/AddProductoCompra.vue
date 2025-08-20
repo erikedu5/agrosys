@@ -262,13 +262,13 @@ const changeStatus = (event) => {
                                 <br>
 
                                 <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
-                                <input class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
+                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
                                     disabled>
                                 <InputError class="mt-2" :message="form.errors.total_compra" />
                                 <br>
 
                                 <label class="block font-medium text-sm text-gray-700">Total de credito</label>
-                                <input class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
+                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
                                     disabled>
                                 <InputError class="mt-2" :message="form.errors.total_credito" />
                                 <br>
@@ -288,7 +288,7 @@ const changeStatus = (event) => {
 
                                 <hr class="my-6">
                                 <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
-                                <input class="form-input w-full rounded-md shadow-sm"
+                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
                                     :disabled="props.compra !== undefined && form.status != 'adeudo'"
                                     v-model="form.abono">
                                 <br>
@@ -351,7 +351,7 @@ const changeStatus = (event) => {
             <template #content>
                 <div class="mt-4">
                     <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                    <input type="number" min="1" class="form-input w-full rounded-md shadow-sm"
+                    <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
                         v-model="form.cantidad_pedido">
                     <br><br>
 
@@ -418,7 +418,7 @@ const changeStatus = (event) => {
                     <br>
 
                     <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
-                    <input @change="calcularIpsProducto" class="form-input w-full rounded-md shadow-sm"
+                    <input type="number" step="0.01" @change="calcularIpsProducto" class="form-input w-full rounded-md shadow-sm"
                         v-model="productoForm.precio_unitario">
                     <InputError class="mt-2" :message="productoErrors.precio_unitario" />
                     <br><br>
@@ -437,7 +437,7 @@ const changeStatus = (event) => {
                     <br>
 
                     <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
-                    <input @change="calcularPrecioCompraProducto" class="form-input w-full rounded-md shadow-sm"
+                    <input type="number" step="0.01" @change="calcularPrecioCompraProducto" class="form-input w-full rounded-md shadow-sm"
                         v-model="productoForm.precio_ieps">
                     <InputError class="mt-2" :message="productoErrors.precio_ieps" />
                     <br><br>

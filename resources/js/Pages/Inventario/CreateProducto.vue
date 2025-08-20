@@ -89,7 +89,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
-                            <input type="decimal"
+                            <input type="number" step="0.01"
                                 @change="calcularIps()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_unitario">
@@ -113,7 +113,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
-                            <input type="text"
+                            <input type="number" step="0.01"
                                 @change="calcularPrecioCompra()"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.precio_ieps">

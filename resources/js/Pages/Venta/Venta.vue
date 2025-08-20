@@ -95,6 +95,11 @@ const agregarVenta = () => {
 };
 
 const updateQuantity = (producto) => {
+    if (producto.cantidad === null || producto.cantidad === '') {
+        producto.importe = 0;
+        recalculateTotal();
+        return;
+    }
     if (producto.cantidad > producto.producto.cantidad) {
         alert("No tienes esa cantidad en stock, tu tienes " + producto.producto.cantidad + " en bodega");
         producto.cantidad = producto.producto.cantidad;
@@ -292,7 +297,7 @@ const closeModal = () => {
                                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                                         <div>
                                             <div class="text-gray-500">Cantidad</div>
-                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
                                                 class="w-full border rounded-md p-1" />
                                         </div>
                                         <div>
@@ -331,7 +336,7 @@ const closeModal = () => {
                                         :key="producto.producto.id">
                                         <td class="px-4 py-2"> {{ producto.producto.nombre }} </td>
                                         <td class="px-4 py-2">
-                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
                                                 class="w-20 border rounded-md p-1" />
                                         </td>
                                         <td class="px-4 py-2"> {{ producto.precio_unitario }} </td>

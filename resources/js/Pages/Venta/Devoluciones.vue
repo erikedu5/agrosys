@@ -45,7 +45,7 @@ const submit = () => {
                                     <td class="px-2 py-1 text-right">{{ item.devuelto }}</td>
                                     <td class="px-2 py-1 text-right">{{ item.max_devolver }}</td>
                                     <td class="px-2 py-1 text-right">
-                                        <input type="number" class="border rounded px-2 py-1 w-24" min="0" :max="item.max_devolver" v-model.number="form.items[index].cantidad" />
+                                        <input type="number" step="0.01" class="border rounded px-2 py-1 w-24" min="0" :max="item.max_devolver" v-model.number="form.items[index].cantidad" />
                                     </td>
                                 </tr>
                             </tbody>
