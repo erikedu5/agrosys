@@ -57,9 +57,6 @@ const submit = () => {
                     <li>🚜 Administrar clientes.</li>
                     <li>⚡ Ayudar a personal detras de la vitrina con dosis y enfermedades.</li>
             </ul>
-            <p>
-                Optimiza tu negocio con Agrosys y lleva el control de tu inventario de manera rápida y sencilla.
-            </p>
             </div>
         </div>
         <br>
