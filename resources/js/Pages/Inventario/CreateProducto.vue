@@ -3,6 +3,8 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
+    import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import { ref, watch } from 'vue';
 
     const props=defineProps({
         producto: Object,
@@ -24,6 +26,29 @@
         ingrediente_activo: props.producto !== undefined ? props.producto.ingrediente_activo: null,
         barcode: props.producto !== undefined ? props.producto.barcode : '',
         id_usuario: 0,
+    });
+
+    const clasificacionSeleccionada = ref(props.clasificaciones.find(c => c.id === form.id_clasificacion) || null);
+    watch(clasificacionSeleccionada, (v) => {
+        form.id_clasificacion = v ? v.id : 0;
+    });
+
+    const marcaSeleccionada = ref(props.marcas.find(m => m.id === form.id_marca) || null);
+    watch(marcaSeleccionada, (v) => {
+        form.id_marca = v ? v.id : 0;
+    });
+
+    const iepsOptions = [
+        { value: 0, label: '0%' },
+        { value: 3, label: '3%' },
+        { value: 6, label: '6%' },
+        { value: 7, label: '7%' },
+        { value: 9, label: '9%' }
+    ];
+    const iepsSeleccionado = ref(iepsOptions.find(o => o.value === form.ieps) || null);
+    watch(iepsSeleccionado, (v) => {
+        form.ieps = v ? v.value : 0;
+        calcularIps();
     });
 
     const submit = () => {
@@ -65,26 +90,12 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Clasificacion</label>
-                            <select v-model="form.id_clasificacion" id="id_clasificacion" name="id_clasificacion"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="" disabled>Selecione</option>
-                                <option v-for="clasificacion in clasificaciones" :value="clasificacion.id" :key="clasificacion.id">
-                                    {{ clasificacion.nombre }}
-                                </option>
-                            </select>
+                            <vue-single-select v-model="clasificacionSeleccionada" :options="clasificaciones" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.id_clasificacion" />
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Marca</label>
-                            <select v-model="form.id_marca" id="id_marca" name="id_marca"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="" disabled>Selecione</option>
-                                <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
-                                    {{ marca.nombre }}
-                                </option>
-                            </select>
+                            <vue-single-select v-model="marcaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.id_marca" />
                                 <br>
 
@@ -98,17 +109,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">IEPS</label>
-                            <select v-model="form.ieps" id="ieps" name="ieps"
-                             @change="calcularIps()"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option value="0" default>0%</option>
-                            <option value="3">3%</option>
-                            <option value="6">6%</option>
-                            <option value="7">7%</option>
-                            <option value="9">9%</option>
-                            </select>
+                            <vue-single-select v-model="iepsSeleccionado" :options="iepsOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.ieps" />
                                 <br>
 

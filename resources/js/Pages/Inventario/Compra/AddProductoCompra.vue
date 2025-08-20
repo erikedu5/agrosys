@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { useForm } from '@inertiajs/vue3';
 import 'v-calendar/style.css';
@@ -48,6 +48,18 @@ const form = useForm({
     precio_compra: 0,
     pagadaInicial: true
 });
+
+const statusOptions = [
+    { value: 'adeudo', label: 'Adeudo' },
+    { value: 'pagada', label: 'Pagada' },
+    { value: 'retrasada', label: 'Retrasada' }
+];
+const statusSeleccionado = ref(statusOptions.find(o => o.value === form.status) || null);
+watch(statusSeleccionado, (v) => {
+    form.status = v ? v.value : '';
+    changeStatus();
+});
+
 
 const submit = () => {
     if (form.status == 'adeudo' && form.abonos.length == 0) {
@@ -123,6 +135,29 @@ const productoForm = reactive({
     barcode: '',
 });
 const productoErrors = ref({});
+
+const productoClasificacionSeleccionada = ref(null);
+watch(productoClasificacionSeleccionada, (v) => {
+    productoForm.id_clasificacion = v ? v.id : '';
+});
+
+const productoMarcaSeleccionada = ref(null);
+watch(productoMarcaSeleccionada, (v) => {
+    productoForm.id_marca = v ? v.id : '';
+});
+
+const productoIepsOptions = [
+    { value: 0, label: '0%' },
+    { value: 3, label: '3%' },
+    { value: 6, label: '6%' },
+    { value: 7, label: '7%' },
+    { value: 9, label: '9%' }
+];
+const productoIepsSeleccionado = ref(null);
+watch(productoIepsSeleccionado, (v) => {
+    productoForm.ieps = v ? v.value : '';
+    calcularIpsProducto();
+});
 
 const openProductoModal = () => {
     showProductoModal.value = true;
@@ -274,15 +309,7 @@ const changeStatus = (event) => {
                                 <br>
 
                                 <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
-                                <select v-model="form.status" id="status" name="ieps" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                    :disabled="form.status == 'pagada' || props.compra !== undefined"
-                                    @change="changeStatus($event)">
-                                    <option value="" disabled>Selecione</option>
-                                    <option value="adeudo">Adeudo</option>
-                                    <option value="pagada">Pagada</option>
-                                    <option value="pagada" :disabled="form.compra == undefined">Retrasada</option>
-                                </select>
+                                <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" option-label="label" class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" />
                                 <InputError class="mt-2" :message="form.errors.status" />
                                 <br>
 
@@ -395,25 +422,12 @@ const changeStatus = (event) => {
                     <br><br>
 
                     <label class="block font-medium text-sm text-gray-700">Clasificacion</label>
-                    <select v-model="productoForm.id_clasificacion"
-                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="" disabled>Selecione</option>
-                        <option v-for="clasificacion in clasificaciones" :value="clasificacion.id"
-                            :key="clasificacion.id">
-                            {{ clasificacion.nombre }}
-                        </option>
-                    </select>
+                    <vue-single-select v-model="productoClasificacionSeleccionada" :options="clasificaciones" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                     <InputError class="mt-2" :message="productoErrors.id_clasificacion" />
                     <br>
 
                     <label class="block font-medium text-sm text-gray-700">Marca</label>
-                    <select v-model="productoForm.id_marca"
-                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="" disabled>Selecione</option>
-                        <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
-                            {{ marca.nombre }}
-                        </option>
-                    </select>
+                    <vue-single-select v-model="productoMarcaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                     <InputError class="mt-2" :message="productoErrors.id_marca" />
                     <br>
 
@@ -424,15 +438,7 @@ const changeStatus = (event) => {
                     <br><br>
 
                     <label class="block font-medium text-sm text-gray-700">IEPS</label>
-                    <select v-model="productoForm.ieps" @change="calcularIpsProducto"
-                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="" disabled>Selecione</option>
-                        <option value="0" default>0%</option>
-                        <option value="3">3%</option>
-                        <option value="6">6%</option>
-                        <option value="7">7%</option>
-                        <option value="9">9%</option>
-                    </select>
+                    <vue-single-select v-model="productoIepsSeleccionado" :options="productoIepsOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
                     <InputError class="mt-2" :message="productoErrors.ieps" />
                     <br>
 

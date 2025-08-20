@@ -16,12 +16,14 @@
                                 v-model="form.nombre">
                             <InputError class="mt-2" :message="form.errors.nombre" />
                                 <br>
-                                <label class="block font-medium text-sm text-gray-700">Enfermedades (Seleccione más de una con tecla ctrl/command)</label>
-                                <select multiple v-model="form.selectedOptions" class="w-full h-64 rounded-md shadow-sm">
-                                    <option v-for="enfermedad in enfermedades" :key="enfermedad.id">
-                                        {{ enfermedad.nombre }}
-                                    </option>
-                                </select>
+                                <label class="block font-medium text-sm text-gray-700">Enfermedades</label>
+                                <vue-single-select v-model="enfermedadSeleccionada" :options="enfermedades" option-key="id" option-label="nombre" placeholder="Seleccione una enfermedad" @input="agregarEnfermedad" class="w-full" />
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span v-for="(e, idx) in form.selectedOptions" :key="idx" class="bg-gray-200 px-2 py-1 rounded">
+                                        {{ e }}
+                                        <button type="button" class="ml-1" @click="form.selectedOptions.splice(idx,1)">x</button>
+                                    </span>
+                                </div>
                                 <InputError class="mt-2" :message="form.errors.selectedOptions" />
                                 <br>
                             <button
@@ -44,6 +46,7 @@ import AppLayout from'@/Layouts/AppLayout.vue';
 import{ useForm }from'@inertiajs/vue3';
 import { ref } from 'vue';
 import InputError from '@/Components/InputError.vue';
+import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 
 
 const props=defineProps({
@@ -55,8 +58,16 @@ const props=defineProps({
 const form = useForm({
     nombre: props.tipoFlor !== undefined ? props.tipoFlor.nombre : '',
     id: props.tipoFlor !== undefined ? props.tipoFlor.id: null,
-    selectedOptions: props.tipoFlor !== undefined ? props.tipoFlor.selectedOptions : null,
+    selectedOptions: props.tipoFlor !== undefined ? props.tipoFlor.selectedOptions : [],
 });
+
+const enfermedadSeleccionada = ref(null);
+const agregarEnfermedad = (e) => {
+    if (e && !form.selectedOptions.includes(e.nombre)) {
+        form.selectedOptions.push(e.nombre);
+    }
+    enfermedadSeleccionada.value = null;
+};
 
 const submit = () => {
     if (props.tipoFlor == undefined) {

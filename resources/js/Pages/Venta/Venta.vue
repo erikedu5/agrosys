@@ -47,6 +47,15 @@ const formVenta = useForm({
     total: 0
 });
 
+const tipoVentaOptions = [
+    { value: 'Contado', label: 'Contado' },
+    { value: 'Credito', label: 'Credito' }
+];
+const tipoVentaSeleccionado = ref(tipoVentaOptions.find(o => o.value === formVenta.tipoVenta) || null);
+watch(tipoVentaSeleccionado, (v) => {
+    formVenta.tipoVenta = v ? v.value : '';
+});
+
 const canAddProducto = computed(() =>
     form.cliente && form.cliente.id &&
     form.producto && form.producto.id
@@ -357,11 +366,7 @@ const closeModal = () => {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
                             <div>
                                 <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                                <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full max-w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                    <option value="" disabled>Selecione</option>
-                                    <option value="Contado">Contado</option>
-                                    <option value="Credito">Credito</option>
-                                </select>
+                                <vue-single-select v-model="tipoVentaSeleccionado" :options="tipoVentaOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full max-w-full" />
                             </div>
                             <div v-if="formVenta.tipoVenta === 'Credito'">
                                 <label>abono a cuenta: </label>
