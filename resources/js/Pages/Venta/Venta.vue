@@ -83,17 +83,24 @@ const agregarVenta = () => {
     if (!canAddProducto.value) {
         return false;
     }
-    if (form.producto.cantidad < form.cantidad) {
+    const existente = productoVenta.find(p => p.producto.id === form.producto.id);
+    const cantidadTotal = (existente ? existente.cantidad : 0) + form.cantidad;
+    if (form.producto.cantidad < cantidadTotal) {
         alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
         return false;
     }
-    let venta = {
-        'producto': form.producto,
-        'cantidad': form.cantidad,
-        'precio_unitario': form.precio_ieps_con_descuento,
-        'importe': form.importe
-    };
-    productoVenta.push(venta);
+    if (existente) {
+        existente.cantidad += form.cantidad;
+        existente.importe = (existente.cantidad * existente.precio_unitario).toFixed(2);
+    } else {
+        let venta = {
+            'producto': form.producto,
+            'cantidad': form.cantidad,
+            'precio_unitario': form.precio_ieps_con_descuento,
+            'importe': form.importe
+        };
+        productoVenta.push(venta);
+    }
     recalculateTotal();
     let cliente = form.cliente;
     form.reset();
@@ -170,10 +177,6 @@ const finalizeSale = () => {
 
 const handleSelectChange = (event) => {
     if (event !== null) {
-        if (form.producto.cantidad < form.cantidad) {
-            alert("No tienes esa cantidad en stock, tu tienes " + form.producto.cantidad + " en bodega");
-            return false;
-        }
         form.precio_ieps_con_descuento = (form.producto.precio_ieps
             - ((form.producto.precio_ieps / 100)
                 * form.cliente.porcentaje_descuento)).toFixed(2);
