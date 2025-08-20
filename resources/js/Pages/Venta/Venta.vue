@@ -16,7 +16,7 @@ const props = defineProps({
     },
     producto_id: {
         type: Object,
-        default: 0
+        default: {}
     },
     clientes: {
         type: Array,
@@ -28,7 +28,7 @@ const props = defineProps({
     },
 });
 
-const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
+const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + p.tamano })));
 
 let form = useForm({
     cantidad: 1,
@@ -366,10 +366,10 @@ const closeModal = () => {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
                             <div>
                                 <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                                <vue-single-select v-model="tipoVentaSeleccionado" :options="tipoVentaOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full max-w-full" />
+                                <vue-single-select v-model="tipoVentaSeleccionado" :options="tipoVentaOptions" option-key="value" placeholder="Selecione" class="w-full max-w-full" />
                             </div>
                             <div v-if="formVenta.tipoVenta === 'Credito'">
-                                <label>abono a cuenta: </label>
+                                <label class="block font-medium text-sm text-gray-700">Abono a cuenta: </label>
                                 <input type="number" step="0.01" v-model="form.abono"
                                     class="form-input rounded-md shadow-sm w-full max-w-full" />
                             </div>

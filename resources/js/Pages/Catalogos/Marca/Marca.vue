@@ -6,8 +6,8 @@ import Pagination from '@/Components/Pagination.vue'
 
 defineProps({
     marcas: {
-        type: Array,
-        default: []
+        type: Object,
+        default: {}
     }
 })
 

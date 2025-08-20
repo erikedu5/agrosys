@@ -6,8 +6,8 @@ import Pagination from '@/Components/Pagination.vue'
 
 defineProps({
     productos: {
-        type: Array,
-        default: []
+        type: Object,
+        default: {}
     }
 });
 
