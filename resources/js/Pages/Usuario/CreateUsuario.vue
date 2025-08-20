@@ -3,6 +3,8 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
+    import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import { ref, watch } from 'vue';
 
     const props=defineProps({
         usuario: Object,
@@ -19,6 +21,21 @@
         tipo: props.usuario !== undefined ? props.usuario.tipo: '',
         id: props.usuario !== undefined ? props.usuario.id: null,
         id_sucursal: props.usuario !== undefined ? props.usuario.id_sucursal: props.sucursales[0].is_sucursal,
+    });
+
+    const tipoOptions = [
+        { value: 'admin', label: 'Administrador' },
+        { value: 'vendedor', label: 'Vendedor' },
+        { value: 'inventario', label: 'Inventario' }
+    ];
+    const tipoSeleccionado = ref(tipoOptions.find(o => o.value === form.tipo) || null);
+    watch(tipoSeleccionado, (v) => {
+        form.tipo = v ? v.value : '';
+    });
+
+    const sucursalSeleccionada = ref(props.sucursales.find(s => s.id === form.id_sucursal) || null);
+    watch(sucursalSeleccionada, (v) => {
+        form.id_sucursal = v ? v.id : null;
     });
 
     console.log(props.sucursales);
@@ -70,27 +87,13 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Tipo de usuario</label>
-                            <select v-model="form.tipo" id="tipo" name="tipo"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option value="admin">Administrador</option>
-                            <option value="vendedor">Vendedor</option>
-                            <option value="inventario">Inventario</option>
-                            </select>
+                            <vue-single-select v-model="tipoSeleccionado" :options="tipoOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.tipo" />
 
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Sucursal</label>
-                            <select v-model="form.id_sucursal" id="sucursal" name="sucursal"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option v-for="sucursal in sucursales" :value="sucursal.id" :key="sucursal.id">
-                                {{ sucursal.nombre }}
-                            </option>
-                            </select>
+                            <vue-single-select v-model="sucursalSeleccionada" :options="sucursales" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.id_sucursal" />
 
                             <br>

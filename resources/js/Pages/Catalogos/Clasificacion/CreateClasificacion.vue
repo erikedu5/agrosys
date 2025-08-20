@@ -3,6 +3,8 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
+    import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import { ref, watch } from 'vue';
 
     const props=defineProps({clasificacion: Object});
 
@@ -10,6 +12,17 @@
         nombre: props.clasificacion !== undefined ? props.clasificacion.nombre : '',
         id: props.clasificacion !== undefined ? props.clasificacion.id: null,
         criterio: props.clasificacion !== undefined ? props.clasificacion.criterio: '',
+    });
+
+    const criterioOptions = [
+        { value: 'Función', label: 'Por Función' },
+        { value: 'Origen Químico', label: 'Por Origen Químico' },
+        { value: 'Persistencia', label: 'Por Persistencia' },
+        { value: 'Modo de Accion', label: 'Por Modo de Acción' }
+    ];
+    const criterioSeleccionado = ref(criterioOptions.find(o => o.value === form.criterio) || null);
+    watch(criterioSeleccionado, (v) => {
+        form.criterio = v ? v.value : '';
     });
 
     const submit = () => {
@@ -43,15 +56,7 @@
                                 <br>
 
                             <label class="block font-medium text-sm text-gray-700">Criterio</label>
-                            <select v-model="form.criterio" id="criterio" name="criterio"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option value="Función">Por Función</option>
-                            <option value="Origen Químico">Por Origen Químico</option>
-                            <option value="Persistencia">Por Persistencia</option>
-                            <option value="Modo de Accion">Por Modo de Acción</option>
-                            </select>
+                            <vue-single-select v-model="criterioSeleccionado" :options="criterioOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.criterio" />
                                 <br>
                                 <br>

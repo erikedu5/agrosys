@@ -8,8 +8,8 @@ import '@vuepic/vue-datepicker/dist/main.css';
 
 defineProps({
     facturas: {
-        type: Array,
-        default: []
+        type: Object,
+        default: {}
     }
 });
 

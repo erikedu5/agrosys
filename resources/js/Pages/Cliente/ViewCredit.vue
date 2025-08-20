@@ -40,7 +40,7 @@
                     <div class="shadow bg-white md:rounded-md p-4">
                         <div v-if="props.ventas.data.length !== 0">
                             <label class="block font-medium text-sm text-gray-700">Abonar a cuenta</label>
-                            <input
+                            <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.abono">
                             <br>

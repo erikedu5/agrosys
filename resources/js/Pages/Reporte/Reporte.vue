@@ -4,7 +4,8 @@
     import VueDatePicker from '@vuepic/vue-datepicker';
     import '@vuepic/vue-datepicker/dist/main.css';
     import InputError from '@/Components/InputError.vue';
-    import { ref } from 'vue';
+    import { ref, watch } from 'vue';
+    import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 
     const props = defineProps({
         clasificaciones: Array,
@@ -30,6 +31,40 @@
         id_marca_venta: 0,
         id_producto: 0,
         id_sucursal: 0,
+    });
+
+    const sucursalSeleccionada = ref(props.sucursales.find(s => s.id === formReporte.id_sucursal) || null);
+    watch(sucursalSeleccionada, (v) => {
+        formReporte.id_sucursal = v ? v.id : 0;
+    });
+
+    const tipoReporteVentaOptions = [
+        { value: 'marca', label: 'marca' },
+        { value: 'producto', label: 'producto' }
+    ];
+    const tipoReporteVentaSeleccionado = ref(tipoReporteVentaOptions.find(o => o.value === formReporte.tipoReporteVenta));
+    watch(tipoReporteVentaSeleccionado, (v) => {
+        formReporte.tipoReporteVenta = v ? v.value : 'marca';
+    });
+
+    const marcaVentaSeleccionada = ref(null);
+    watch(marcaVentaSeleccionada, (v) => {
+        formReporte.id_marca_venta = v ? v.id : 0;
+    });
+
+    const productoSeleccionado = ref(null);
+    watch(productoSeleccionado, (v) => {
+        formReporte.id_producto = v ? v.id : 0;
+    });
+
+    const clasificacionSeleccionada = ref(null);
+    watch(clasificacionSeleccionada, (v) => {
+        formReporte.id_clasificacion = v ? v.id : 0;
+    });
+
+    const marcaSeleccionada = ref(null);
+    watch(marcaSeleccionada, (v) => {
+        formReporte.id_marca = v ? v.id : 0;
     });
 
     const generarReporteVentas = () => {
@@ -102,12 +137,7 @@
                 <div class="shadow bg-white md:rounded-md p-4">
                     <div v-if="props.sucursales.length > 0">
                         <label class="block font-medium text-sm text-gray-700">Sucursal</label>
-                        <select v-model="formReporte.id_sucursal" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="0" disabled>Seleccione</option>
-                            <option v-for="sucursal in props.sucursales" :value="sucursal.id" :key="sucursal.id">
-                                {{ sucursal.nombre }}
-                            </option>
-                        </select>
+                        <vue-single-select v-model="sucursalSeleccionada" :options="props.sucursales" option-key="id" option-label="nombre" placeholder="Seleccione" class="w-full" />
                         <br>
                     </div>
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
@@ -152,39 +182,20 @@
 
                         <div>
                             <label class="block font-medium text-sm text-gray-700">Marca</label>
-                            <select v-model="formReporte.tipoReporteVenta" id="id_marca_venta" name="id_marca_venta"
-                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="marca">marca</option>
-                                <option value="producto">producto</option>
-                            </select>
+                            <vue-single-select v-model="tipoReporteVentaSeleccionado" :options="tipoReporteVentaOptions" option-key="value" option-label="label" class="w-full" />
                             <br>
                         </div>
 
 
                         <div v-if="formReporte.tipoReporteVenta == 'marca'">
                             <label class="block font-medium text-sm text-gray-700">Marca</label>
-                            <select v-model="formReporte.id_marca_venta" id="id_marca_venta" name="id_marca_venta"
-                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="" disabled>Selecione</option>
-                                <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
-                                    {{ marca.nombre }}
-                                </option>
-                            </select>
+                            <vue-single-select v-model="marcaVentaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <br>
                         </div>
 
                         <div  v-if="formReporte.tipoReporteVenta == 'producto'">
                             <label class="block font-medium text-sm text-gray-700">Producto</label>
-                            <select v-model="formReporte.id_producto" id="id_marca" name="id_marca"
-                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="" disabled>Selecione</option>
-                                <option v-for="producto in productos" :value="producto.id" :key="producto.id">
-                                    {{ producto.nombre }}
-                                </option>
-                            </select>
+                            <vue-single-select v-model="productoSeleccionado" :options="productos" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <br>
                         </div>
 
@@ -207,25 +218,11 @@
                         <br>
                         <br>
                         <label class="block font-medium text-sm text-gray-700">Clasificacion (Opcional)</label>
-                        <select v-model="formReporte.id_clasificacion" id="id_clasificacion" name="id_clasificacion"
-                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option v-for="clasificacion in clasificaciones" :value="clasificacion.id" :key="clasificacion.id">
-                                {{ clasificacion.nombre }}
-                            </option>
-                        </select>
+                        <vue-single-select v-model="clasificacionSeleccionada" :options="clasificaciones" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <br>
 
                         <label class="block font-medium text-sm text-gray-700">Marca (Opcional)</label>
-                        <select v-model="formReporte.id_marca" id="id_marca" name="id_marca"
-                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option value="" disabled>Selecione</option>
-                            <option v-for="marca in marcas" :value="marca.id" :key="marca.id">
-                                {{ marca.nombre }}
-                            </option>
-                        </select>
+                        <vue-single-select v-model="marcaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
                             <br>
                         <button @click="generarReporteInventario()"
                             class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded

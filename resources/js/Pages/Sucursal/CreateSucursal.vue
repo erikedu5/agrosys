@@ -3,6 +3,8 @@
     import AppLayout from'@/Layouts/AppLayout.vue';
     import{ useForm }from'@inertiajs/vue3';
     import InputError from '@/Components/InputError.vue';
+    import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import { ref, watch } from 'vue';
 
     const props=defineProps({
         sucursal: Object,
@@ -22,6 +24,20 @@
         id_empresa: props.sucursal !== undefined ? props.sucursal.id_empresa : props.empresas[0].id,
         ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? props.sucursal.ticket_width_mm : 80,
 });
+
+    const empresaSeleccionada = ref(props.empresas.find(e => e.id === form.id_empresa) || null);
+    watch(empresaSeleccionada, (val) => {
+        form.id_empresa = val ? val.id : null;
+    });
+
+    const ticketOptions = [
+        { value: 80, label: '80 mm (recomendado)' },
+        { value: 58, label: '58 mm' }
+    ];
+    const ticketSeleccionado = ref(ticketOptions.find(t => t.value === form.ticket_width_mm) || null);
+    watch(ticketSeleccionado, (val) => {
+        form.ticket_width_mm = val ? val.value : null;
+    });
 
     const submit = () => {
         if (props.sucursal == undefined) {
@@ -48,13 +64,7 @@
                         <form @submit.prevent="submit">
 
                             <label class="block font-medium text-sm text-gray-700">Empresa</label>
-                            <select v-model="form.id_empresa" id="empresa" name="empresa"
-                             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                                    focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                            <option v-for="empresa in empresas" :value="empresa.id" :key="empresa.id">
-                                {{ empresa.nombre }}
-                            </option>
-                            </select>
+                            <vue-single-select v-model="empresaSeleccionada" :options="empresas" option-key="id" option-label="nombre" placeholder="Seleccione una empresa" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.id_empresa" />
 
                             <br>
@@ -99,10 +109,7 @@
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Ancho de Ticket (mm)</label>
-                            <select v-model.number="form.ticket_width_mm" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option :value="80">80 mm (recomendado)</option>
-                                <option :value="58">58 mm</option>
-                            </select>
+                            <vue-single-select v-model="ticketSeleccionado" :options="ticketOptions" option-key="value" option-label="label" placeholder="Seleccione" class="w-full" />
                             <InputError class="mt-2" :message="form.errors.ticket_width_mm" />
                             <br>
                             <br>

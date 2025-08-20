@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref, watch, computed } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
+import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 
 const props = defineProps({
     pedidos: Object,
@@ -15,13 +16,20 @@ const props = defineProps({
 const q = ref(props.search);
 const sucursal = ref(props.filtroSucursal ?? '');
 const estado = ref(props.filtroCompletado ?? '');
+const estadoOptions = [
+    { value: '', label: 'Todos' },
+    { value: '0', label: 'Pendiente' },
+    { value: '1', label: 'Completado' }
+];
+const estadoSeleccionado = ref(estadoOptions.find(o => o.value === estado.value));
 
 watch(q, (v) => {
     router.get(route('pedidos.index', { q: v, completado: estado.value }), {}, { preserveState: true });
 });
 
-watch(estado, (v) => {
-    router.get(route('pedidos.index', { completado: v, q: q.value }), {}, { preserveState: true });
+watch(estadoSeleccionado, (v) => {
+    estado.value = v ? v.value : '';
+    router.get(route('pedidos.index', { completado: estado.value, q: q.value }), {}, { preserveState: true });
 });
 
 const groupedPedidos = computed(() => {
@@ -58,11 +66,7 @@ const completar = (id) => {
 
         <hr class="my-6" />
         <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
-            <select v-model="estado" class="form-select">
-                <option value="">Todos</option>
-                <option value="0">Pendiente</option>
-                <option value="1">Completado</option>
-            </select>
+            <vue-single-select v-model="estadoSeleccionado" :options="estadoOptions" option-key="value" option-label="label" placeholder="Todos" class="w-48" />
         </div>
         <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
             <!-- Vista en tarjetas -->

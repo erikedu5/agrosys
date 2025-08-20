@@ -8,8 +8,8 @@ import '@vuepic/vue-datepicker/dist/main.css';
 
 defineProps({
     solucionesByProduct: {
-        type: Array,
-        default: []
+        type: Object,
+        default: {}
     }
 })
 const formReporte = useForm({

@@ -16,7 +16,7 @@ const props = defineProps({
     },
     producto_id: {
         type: Object,
-        default: 0
+        default: {}
     },
     clientes: {
         type: Array,
@@ -28,7 +28,7 @@ const props = defineProps({
     },
 });
 
-const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
+const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + p.tamano })));
 
 let form = useForm({
     cantidad: 1,
@@ -45,6 +45,15 @@ const formVenta = useForm({
     clientVenta: {},
     tipoVenta: "",
     total: 0
+});
+
+const tipoVentaOptions = [
+    { value: 'Contado', label: 'Contado' },
+    { value: 'Credito', label: 'Credito' }
+];
+const tipoVentaSeleccionado = ref(tipoVentaOptions.find(o => o.value === formVenta.tipoVenta) || null);
+watch(tipoVentaSeleccionado, (v) => {
+    formVenta.tipoVenta = v ? v.value : '';
 });
 
 const canAddProducto = computed(() =>
@@ -95,6 +104,11 @@ const agregarVenta = () => {
 };
 
 const updateQuantity = (producto) => {
+    if (producto.cantidad === null || producto.cantidad === '') {
+        producto.importe = 0;
+        recalculateTotal();
+        return;
+    }
     if (producto.cantidad > producto.producto.cantidad) {
         alert("No tienes esa cantidad en stock, tu tienes " + producto.producto.cantidad + " en bodega");
         producto.cantidad = producto.producto.cantidad;
@@ -292,7 +306,7 @@ const closeModal = () => {
                                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                                         <div>
                                             <div class="text-gray-500">Cantidad</div>
-                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
                                                 class="w-full border rounded-md p-1" />
                                         </div>
                                         <div>
@@ -331,7 +345,7 @@ const closeModal = () => {
                                         :key="producto.producto.id">
                                         <td class="px-4 py-2"> {{ producto.producto.nombre }} </td>
                                         <td class="px-4 py-2">
-                                            <input type="number" min="1" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
+                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
                                                 class="w-20 border rounded-md p-1" />
                                         </td>
                                         <td class="px-4 py-2"> {{ producto.precio_unitario }} </td>
@@ -352,14 +366,10 @@ const closeModal = () => {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
                             <div>
                                 <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                                <select v-model="formVenta.tipoVenta" id="tipoVenta" name="tipoVenta" class="mt-1 block w-full max-w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                    <option value="" disabled>Selecione</option>
-                                    <option value="Contado">Contado</option>
-                                    <option value="Credito">Credito</option>
-                                </select>
+                                <vue-single-select v-model="tipoVentaSeleccionado" :options="tipoVentaOptions" option-key="value" placeholder="Selecione" class="w-full max-w-full" />
                             </div>
                             <div v-if="formVenta.tipoVenta === 'Credito'">
-                                <label>abono a cuenta: </label>
+                                <label class="block font-medium text-sm text-gray-700">Abono a cuenta: </label>
                                 <input type="number" step="0.01" v-model="form.abono"
                                     class="form-input rounded-md shadow-sm w-full max-w-full" />
                             </div>
