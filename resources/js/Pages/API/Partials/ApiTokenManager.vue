@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionMessage from '@/Components/ActionMessage.vue';
 import ActionSection from '@/Components/ActionSection.vue';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -21,16 +21,16 @@ const props = defineProps({
     defaultPermissions: Array,
 });
 
-const createApiTokenForm = useForm({
+const { form: createApiTokenForm, reset: resetCreate } = usePersistedForm('createApiTokenForm', {
     name: '',
     permissions: props.defaultPermissions,
 });
 
-const updateApiTokenForm = useForm({
+const { form: updateApiTokenForm, reset: resetUpdate } = usePersistedForm('updateApiTokenForm', {
     permissions: [],
 });
 
-const deleteApiTokenForm = useForm({});
+const { form: deleteApiTokenForm, reset: resetDelete } = usePersistedForm('deleteApiTokenForm', {});
 
 const displayingToken = ref(false);
 const managingPermissionsFor = ref(null);
@@ -41,7 +41,7 @@ const createApiToken = () => {
         preserveScroll: true,
         onSuccess: () => {
             displayingToken.value = true;
-            createApiTokenForm.reset();
+            resetCreate();
         },
     });
 };
@@ -55,7 +55,10 @@ const updateApiToken = () => {
     updateApiTokenForm.put(route('api-tokens.update', managingPermissionsFor.value), {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => (managingPermissionsFor.value = null),
+        onSuccess: () => {
+            managingPermissionsFor.value = null;
+            resetUpdate();
+        },
     });
 };
 
@@ -67,7 +70,10 @@ const deleteApiToken = () => {
     deleteApiTokenForm.delete(route('api-tokens.destroy', apiTokenBeingDeleted.value), {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => (apiTokenBeingDeleted.value = null),
+        onSuccess: () => {
+            apiTokenBeingDeleted.value = null;
+            resetDelete();
+        },
     });
 };
 </script>

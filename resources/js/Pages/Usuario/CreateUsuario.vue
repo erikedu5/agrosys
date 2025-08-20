@@ -1,7 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { ref, watch } from 'vue';
@@ -14,7 +14,7 @@
         }
     });
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('usuarioForm', {
         name: props.usuario !== undefined ? props.usuario.name : '',
         password: '',
         email: props.usuario !== undefined ? props.usuario.email: '',
@@ -42,9 +42,13 @@
 
     const submit = () => {
         if (props.usuario == undefined) {
-            form.post(route('usuario.store'), form);
+            form.post(route('usuario.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('usuario.update', props.usuario.id), form);
+            form.put(route('usuario.update', props.usuario.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { useForm } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import 'v-calendar/style.css';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import moment from 'moment';
@@ -28,7 +28,7 @@ const props = defineProps({
 
 const productoOptions = ref(props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
 
-const form = useForm({
+const { form, reset } = usePersistedForm('compraForm', {
     id: props.compra !== undefined ? props.compra.id : null,
     proveedor: props.compra !== undefined ? props.compra.proveedor : '',
     fecha_compra: props.compra !== undefined ? new Date(props.compra.fecha_compra).toLocaleString('en-US', { timeZone: 'UTC' }) : new Date(),
@@ -68,9 +68,13 @@ const submit = () => {
         return;
     }
     if (props.compra == undefined) {
-        form.post(route('compra.store'), form);
+        form.post(route('compra.store'), {
+            onSuccess: reset,
+        });
     } else {
-        form.put(route('compra.update', props.compra.id), form);
+        form.put(route('compra.update', props.compra.id), {
+            onSuccess: reset,
+        });
     }
 }
 

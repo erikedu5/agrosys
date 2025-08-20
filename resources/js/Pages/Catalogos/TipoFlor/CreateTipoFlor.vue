@@ -43,7 +43,7 @@
 
 <script setup>
 import AppLayout from'@/Layouts/AppLayout.vue';
-import{ useForm }from'@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import { ref } from 'vue';
 import InputError from '@/Components/InputError.vue';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
@@ -55,7 +55,7 @@ const props=defineProps({
     enfermedadesSelected: Array,
 });
 
-const form = useForm({
+const { form, reset } = usePersistedForm('tipoFlorForm', {
     nombre: props.tipoFlor !== undefined ? props.tipoFlor.nombre : '',
     id: props.tipoFlor !== undefined ? props.tipoFlor.id: null,
     selectedOptions: props.tipoFlor !== undefined ? props.tipoFlor.selectedOptions : [],
@@ -71,9 +71,13 @@ const agregarEnfermedad = (e) => {
 
 const submit = () => {
     if (props.tipoFlor == undefined) {
-        form.post(route('tipoFlor.store'), form);
+        form.post(route('tipoFlor.store'), {
+            onSuccess: reset,
+        });
     } else {
-        form.put(route('tipoFlor.update', props.tipoFlor.id), form);
+        form.put(route('tipoFlor.update', props.tipoFlor.id), {
+            onSuccess: reset,
+        });
     }
 }
 </script>

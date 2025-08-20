@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionMessage from '@/Components/ActionMessage.vue';
 import FormSection from '@/Components/FormSection.vue';
 import InputError from '@/Components/InputError.vue';
@@ -11,7 +11,7 @@ import TextInput from '@/Components/TextInput.vue';
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
 
-const form = useForm({
+const { form, reset } = usePersistedForm('updatePasswordForm', {
     current_password: '',
     password: '',
     password_confirmation: '',
@@ -21,15 +21,15 @@ const updatePassword = () => {
     form.put(route('user-password.update'), {
         errorBag: 'updatePassword',
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: reset,
         onError: () => {
             if (form.errors.password) {
-                form.reset('password', 'password_confirmation');
+                reset();
                 passwordInput.value.focus();
             }
 
             if (form.errors.current_password) {
-                form.reset('current_password');
+                reset();
                 currentPasswordInput.value.focus();
             }
         },

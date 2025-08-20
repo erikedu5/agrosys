@@ -1,21 +1,25 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({marca: Object});
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('marcaForm', {
         nombre: props.marca !== undefined ? props.marca.nombre : '',
         id: props.marca !== undefined ? props.marca.id: null
     });
 
     const submit = () => {
         if (props.marca == undefined) {
-            form.post(route('marca.store'), form);
+            form.post(route('marca.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('marca.update', props.marca.id), form);
+            form.put(route('marca.update', props.marca.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

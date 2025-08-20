@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionSection from '@/Components/ActionSection.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -11,7 +11,7 @@ import TextInput from '@/Components/TextInput.vue';
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
 
-const form = useForm({
+const { form, reset } = usePersistedForm('deleteUserForm', {
     password: '',
 });
 
@@ -26,14 +26,14 @@ const deleteUser = () => {
         preserveScroll: true,
         onSuccess: () => closeModal(),
         onError: () => passwordInput.value.focus(),
-        onFinish: () => form.reset(),
+        onFinish: reset,
     });
 };
 
 const closeModal = () => {
     confirmingUserDeletion.value = false;
 
-    form.reset();
+    reset();
 };
 </script>
 

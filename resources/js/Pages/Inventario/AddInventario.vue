@@ -1,21 +1,23 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({
         producto: Object,
     });
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('addInventarioForm', {
         nombre: props.producto !== undefined ? props.producto.nombre : '',
         cantidad: 0,
         id: props.producto !== undefined ? props.producto.id: null,
     });
 
     const submit = () => {
-        form.post(route('inventario.addInventario'), form);
+        form.post(route('inventario.addInventario'), {
+            onSuccess: reset,
+        });
     }
 </script>
 

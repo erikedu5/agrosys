@@ -1,12 +1,12 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
     const props=defineProps({enfermedad: Object});
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('enfermedadForm', {
         nombre: props.enfermedad !== undefined ? props.enfermedad.nombre : '',
         descripcion: props.enfermedad !== undefined ? props.enfermedad.descripcion: '',
         id: props.enfermedad !== undefined ? props.enfermedad.id: null,
@@ -14,9 +14,13 @@
 
     const submit = () => {
         if (props.enfermedad == undefined) {
-            form.post(route('enfermedad.store'), form);
+            form.post(route('enfermedad.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('enfermedad.update', props.enfermedad.id), form);
+            form.put(route('enfermedad.update', props.enfermedad.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

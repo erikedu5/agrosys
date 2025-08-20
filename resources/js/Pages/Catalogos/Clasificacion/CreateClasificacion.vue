@@ -1,14 +1,14 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { ref, watch } from 'vue';
 
     const props=defineProps({clasificacion: Object});
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('clasificacionForm', {
         nombre: props.clasificacion !== undefined ? props.clasificacion.nombre : '',
         id: props.clasificacion !== undefined ? props.clasificacion.id: null,
         criterio: props.clasificacion !== undefined ? props.clasificacion.criterio: '',
@@ -27,9 +27,13 @@
 
     const submit = () => {
         if (props.clasificacion == undefined) {
-            form.post(route('clasificacion.store'), form);
+            form.post(route('clasificacion.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('clasificacion.update', props.clasificacion.id), form);
+            form.put(route('clasificacion.update', props.clasificacion.id), {
+                onSuccess: reset,
+            });
         }
     }
 </script>

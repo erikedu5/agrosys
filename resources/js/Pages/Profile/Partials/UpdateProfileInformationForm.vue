@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionMessage from '@/Components/ActionMessage.vue';
 import FormSection from '@/Components/FormSection.vue';
 import InputError from '@/Components/InputError.vue';
@@ -13,7 +14,7 @@ const props = defineProps({
     user: Object,
 });
 
-const form = useForm({
+const { form, reset } = usePersistedForm('updateProfileForm', {
     _method: 'PUT',
     name: props.user.name,
     email: props.user.email,
@@ -32,7 +33,10 @@ const updateProfileInformation = () => {
     form.post(route('user-profile-information.update'), {
         errorBag: 'updateProfileInformation',
         preserveScroll: true,
-        onSuccess: () => clearPhotoFileInput(),
+        onSuccess: () => {
+            clearPhotoFileInput();
+            reset();
+        },
     });
 };
 

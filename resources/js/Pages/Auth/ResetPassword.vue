@@ -1,5 +1,6 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
@@ -12,7 +13,7 @@ const props = defineProps({
     token: String,
 });
 
-const form = useForm({
+const { form, reset } = usePersistedForm('resetPasswordForm', {
     token: props.token,
     email: props.email,
     password: '',
@@ -21,7 +22,7 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('password.update'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
+        onSuccess: reset,
     });
 };
 </script>

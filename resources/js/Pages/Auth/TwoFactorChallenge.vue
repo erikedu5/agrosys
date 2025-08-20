@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, ref } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import InputError from '@/Components/InputError.vue';
@@ -10,7 +11,7 @@ import TextInput from '@/Components/TextInput.vue';
 
 const recovery = ref(false);
 
-const form = useForm({
+const { form, reset } = usePersistedForm('twoFactorForm', {
     code: '',
     recovery_code: '',
 });
@@ -33,7 +34,9 @@ const toggleRecovery = async () => {
 };
 
 const submit = () => {
-    form.post(route('two-factor.login'));
+    form.post(route('two-factor.login'), {
+        onSuccess: reset,
+    });
 };
 </script>
 

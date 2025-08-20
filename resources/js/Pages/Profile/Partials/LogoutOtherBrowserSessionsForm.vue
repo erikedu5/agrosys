@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionMessage from '@/Components/ActionMessage.vue';
 import ActionSection from '@/Components/ActionSection.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -16,7 +16,7 @@ defineProps({
 const confirmingLogout = ref(false);
 const passwordInput = ref(null);
 
-const form = useForm({
+const { form, reset } = usePersistedForm('logoutOtherSessionsForm', {
     password: '',
 });
 
@@ -31,14 +31,14 @@ const logoutOtherBrowserSessions = () => {
         preserveScroll: true,
         onSuccess: () => closeModal(),
         onError: () => passwordInput.value.focus(),
-        onFinish: () => form.reset(),
+        onFinish: reset,
     });
 };
 
 const closeModal = () => {
     confirmingLogout.value = false;
 
-    form.reset();
+    reset();
 };
 </script>
 

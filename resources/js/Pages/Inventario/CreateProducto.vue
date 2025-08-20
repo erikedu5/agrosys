@@ -1,7 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import{ useForm }from'@inertiajs/vue3';
+    import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import { ref, watch } from 'vue';
@@ -13,7 +13,7 @@
         enfermedadesFlor: Array,
     });
 
-    const form = useForm({
+    const { form, reset } = usePersistedForm('productoForm', {
         nombre: props.producto !== undefined ? props.producto.nombre : '',
         id_clasificacion: props.producto !== undefined ? props.producto.id_clasificacion: 0,
         id_marca: props.producto != undefined ? props.producto.id_marca: 0,
@@ -53,9 +53,13 @@
 
     const submit = () => {
         if (props.producto == undefined) {
-            form.post(route('inventario.store'), form);
+            form.post(route('inventario.store'), {
+                onSuccess: reset,
+            });
         } else {
-            form.put(route('inventario.update', props.producto.id), form);
+            form.put(route('inventario.update', props.producto.id), {
+                onSuccess: reset,
+            });
         }
     }
 

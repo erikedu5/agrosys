@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { router, useForm, usePage } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
+import { usePersistedForm } from '@/stores/formStore';
 import ActionSection from '@/Components/ActionSection.vue';
 import ConfirmsPassword from '@/Components/ConfirmsPassword.vue';
 import DangerButton from '@/Components/DangerButton.vue';
@@ -21,7 +22,7 @@ const qrCode = ref(null);
 const setupKey = ref(null);
 const recoveryCodes = ref([]);
 
-const confirmationForm = useForm({
+const { form: confirmationForm, reset: resetConfirmation } = usePersistedForm('twoFactorConfirmForm', {
     code: '',
 });
 
@@ -31,7 +32,7 @@ const twoFactorEnabled = computed(
 
 watch(twoFactorEnabled, () => {
     if (! twoFactorEnabled.value) {
-        confirmationForm.reset();
+        resetConfirmation();
         confirmationForm.clearErrors();
     }
 });
@@ -80,6 +81,7 @@ const confirmTwoFactorAuthentication = () => {
             confirming.value = false;
             qrCode.value = null;
             setupKey.value = null;
+            resetConfirmation();
         },
     });
 };
