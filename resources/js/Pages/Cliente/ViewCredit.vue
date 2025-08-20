@@ -6,9 +6,9 @@
     import { notify } from '@/utils/notify';
 
     const props = defineProps({
-        ventas: Array,
+        ventas: Object,
         cliente: Object,
-        abonos: Array,
+        abonos: Object,
     });
 
     const form = useForm({
