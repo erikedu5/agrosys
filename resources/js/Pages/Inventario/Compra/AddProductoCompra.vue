@@ -8,6 +8,7 @@ import moment from 'moment';
 import VCalendar from 'v-calendar';
 import InputError from '@/Components/InputError.vue';
 import DialogModal from '@/Components/DialogModal.vue';
+import { notify } from '@/utils/notify';
 
 const props = defineProps({
     compra: Object,
@@ -63,7 +64,7 @@ watch(statusSeleccionado, (v) => {
 
 const submit = () => {
     if (form.status == 'adeudo' && form.abonos.length == 0) {
-        alert('Debe agregar al menos un abono');
+        notify('Debe agregar al menos un abono', 'error');
         return;
     }
     if (props.compra == undefined) {
