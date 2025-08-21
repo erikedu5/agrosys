@@ -10,7 +10,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('CREATE EXTENSION IF NOT EXISTS unaccent;');
+        DB::statement('ALTER TABLE productos
+            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci,
+            MODIFY ingrediente_activo VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;
+
+            ALTER TABLE cat_enfermedades
+            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;
+
+            ALTER TABLE cat_tipo_flors
+            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;');
     }
 
     /**
