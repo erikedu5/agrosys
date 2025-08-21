@@ -10,4 +10,15 @@
     label {
         @apply block font-medium text-sm text-gray-700 uppercase;
     }
+
+    table {
+        @apply w-full;
+        table-layout: fixed;
+    }
+
+    th,
+    td {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
 }
