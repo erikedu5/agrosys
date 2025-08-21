@@ -33,7 +33,7 @@
             </h2>
         </template>
 
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8  mt-5">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8  mt-5">
             <div class="grow">
                 <div class="md-col-span-2 mt-5 md:mt-0">
                     <div class="shadow bg-white md:rounded-md p-4">

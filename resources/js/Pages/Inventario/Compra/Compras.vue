@@ -33,7 +33,7 @@ watch(q, (value) => {
         </template>
 
         <hr class="my-6">
-        <div class="flex justify-end max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <Link :href="route('compra.create')"
                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
@@ -42,7 +42,7 @@ watch(q, (value) => {
             Nueva compra
             </Link>
         </div>
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
 
             <!-- Vista en tarjetas -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">

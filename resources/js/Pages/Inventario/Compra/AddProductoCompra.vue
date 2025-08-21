@@ -234,7 +234,7 @@ const changeStatus = (event) => {
                 Crear Compra
             </h2>
         </template>
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
             <div class="flex font-semibold text-xl dark:text-white-200 leading-tight w-full">
                 <div class="grow">
                     <div class="md-col-span-2 mt-5 md:mt-0">
