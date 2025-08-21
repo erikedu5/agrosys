@@ -44,7 +44,7 @@ const generarReporteVentas = () => {
 
         <hr class="my-6">
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
 
             <!-- Vista en tarjetas (mobile) -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4  w-full">

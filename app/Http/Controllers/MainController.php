@@ -19,20 +19,33 @@ class MainController extends Controller
      */
     public function index(Request $request)
     {
-        $solucionesByProduct = SolucionEnfermedad::where(function ($query) use ($request) {
-            return $query->orwhere('productos.nombre', 'LIKE', "%$request->q%")
-            ->orWhere('productos.ingrediente_activo', 'LIKE', "%$request->q%")
-            ->orWhere('cat_enfermedades.nombre', 'LIKE', "%$request->q%")
-            ->orWhere('cat_tipo_flors.nombre', 'LIKE', "%$request->q%");
-        })->where('solucion_enfermedads.id_sucursal', Auth::user()->id_sucursal)
-        ->join('productos', 'productos.id', 'solucion_enfermedads.id_producto')
-        ->join('enfermedades_tipo_flors', 'enfermedades_tipo_flors.id', 'solucion_enfermedads.id_enfermedad_tipo_flor')
-        ->join('cat_tipo_flors', 'cat_tipo_flors.id', 'enfermedades_tipo_flors.id_tipo_flor')
-        ->join('cat_enfermedades', 'cat_enfermedades.id', 'enfermedades_tipo_flors.id_enfermedad')
-        ->latest('solucion_enfermedads.created_at')
-        ->paginate(10);
+        $q = trim((string) $request->input('q', ''));
 
-        foreach($solucionesByProduct as $solucionByProd) {
+        // Escapa comodines para LIKE (_ y %) y arma el patrón
+        $escaped = str_replace(['%', '_'], ['\%', '\_'], $q);
+        $pattern = "%{$escaped}%";
+
+        $solucionesByProduct = SolucionEnfermedad::query()
+            ->join('productos', 'productos.id', '=', 'solucion_enfermedads.id_producto')
+            ->join('enfermedades_tipo_flors', 'enfermedades_tipo_flors.id', '=', 'solucion_enfermedads.id_enfermedad_tipo_flor')
+            ->join('cat_tipo_flors', 'cat_tipo_flors.id', '=', 'enfermedades_tipo_flors.id_tipo_flor')
+            ->join('cat_enfermedades', 'cat_enfermedades.id', '=', 'enfermedades_tipo_flors.id_enfermedad')
+            ->where('solucion_enfermedads.id_sucursal', Auth::user()->id_sucursal)
+            ->when($q !== '', function ($query) use ($pattern) {
+                $query->where(function ($w) use ($pattern) {
+                    // Búsqueda case-insensitive + accent-insensitive
+                    $w->orWhereRaw('unaccent(productos.nombre) ILIKE unaccent(?)', [$pattern])
+                        ->orWhereRaw('unaccent(productos.ingrediente_activo) ILIKE unaccent(?)', [$pattern])
+                        ->orWhereRaw('unaccent(cat_enfermedades.nombre) ILIKE unaccent(?)', [$pattern])
+                        ->orWhereRaw('unaccent(cat_tipo_flors.nombre) ILIKE unaccent(?)', [$pattern]);
+                });
+            })
+            ->select('solucion_enfermedads.*') // evita colisiones de columnas
+            ->latest('solucion_enfermedads.created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        foreach ($solucionesByProduct as $solucionByProd) {
             $enfermedadTipo = EnfermedadesTipoFlor::where('id', $solucionByProd->id_enfermedad_tipo_flor)->first();
             $tipoFlor = CatTipoFlor::where('id', $enfermedadTipo->id_tipo_flor)->first();
             $enfermedad = CatEnfermedades::where('id', $enfermedadTipo->id_enfermedad)->first();
@@ -40,13 +53,10 @@ class MainController extends Controller
 
             $actualStock = AltaInventario::where('id_producto', $producto->id)
                 ->where('id_sucursal', Auth::user()->id_sucursal)
-                ->orderBy('created_at', 'desc')->first();
+                ->orderBy('created_at', 'desc')
+                ->first();
 
-            if ($actualStock != null) {
-                $producto->cantidad = $actualStock->cantidad_nueva;
-            } else {
-                $producto->cantidad = 0;
-            }
+            $producto->cantidad = $actualStock?->cantidad_nueva ?? 0;
 
             $solucionByProd->tipoFlor = $tipoFlor;
             $solucionByProd->enfermedad = $enfermedad;
@@ -54,9 +64,8 @@ class MainController extends Controller
         }
 
         return Inertia::render('Dashboard', [
-            'solucionesByProduct' => $solucionesByProduct
+            'solucionesByProduct' => $solucionesByProduct,
         ]);
-
     }
 
 }
