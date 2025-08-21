@@ -8,6 +8,6 @@
 
 @layer base {
     label {
-        @apply block font-medium text-sm text-gray-700 uppercase;
+        @apply block font-medium text-sm text-gray-700 capitalize;
     }
 }

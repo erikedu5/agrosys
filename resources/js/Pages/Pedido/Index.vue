@@ -65,10 +65,10 @@ const completar = (id) => {
         </template>
 
         <hr class="my-6" />
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
             <vue-single-select v-model="estadoSeleccionado" :options="estadoOptions" option-key="value" option-label="label" placeholder="Todos" class="w-48" />
         </div>
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
             <!-- Vista en tarjetas -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <template v-for="g in groupedPedidos" :key="g.uuid">

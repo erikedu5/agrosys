@@ -60,7 +60,7 @@ const update = (id) => {
         </template>
 
         <hr class="my-6">
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <!-- Vista en tarjetas -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <div v-for="factura in facturas.data" :key="factura.id" class="rounded-lg boder p-4 bg-white shadow-lg">

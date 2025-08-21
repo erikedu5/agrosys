@@ -270,13 +270,13 @@ const closeModal = () => {
         <hr class="my-6">
 
 
-        <div class="flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grow">
                 <div class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
                     <div style=" text-align: left;">
                         <h6>Selecciona un cliente</h6>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label>Cliente: </label>
                             <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
