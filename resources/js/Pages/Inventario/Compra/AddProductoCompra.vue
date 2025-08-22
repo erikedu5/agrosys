@@ -32,13 +32,12 @@ const { form, reset } = usePersistedForm('compraForm', {
     id: props.compra !== undefined ? props.compra.id : null,
     proveedor: props.compra !== undefined ? props.compra.proveedor : '',
     fecha_compra: props.compra !== undefined ? new Date(props.compra.fecha_compra).toLocaleString('en-US', { timeZone: 'UTC' }) : new Date(),
-    total_compra: props.compra !== undefined ? props.compra.total_compra : 0,
+    total_compra: props.compra !== undefined ? props.compra.total_compra : 0.0,
     status: props.compra !== undefined ? props.compra.status : '',
     productos: props.compra !== undefined ? props.compra.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })) : [],
     abonos: props.compra !== undefined ? props.compra.abonos : [],
-    total_credito: props.compra !== undefined ? props.compra.total_credito : 0,
+    total_credito: props.compra !== undefined ? props.compra.total_credito : 0.0,
     fecha_credito: props.compra !== undefined ? props.compra.fecha_credito : null,
-    total_credito: props.compra !== undefined ? props.compra.total_credito : 0,
     producto: '',
     abono: '',
     cantidad_pedido: 1,
@@ -93,22 +92,27 @@ const submit = () => {
 const addProducto = () => {
     let existe = false;
     form.productos.forEach((item, index) => {
-        if (form.producto == null || form.producto.id === item.id) {
+        if (!existe && form.producto.id === item.id) {
+            item.cantidad += form.cantidad_pedido;
+            item.precio_compra = form.precio_compra;
+            item.subtotal = (item.cantidad * item.precio_compra);
+            form.total_compra += item.subtotal;
             existe = true;
-            indexOf = index;
+            form.cantidad_pedido = 1;
+            form.producto = undefined;
+            form.precio_compra = 0;
         }
     });
-    if (existe && form.producto != null) {
-        eliminarProducto(form.producto.id);
+    if (existe) {
+        return;
     }
     form.producto.cantidad = form.cantidad_pedido;
     form.producto.precio_compra = form.precio_compra;
-    form.producto.subtotal = (form.cantidad_pedido * form.precio_compra).toFixed(2);
+    form.producto.subtotal = (form.cantidad_pedido * form.precio_compra);
+    console.log(form.producto);
+    console.log(form.total_compra);
     form.total_compra += form.producto.subtotal;
     form.total_credito += form.producto.subtotal;
-    parseFloat(form.producto.precio_compra).toFixed(2);
-    parseFloat(form.producto.subtotal).toFixed(2);
-    parseFloat(form.total_compra).toFixed(2);
     form.productos.push(form.producto);
     form.cantidad_pedido = 1;
     form.producto = undefined;
@@ -136,7 +140,7 @@ const closeAddProductoModal = () => {
 
 const handleAddProducto = () => {
     addProducto();
-    closeAddProductoModal();
+    //closeAddProductoModal();
 };
 
 const showProductoModal = ref(false);
@@ -246,7 +250,7 @@ const changeStatus = (event) => {
                 Crear Compra
             </h2>
         </template>
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+        <div class="max-full mx-auto px-4 sm:px-6 lg:px-8 mt-5">
             <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
                 <form @submit.prevent="submit">
 
@@ -328,17 +332,17 @@ const changeStatus = (event) => {
                                     </div>
                                     <div>
                                         <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
-                                        <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" option-label="label" class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" />
-                                        <span v-if="form.status" :class="'mt-2 inline-block px-2 py-1 rounded-full text-xs capitalize ' + statusClass(form.status)">{{ form.status }}</span>
+                                        <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" 
+                                            class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" placeholder="Selecione" />
                                         <InputError class="mt-2" :message="form.errors.status" />
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-1 gap-4 mt-6">
-                                    <div>
+                                    <div v-if="props.compra !== undefined || form.status == 'adeudo'">
                                         <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
                                         <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                                            :disabled="props.compra !== undefined && form.status != 'adeudo'"
+                                            :disabled="props.compra !== undefined || form.status == 'pagada'"
                                             v-model="form.abono">
                                     </div>
                                     <div class="flex items-end">
@@ -394,11 +398,6 @@ const changeStatus = (event) => {
 
             <template #content>
                 <div class="mt-4">
-                    <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                    <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                        v-model="form.cantidad_pedido">
-                    <br><br>
-
                     <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
                     <vue-single-select placeholder="Seleccione un producto" v-model="form.producto" option-key="barcode"
                         option-label="nombre" :options="productoOptions">
@@ -409,21 +408,62 @@ const changeStatus = (event) => {
                     </button>
                     <br><br>
 
+                    <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
+                    <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
+                        v-model="form.cantidad_pedido">
+                    <br><br>
+
                     <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
                     <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
                         v-model="form.precio_compra">
                 </div>
+                <br>
+                <div >
+                    <button @click="closeAddProductoModal"
+                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        Cancelar
+                    </button>
+                    <button @click="handleAddProducto"
+                        class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        Agregar
+                    </button>
+                </div>
             </template>
-
             <template #footer>
-                <button @click="closeAddProductoModal"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                    Cancelar
-                </button>
-                <button @click="handleAddProducto"
-                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                    Agregar
-                </button>
+            <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
+                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead
+                        class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th>Nombre del producto</th>
+                            <th>Cantidad del pedido</th>
+                            <th>Precio compra</th>
+                            <th>Subtotal</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
+                            <td class="px-4 py-2"> {{ producto.nombre }} </td>
+                            <td class="px-4 py-2"> {{ producto.cantidad }}</td>
+                            <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
+                            <td class="px-4 py-2"> {{ producto.subtotal }}</td>
+                            <td class="px-4 py-2">
+                                <div class="inline-flex rounded-md shadow-sm" role="group">
+                                    <button :disabled="props.compra !== undefined"
+                                        @click.prevent="eliminarProducto(producto.id)"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             </template>
         </DialogModal>
         <DialogModal :show="showProductoModal" @close="closeProductoModal">
