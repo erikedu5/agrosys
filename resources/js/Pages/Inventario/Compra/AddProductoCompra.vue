@@ -55,6 +55,18 @@ const statusOptions = [
     { value: 'pagada', label: 'Pagada' },
     { value: 'retrasada', label: 'Retrasada' }
 ];
+const statusClass = (status) => {
+    switch (status) {
+        case 'pagada':
+            return 'bg-green-100 text-green-800';
+        case 'adeudo':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'retrasada':
+            return 'bg-red-100 text-red-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
 const statusSeleccionado = ref(statusOptions.find(o => o.value === form.status) || null);
 watch(statusSeleccionado, (v) => {
     form.status = v ? v.value : '';
@@ -238,7 +250,7 @@ const changeStatus = (event) => {
             <div class="flex font-semibold text-xl dark:text-white-200 leading-tight w-full">
                 <div class="grow">
                     <div class="md-col-span-2 mt-5 md:mt-0">
-                        <div class="shadow bg-white md:rounded-md p-4">
+                        <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
                             <form @submit.prevent="submit">
 
                                 <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
@@ -251,13 +263,13 @@ const changeStatus = (event) => {
                                 <label>Productos: </label>
 
                                 <button type="button" @click="openAddProductoModal"
-                                    class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                                     Agregar producto
                                 </button>
                                 <br>
                                 <br>
 
-                                <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -270,7 +282,7 @@ const changeStatus = (event) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="producto in form.productos" :key="producto.id">
+                                            <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
                                                 <td class="px-4 py-2"> {{ producto.nombre }} </td>
                                                 <td class="px-4 py-2"> {{ producto.cantidad }}</td>
                                                 <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
@@ -279,7 +291,7 @@ const changeStatus = (event) => {
                                                     <div class="inline-flex rounded-md shadow-sm" role="group">
                                                         <button :disabled="props.compra !== undefined"
                                                             @click.prevent="eliminarProducto(producto.id)"
-                                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
                                                                     hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                                                     focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                                                     dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
@@ -315,6 +327,7 @@ const changeStatus = (event) => {
 
                                 <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
                                 <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" option-label="label" class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" />
+                                <span v-if="form.status" :class="'mt-2 inline-block px-2 py-1 rounded-full text-xs capitalize ' + statusClass(form.status)">{{ form.status }}</span>
                                 <InputError class="mt-2" :message="form.errors.status" />
                                 <br>
 
@@ -328,7 +341,7 @@ const changeStatus = (event) => {
 
                                 <button @click.prevent="agregarAbono()"
                                     :disabled="props.compra !== undefined && form.status != 'adeudo'"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
                                             hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                             focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                             dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
@@ -337,7 +350,7 @@ const changeStatus = (event) => {
                                 <br>
                                 <br>
 
-                                <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -347,7 +360,7 @@ const changeStatus = (event) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="abono in form.abonos" :key="abono.id">
+                                            <tr v-for="abono in form.abonos" :key="abono.id" class="border-b dark:border-gray-700">
                                                 <td class="px-4 py-2"> {{ abono.created_at }}</td>
                                                 <td class="px-4 py-2"> {{ abono.cantidad_abonada }} </td>
                                             </tr>
@@ -362,7 +375,7 @@ const changeStatus = (event) => {
 
                                 <button
                                     :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
                                             hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                             focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                             dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
@@ -392,7 +405,7 @@ const changeStatus = (event) => {
                         option-label="nombre" :options="productoOptions">
                     </vue-single-select>
                     <button type="button" @click="openProductoModal"
-                        class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                        class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                         Crear producto
                     </button>
                     <br><br>
@@ -405,11 +418,11 @@ const changeStatus = (event) => {
 
             <template #footer>
                 <button @click="closeAddProductoModal"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                     Cancelar
                 </button>
                 <button @click="handleAddProducto"
-                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                     Agregar
                 </button>
             </template>
@@ -471,11 +484,11 @@ const changeStatus = (event) => {
 
             <template #footer>
                 <button @click="closeProductoModal"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                     Cancelar
                 </button>
                 <button @click="guardarProducto"
-                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                     Guardar
                 </button>
             </template>
