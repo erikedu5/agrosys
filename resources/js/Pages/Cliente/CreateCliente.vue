@@ -18,18 +18,24 @@
     const submit = () => {
         if (props.cliente == undefined) {
             form.post(route('cliente.store'), {
-                onSuccess: reset,
+                onSuccess: () => {
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Cliente guardado' } }));
+                    reset();
+                },
             });
         } else {
             form.put(route('cliente.update', props.cliente.id), {
-                onSuccess: reset,
+                onSuccess: () => {
+                    window.dispatchEvent(new CustomEvent('notify', { detail: { message: 'Cliente actualizado' } }));
+                    reset();
+                },
             });
         }
     }
 </script>
 
 <template>
-    <AppLayout title="CrearCliente">
+    <AppLayout title="Crear Cliente">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Crear Cliente
@@ -44,26 +50,29 @@
                             <label class="block font-medium text-sm text-gray-700">Nombre</label>
                             <input type="text" required
                                 class="form-input w-full rounded-md shadow-sm"
+                                :class="{'border-red-500': form.errors.nombre}"
                                 v-model="form.nombre">
                             <InputError class="mt-2" :message="form.errors.nombre" />
                             <br>
                             <br>
 
-                            <label class="block font-medium text-sm text-gray-700">porcentaje de Descuento</label>
+                            <label class="block font-medium text-sm text-gray-700">Porcentaje de descuento</label>
                             <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
+                                :class="{'border-red-500': form.errors.porcentaje_descuento}"
                                 v-model="form.porcentaje_descuento">
                             <InputError class="mt-2" :message="form.errors.porcentaje_descuento" />
                             <br>
                             <br>
                             <label class="block font-medium text-sm text-gray-700">
                                 <checkbox v-model="form.requiereFactura" value="false" />
-                                <span class="ml-2 text-sm">Require factura</span>
+                                <span class="ml-2 text-sm">Requiere factura</span>
                             </label><br>
 
                             <label class="block font-medium text-sm text-gray-700">RFC</label>
                             <input :required="form.requiereFactura"
                                 class="form-input w-full rounded-md shadow-sm"
+                                :class="{'border-red-500': form.errors.rfc}"
                                 v-model="form.rfc">
                             <InputError class="mt-2" :message="form.errors.rfc" />
                             <br>
