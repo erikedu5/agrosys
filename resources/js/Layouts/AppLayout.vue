@@ -122,7 +122,7 @@ const searchItems = computed(() => {
         <Toast />
         <Loading :show="isLoading" />
         <div>
-            <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 fixed top-0 w-full z-50">
                 <!-- Menú de navegación principal -->
                 <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -250,17 +250,19 @@ const searchItems = computed(() => {
                 </div>
             </nav>
 
-            <!-- Encabezado de la página -->
-            <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
-                <div class="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
+            <div class="pt-16">
+                <!-- Encabezado de la página -->
+                <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
+                    <div class="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        <slot name="header" />
+                    </div>
+                </header>
 
-            <!-- Contenido de la página -->
-            <main>
-                <slot />
-            </main>
+                <!-- Contenido de la página -->
+                <main>
+                    <slot />
+                </main>
+            </div>
         </div>
     </div>
 </template>
