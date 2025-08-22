@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, watch } from 'vue';
+import { ref, reactive, watch, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { usePersistedForm } from '@/stores/formStore';
 import 'v-calendar/style.css';
@@ -26,6 +26,12 @@ const props = defineProps({
     },
 });
 
+const statusOptions = [
+    { value: 'adeudo', label: 'Adeudo' },
+    { value: 'pagada', label: 'Pagada' },
+    { value: 'retrasada', label: 'Retrasada' }
+];
+
 const productoOptions = ref(props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
 
 const { form, reset } = usePersistedForm('compraForm', {
@@ -49,27 +55,14 @@ const { form, reset } = usePersistedForm('compraForm', {
     pagadaInicial: true
 });
 
-const statusOptions = [
-    { value: 'adeudo', label: 'Adeudo' },
-    { value: 'pagada', label: 'Pagada' },
-    { value: 'retrasada', label: 'Retrasada' }
-];
-const statusClass = (status) => {
-    switch (status) {
-        case 'pagada':
-            return 'bg-green-100 text-green-800';
-        case 'adeudo':
-            return 'bg-yellow-100 text-yellow-800';
-        case 'retrasada':
-            return 'bg-red-100 text-red-800';
-        default:
-            return 'bg-gray-100 text-gray-800';
+const statusSeleccionado = computed({
+    get() {
+        return statusOptions.find(o => o.value === form.status) || null;
+    },
+    set(value) {
+        form.status = value ? value.value : '';
+        changeStatus();
     }
-};
-const statusSeleccionado = ref(statusOptions.find(o => o.value === form.status) || null);
-watch(statusSeleccionado, (v) => {
-    form.status = v ? v.value : '';
-    changeStatus();
 });
 
 
@@ -239,6 +232,14 @@ const changeStatus = (event) => {
         form.abono = form.total_compra;
         form.pagadaInicial = false;
         agregarAbono();
+    } else if (form.status == 'adeudo') {
+        // Si se cambia a adeudo, restaurar el total de crédito y borrar abonos
+        form.total_credito = form.total_compra;
+        form.abonos = [];
+        form.abono = 0;
+        form.abonoObj = {};
+    } else if (form.status == 'atrasada') { 
+        return;
     }
 }
 </script>
@@ -253,140 +254,146 @@ const changeStatus = (event) => {
         <div class="max-full mx-auto px-4 sm:px-6 lg:px-8 mt-5">
             <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
                 <form @submit.prevent="submit">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
+                            <input type="text" :disabled="props.compra !== undefined"
+                                class="form-input w-full rounded-md shadow-sm" v-model="form.proveedor">
+                            <InputError class="mt-2" :message="form.errors.proveedor" />
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="block font-medium text-sm text-gray-700">Productos</label>
+                            <button type="button" @click="openAddProductoModal" 
+                                :disabled="form.status !== ''"
+                                :class="[
+                                    'mt-1 px-4 py-2 text-sm font-medium border border-gray-200 rounded-md focus:z-10 focus:ring-2',
+                                    form.status !== '' 
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300' 
+                                        : 'text-gray-900 bg-white hover:bg-gray-100 hover:text-blue-700 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white'
+                                ]"
+                                v-tooltip="form.status !== '' ? 'Esta compra ya se cambió de status, por lo que no se le pueden agregar más productos' : ''">
+                                Agregar producto
+                            </button>
+                        </div>
+                    </div>
 
-                                <div class="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
-                                        <input type="text" :disabled="props.compra !== undefined"
-                                            class="form-input w-full rounded-md shadow-sm" v-model="form.proveedor">
-                                        <InputError class="mt-2" :message="form.errors.proveedor" />
-                                    </div>
-                                    <div class="flex flex-col">
-                                        <label class="block font-medium text-sm text-gray-700">Productos</label>
-                                        <button type="button" @click="openAddProductoModal"
-                                            class="mt-1 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                            Agregar producto
-                                        </button>
-                                    </div>
-                                </div>
+                    <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
+                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead
+                                class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th>Nombre del producto</th>
+                                    <th>Cantidad del pedido</th>
+                                    <th>Precio compra</th>
+                                    <th>Subtotal</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
+                                    <td class="px-4 py-2"> {{ producto.nombre }} </td>
+                                    <td class="px-4 py-2"> {{ producto.cantidad }}</td>
+                                    <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
+                                    <td class="px-4 py-2"> {{ producto.subtotal }}</td>
+                                    <td class="px-4 py-2">
+                                        <div class="inline-flex rounded-md shadow-sm" role="group">
+                                            <button :disabled="props.compra !== undefined"
+                                                @click.prevent="eliminarProducto(producto.id)"
+                                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr class="my-6">
 
-                                <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
-                                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                        <thead
-                                            class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                            <tr>
-                                                <th>Nombre del producto</th>
-                                                <th>Cantidad del pedido</th>
-                                                <th>Precio compra</th>
-                                                <th>Subtotal</th>
-                                                <th>Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
-                                                <td class="px-4 py-2"> {{ producto.nombre }} </td>
-                                                <td class="px-4 py-2"> {{ producto.cantidad }}</td>
-                                                <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
-                                                <td class="px-4 py-2"> {{ producto.subtotal }}</td>
-                                                <td class="px-4 py-2">
-                                                    <div class="inline-flex rounded-md shadow-sm" role="group">
-                                                        <button :disabled="props.compra !== undefined"
-                                                            @click.prevent="eliminarProducto(producto.id)"
-                                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                            Eliminar
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <hr class="my-6">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
+                            <VDatePicker class="form-input w-full rounded-md shadow-sm"
+                                :max-date="props.compra !== undefined ? form.fecha_compra : null"
+                                :min-date="props.compra !== undefined ? form.fecha_compra : null"
+                                v-model="form.fecha_compra" expanded />
+                            <InputError class="mt-2" :message="form.errors.fecha_compra" />
+                        </div>
+                        <div>
+                            <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
+                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
+                                disabled>
+                            <InputError class="mt-2" :message="form.errors.total_compra" />
+                        </div>
+                    </div>
 
-                                <div class="grid grid-cols-1 gap-4">
-                                    <div>
-                                        <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
-                                        <VDatePicker class="form-input w-full rounded-md shadow-sm"
-                                            :max-date="props.compra !== undefined ? form.fecha_compra : null"
-                                            :min-date="props.compra !== undefined ? form.fecha_compra : null"
-                                            v-model="form.fecha_compra" expanded />
-                                        <InputError class="mt-2" :message="form.errors.fecha_compra" />
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
-                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
-                                            disabled>
-                                        <InputError class="mt-2" :message="form.errors.total_compra" />
-                                    </div>
-                                </div>
+                    <div class="grid grid-cols-1 gap-4 mt-6">
+                        <div>
+                            <label class="block font-medium text-sm text-gray-700">Total de credito</label>
+                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
+                                disabled>
+                            <InputError class="mt-2" :message="form.errors.total_credito" />
+                        </div>
+                        <div>
+                            <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
+                            <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" 
+                                class="mt-1 w-full" :disabled="form.status == 'pagada'" placeholder="Selecione" />
+                            <InputError class="mt-2" :message="form.errors.status" />
+                        </div>
+                    </div>
 
-                                <div class="grid grid-cols-1 gap-4 mt-6">
-                                    <div>
-                                        <label class="block font-medium text-sm text-gray-700">Total de credito</label>
-                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
-                                            disabled>
-                                        <InputError class="mt-2" :message="form.errors.total_credito" />
-                                    </div>
-                                    <div>
-                                        <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
-                                        <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" 
-                                            class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" placeholder="Selecione" />
-                                        <InputError class="mt-2" :message="form.errors.status" />
-                                    </div>
-                                </div>
+                    <div class="grid grid-cols-1 gap-4 mt-6">
+                        <div v-if="props.compra !== undefined || form.status == 'adeudo'">
+                            <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
+                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
+                                :disabled="form.status == 'pagada'"
+                                v-model="form.abono">
+                        </div>
+                        <div class="flex items-end">
+                            <button @click.prevent="agregarAbono()"
+                                :disabled="form.status == 'pagada'"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                Abonar
+                            </button>
+                        </div>
+                    </div>
 
-                                <div class="grid grid-cols-1 gap-4 mt-6">
-                                    <div v-if="props.compra !== undefined || form.status == 'adeudo'">
-                                        <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
-                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                                            :disabled="props.compra !== undefined || form.status == 'pagada'"
-                                            v-model="form.abono">
-                                    </div>
-                                    <div class="flex items-end">
-                                        <button @click.prevent="agregarAbono()"
-                                            :disabled="props.compra !== undefined && form.status != 'adeudo'"
-                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                            Abonar
-                                        </button>
-                                    </div>
-                                </div>
+                    <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-6">
+                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead
+                                class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th>Fecha abono</th>
+                                    <th>Cantidad abono</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="abono in form.abonos" :key="abono.id" class="border-b dark:border-gray-700">
+                                    <td class="px-4 py-2"> {{ abono.created_at }}</td>
+                                    <td class="px-4 py-2"> {{ abono.cantidad_abonada }} </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                                <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-6">
-                                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                        <thead
-                                            class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                            <tr>
-                                                <th>Fecha abono</th>
-                                                <th>Cantidad abono</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="abono in form.abonos" :key="abono.id" class="border-b dark:border-gray-700">
-                                                <td class="px-4 py-2"> {{ abono.created_at }}</td>
-                                                <td class="px-4 py-2"> {{ abono.cantidad_abonada }} </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                    <hr class="my-6">
 
-                                <hr class="my-6">
-
-                                <div class="flex justify-end">
-                                    <button
-                                        :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                        Guardar
-                                    </button>
-                                </div>
+                    <div class="flex justify-end">
+                        <button
+                            :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
+                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                            Guardar
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -397,34 +404,41 @@ const changeStatus = (event) => {
             </template>
 
             <template #content>
-                <div class="mt-4">
-                    <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
-                    <vue-single-select placeholder="Seleccione un producto" v-model="form.producto" option-key="barcode"
-                        option-label="nombre" :options="productoOptions">
-                    </vue-single-select>
-                    <button type="button" @click="openProductoModal"
-                        class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                        Crear producto
-                    </button>
-                    <br><br>
-
-                    <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                    <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                        v-model="form.cantidad_pedido">
-                    <br><br>
-
-                    <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
-                    <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                        v-model="form.precio_compra">
+                <div class="mt-4">    
+                    
+                    <div class="flex justify-end">       
+                        <button type="button" @click="openProductoModal"
+                            class="align-right mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                            Crear producto
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
+                        <vue-single-select placeholder="Seleccione un producto" v-model="form.producto" option-key="barcode"
+                            option-label="nombre" :options="productoOptions">
+                        </vue-single-select>
+                    </div>
+                    <br>
+                    <div>
+                        <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
+                        <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
+                            v-model="form.cantidad_pedido">
+                    </div>
+                    <br>
+                    <div>
+                        <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
+                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
+                            v-model="form.precio_compra">  
+                    </div>
                 </div>
-                <br>
-                <div >
-                    <button @click="closeAddProductoModal"
+                
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" @click="closeAddProductoModal"
                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                        Cancelar
+                        Cerrar
                     </button>
-                    <button @click="handleAddProducto"
-                        class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                    <button type="button" @click="handleAddProducto"
+                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                         Agregar
                     </button>
                 </div>
