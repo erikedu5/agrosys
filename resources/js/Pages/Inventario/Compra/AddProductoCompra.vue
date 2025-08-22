@@ -246,14 +246,11 @@ const changeStatus = (event) => {
                 Crear Compra
             </h2>
         </template>
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="flex font-semibold text-xl dark:text-white-200 leading-tight w-full">
-                <div class="grow">
-                    <div class="md-col-span-2 mt-5 md:mt-0">
-                        <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                            <form @submit.prevent="submit">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+            <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
+                <form @submit.prevent="submit">
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4">
                                     <div>
                                         <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
                                         <input type="text" :disabled="props.compra !== undefined"
@@ -305,7 +302,7 @@ const changeStatus = (event) => {
                                 </div>
                                 <hr class="my-6">
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 gap-4">
                                     <div>
                                         <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
                                         <VDatePicker class="form-input w-full rounded-md shadow-sm"
@@ -322,7 +319,7 @@ const changeStatus = (event) => {
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                <div class="grid grid-cols-1 gap-4 mt-6">
                                     <div>
                                         <label class="block font-medium text-sm text-gray-700">Total de credito</label>
                                         <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
@@ -337,7 +334,7 @@ const changeStatus = (event) => {
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                <div class="grid grid-cols-1 gap-4 mt-6">
                                     <div>
                                         <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
                                         <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
@@ -386,10 +383,7 @@ const changeStatus = (event) => {
                                         Guardar
                                     </button>
                                 </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                </form>
             </div>
         </div>
 
