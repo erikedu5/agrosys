@@ -266,7 +266,7 @@ const changeStatus = (event) => {
                                     </div>
                                 </div>
 
-                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-4">
+                                <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -353,7 +353,7 @@ const changeStatus = (event) => {
                                     </div>
                                 </div>
 
-                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-6">
+                                <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-6">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
