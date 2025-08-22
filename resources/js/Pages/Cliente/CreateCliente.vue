@@ -35,7 +35,7 @@
 </script>
 
 <template>
-    <AppLayout title="CrearCliente">
+    <AppLayout title="Crear Cliente">
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     Crear Cliente
@@ -56,7 +56,7 @@
                             <br>
                             <br>
 
-                            <label class="block font-medium text-sm text-gray-700">porcentaje de Descuento</label>
+                            <label class="block font-medium text-sm text-gray-700">Porcentaje de descuento</label>
                             <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 :class="{'border-red-500': form.errors.porcentaje_descuento}"
@@ -66,7 +66,7 @@
                             <br>
                             <label class="block font-medium text-sm text-gray-700">
                                 <checkbox v-model="form.requiereFactura" value="false" />
-                                <span class="ml-2 text-sm">Require factura</span>
+                                <span class="ml-2 text-sm">Requiere factura</span>
                             </label><br>
 
                             <label class="block font-medium text-sm text-gray-700">RFC</label>
