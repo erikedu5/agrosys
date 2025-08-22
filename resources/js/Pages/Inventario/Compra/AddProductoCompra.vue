@@ -253,23 +253,23 @@ const changeStatus = (event) => {
                         <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
                             <form @submit.prevent="submit">
 
-                                <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
-                                <input type="text" :disabled="props.compra !== undefined"
-                                    class="form-input w-full rounded-md shadow-sm" v-model="form.proveedor">
-                                <InputError class="mt-2" :message="form.errors.proveedor" />
-                                <br>
-                                <br>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
+                                        <input type="text" :disabled="props.compra !== undefined"
+                                            class="form-input w-full rounded-md shadow-sm" v-model="form.proveedor">
+                                        <InputError class="mt-2" :message="form.errors.proveedor" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label class="block font-medium text-sm text-gray-700">Productos</label>
+                                        <button type="button" @click="openAddProductoModal"
+                                            class="mt-1 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                            Agregar producto
+                                        </button>
+                                    </div>
+                                </div>
 
-                                <label>Productos: </label>
-
-                                <button type="button" @click="openAddProductoModal"
-                                    class="mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Agregar producto
-                                </button>
-                                <br>
-                                <br>
-
-                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-4">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -305,52 +305,58 @@ const changeStatus = (event) => {
                                 </div>
                                 <hr class="my-6">
 
-                                <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
-                                <VDatePicker class="form-input w-full rounded-md shadow-sm"
-                                    :max-date="props.compra !== undefined ? form.fecha_compra : null"
-                                    :min-date="props.compra !== undefined ? form.fecha_compra : null"
-                                    v-model="form.fecha_compra" expanded />
-                                <InputError class="mt-2" :message="form.errors.fecha_compra" />
-                                <br>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
+                                        <VDatePicker class="form-input w-full rounded-md shadow-sm"
+                                            :max-date="props.compra !== undefined ? form.fecha_compra : null"
+                                            :min-date="props.compra !== undefined ? form.fecha_compra : null"
+                                            v-model="form.fecha_compra" expanded />
+                                        <InputError class="mt-2" :message="form.errors.fecha_compra" />
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
+                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
+                                            disabled>
+                                        <InputError class="mt-2" :message="form.errors.total_compra" />
+                                    </div>
+                                </div>
 
-                                <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
-                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
-                                    disabled>
-                                <InputError class="mt-2" :message="form.errors.total_compra" />
-                                <br>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Total de credito</label>
+                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
+                                            disabled>
+                                        <InputError class="mt-2" :message="form.errors.total_credito" />
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
+                                        <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" option-label="label" class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" />
+                                        <span v-if="form.status" :class="'mt-2 inline-block px-2 py-1 rounded-full text-xs capitalize ' + statusClass(form.status)">{{ form.status }}</span>
+                                        <InputError class="mt-2" :message="form.errors.status" />
+                                    </div>
+                                </div>
 
-                                <label class="block font-medium text-sm text-gray-700">Total de credito</label>
-                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
-                                    disabled>
-                                <InputError class="mt-2" :message="form.errors.total_credito" />
-                                <br>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                    <div>
+                                        <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
+                                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
+                                            :disabled="props.compra !== undefined && form.status != 'adeudo'"
+                                            v-model="form.abono">
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button @click.prevent="agregarAbono()"
+                                            :disabled="props.compra !== undefined && form.status != 'adeudo'"
+                                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                            Abonar
+                                        </button>
+                                    </div>
+                                </div>
 
-                                <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
-                                <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" option-label="label" class="mt-1 w-full" :disabled="form.status == 'pagada' || props.compra !== undefined" />
-                                <span v-if="form.status" :class="'mt-2 inline-block px-2 py-1 rounded-full text-xs capitalize ' + statusClass(form.status)">{{ form.status }}</span>
-                                <InputError class="mt-2" :message="form.errors.status" />
-                                <br>
-
-                                <hr class="my-6">
-                                <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
-                                <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                                    :disabled="props.compra !== undefined && form.status != 'adeudo'"
-                                    v-model="form.abono">
-                                <br>
-                                <br>
-
-                                <button @click.prevent="agregarAbono()"
-                                    :disabled="props.compra !== undefined && form.status != 'adeudo'"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Abonar
-                                </button>
-                                <br>
-                                <br>
-
-                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                                <div class="relative overflow-x-auto shadow-sm sm:rounded-lg bg-white border border-gray-200 dark:bg-gray-800 dark:border-gray-700 mt-6">
                                     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                                         <thead
                                             class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -368,19 +374,18 @@ const changeStatus = (event) => {
                                     </table>
                                 </div>
 
-                                <br>
-                                <br>
-
                                 <hr class="my-6">
 
-                                <button
-                                    :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Guardar
-                                </button>
+                                <div class="flex justify-end">
+                                    <button
+                                        :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
+                                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                        Guardar
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
