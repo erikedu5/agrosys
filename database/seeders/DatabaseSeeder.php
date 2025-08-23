@@ -28,10 +28,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         Empresa::factory()->create([
-            'nombre' => 'MeztliTech',
+            'nombre' => 'Pixka',
             'direccion' => 'Calle dos de marzo s/n, San Lucas, Villa Guerrero.',
             'telefono' => '7228259581',
-            'email' => 'meztlitechsolutions@gmail.com',
+            'email' => 'pixkaconsultores@gmail.com',
             'rfc' => 'JIDE930407AS4',
             'aviso' => 'Si tiene algun requerimiento contactenos por whatsapp',
             'numero_sucursales' => 1000
@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
             'nombre' => 'Matriz',
             'direccion' => 'Calle dos de marzo s/n, San Lucas, Villa Guerrero.',
             'telefono' => '7228259581',
-            'email' => 'meztlitechsolutions@gmail.com',
+            'email' => 'pixkaconsultores@gmail.com',
             'es_matriz' => true,
             'id_empresa' => 1
         ]);
@@ -49,7 +49,16 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Erik Jimenez',
             'email' => 'erikedu5@gmail.com',
-            'password' => bcrypt('123456789'),
+            'password' => bcrypt('Admin1234.'),
+            'tipo' => 'superAdmin',
+            'id_sucursal' => 1
+
+       ]);
+
+    User::factory()->create([
+            'name' => 'Erik Jimenez',
+            'email' => 'erikedu5@gmail.com',
+            'password' => bcrypt('Admin1234.'),
             'tipo' => 'superAdmin',
             'id_sucursal' => 1
 
@@ -58,7 +67,7 @@ class DatabaseSeeder extends Seeder
        User::factory()->create([
             'name' => 'Jesus Casstro',
             'email' => 'jesfirewall@gmail.com',
-            'password' => bcrypt('12345678'),
+            'password' => bcrypt('Admin1234.'),
             'tipo' => 'superAdmin',
             'id_sucursal' => 1
 

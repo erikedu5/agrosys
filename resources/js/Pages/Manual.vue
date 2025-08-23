@@ -1,257 +1,601 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { ref, onMounted } from 'vue';
+
+const searchTerm = ref('');
+const activeSection = ref('');
+
+const sections = [
+    { id: 'primeros-pasos', title: '🚀 Primeros Pasos' },
+    { id: 'ventas', title: '💰 Ventas' },
+    { id: 'inventario', title: '📦 Inventario' },
+    { id: 'compras', title: '🛒 Compras' },
+    { id: 'clientes', title: '👥 Clientes' },
+    { id: 'reportes', title: '📊 Reportes' },
+    { id: 'configuracion', title: '⚙️ Configuración' },
+    { id: 'ayuda', title: '🆘 Ayuda' }
+];
+
+const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
+};
+
+onMounted(() => {
+    const handleScroll = () => {
+        const sectionElements = document.querySelectorAll('[data-section]');
+        let current = '';
+        
+        sectionElements.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 100 && rect.bottom >= 100) {
+                current = section.dataset.section;
+            }
+        });
+        
+        activeSection.value = current;
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+        window.removeEventListener('scroll', handleScroll);
+    };
+});
 </script>
 
 <template>
     <AppLayout title="Manual de Usuario">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Manual de usuario
-            </h2>
+            <div class="bg-gradient-to-r from-green-800 to-green-600 text-white py-8 px-4 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">🌱 Manual de Usuario - AgroSys</h1>
+                <p class="text-xl opacity-90">Guía Completa del Sistema de Gestión Agrícola</p>
+            </div>
         </template>
+        
+        <div class="max-w-7xl mx-auto">
+            <!-- Navegación sticky -->
+            <div class="sticky top-0 bg-gray-50 border-b border-gray-200 z-50 shadow-sm">
+                <nav class="flex flex-wrap gap-3 p-4 justify-center">
+                    <button
+                        v-for="section in sections"
+                        :key="section.id"
+                        @click="scrollToSection(section.id)"
+                        :class="[
+                            'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border-2',
+                            activeSection === section.id 
+                                ? 'bg-green-800 text-white border-green-800 transform -translate-y-1 shadow-lg' 
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-green-800 hover:text-white hover:border-green-800 hover:transform hover:-translate-y-1 hover:shadow-md'
+                        ]"
+                    >
+                        {{ section.title }}
+                    </button>
+                </nav>
+            </div>
 
-        <div class="p-6 space-y-6">
-            <h1 class="text-2xl font-bold">Manual de Usuario - AgroSys</h1>
-            <p>AgroSys es un sistema de inventario, ventas y administración para negocios agrícolas construido con Laravel y Vue 3.</p>
-            <p>Las capturas de pantalla mostradas son ilustrativas.</p>
-
-            <section class="space-y-4">
-                <h2 class="text-xl font-semibold">Acceso</h2>
-                <ol class="list-decimal ml-5 space-y-4">
-                    <li>
-                        Visita <code>/</code> para la pantalla de inicio de sesión.<br>
-                        <img src="https://via.placeholder.com/600x400?text=Captura" alt="Pantalla de inicio de sesión" class="my-2 w-full max-w-[600px]">
-                        <p>Utiliza las credenciales proporcionadas por el administrador; en caso de olvidar tu contraseña, solicita su restablecimiento.</p>
-                        <ol class="list-decimal ml-5">
-                            <li>Introduce tu correo y contraseña.</li>
-                            <li>Presiona <strong>Iniciar sesión</strong>.</li>
-                            <li>Si no recuerdas tu contraseña, pide al administrador que la restablezca.</li>
-                        </ol>
-                    </li>
-                    <li>
-                        Tras autenticarte, se muestra el panel principal en <code>/dashboard</code>.<br>
-                        <img src="https://via.placeholder.com/600x400?text=Captura" alt="Panel principal" class="my-2 w-full max-w-[600px]">
-                        <p>Desde aquí puedes navegar a los distintos módulos mediante el menú superior.</p>
-                        <ol class="list-decimal ml-5">
-                            <li>Revisa los accesos rápidos del tablero.</li>
-                            <li>Abre cualquier módulo desde la barra superior.</li>
-                            <li>Cierra sesión desde el menú del perfil cuando termines.</li>
-                        </ol>
-                    </li>
-                </ol>
-            </section>
-
-            <section class="space-y-4">
-                <h2 class="text-xl font-semibold">Módulos principales</h2>
-
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Inventario</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Accede al listado de inventario en <code>/inventario</code> para gestionar productos.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Listado de inventario" class="my-2 w-full max-w-[600px]">
-                            <p>Desde este panel puedes revisar existencias, filtrar por clasificación o escanear códigos de barras para encontrar artículos rápidamente.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Haz clic en <strong>Inventario</strong> en el menú superior.</li>
-                                <li>Explora la tabla de productos y usa el buscador para filtrar.</li>
-                                <li>Selecciona un artículo para ver o editar su información.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Para agregar un producto utiliza <code>/inventario/addInventario</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Alta de inventario" class="my-2 w-full max-w-[600px]">
-                            <p>Llena datos como nombre, cantidad inicial y precios de compra y venta; el sistema actualizará automáticamente el stock.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Presiona <strong>Agregar</strong> en el listado de inventario.</li>
-                                <li>Completa el formulario con los datos del producto.</li>
-                                <li>Guarda y verifica que el producto aparezca en la tabla.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Consulta los catálogos de clasificación, enfermedad, tipo de flor y marca según necesites.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Catálogos de inventario" class="my-2 w-full max-w-[600px]">
-                            <p>Estos catálogos mantienen la información estandarizada y permiten crear reportes y filtros consistentes.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Desde el menú de inventario selecciona <strong>Catálogos</strong>.</li>
-                                <li>Elige el tipo de catálogo a editar.</li>
-                                <li>Agrega o modifica registros según tus necesidades.</li>
-                            </ol>
-                        </li>
-                    </ol>
+            <div class="p-6 space-y-8">
+                <!-- Buscador -->
+                <div class="text-center">
+                    <div class="max-w-md mx-auto">
+                        <input
+                            v-model="searchTerm"
+                            type="text"
+                            placeholder="🔍 Buscar en el manual..."
+                            class="w-full px-6 py-3 border-2 border-gray-200 rounded-full text-lg outline-none transition-colors duration-300 focus:border-green-600"
+                        />
+                    </div>
                 </div>
 
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Ventas y Devoluciones</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Gestiona ventas en <code>/venta</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Gestión de ventas" class="my-2 w-full max-w-[600px]">
-                            <p>Añade productos al carrito, aplica descuentos y define métodos de pago antes de confirmar la operación.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Haz clic en <strong>Nueva venta</strong>.</li>
-                                <li>Busca o escanea productos para agregarlos al carrito.</li>
-                                <li>Confirma cantidades, aplica descuentos y selecciona método de pago.</li>
-                                <li>Presiona <strong>Guardar</strong> para finalizar.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Genera tickets en <code>/ticket/{venta}</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Generación de tickets" class="my-2 w-full max-w-[600px]">
-                            <p>El ticket contiene el detalle de la venta y puede enviarse a impresión térmica para el cliente.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Ubica la venta en el listado.</li>
-                                <li>Abre el ticket correspondiente.</li>
-                                <li>Imprime o descarga el comprobante para el cliente.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Maneja devoluciones desde <code>/venta/devoluciones/index</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Gestión de devoluciones" class="my-2 w-full max-w-[600px]">
-                            <p>Registra productos devueltos y el sistema ajustará el inventario y el historial de ventas.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Selecciona la venta original.</li>
-                                <li>Marca los productos a devolver e indica el motivo.</li>
-                                <li>Confirma para ajustar inventario y generar nota de crédito.</li>
-                            </ol>
-                        </li>
-                    </ol>
+                <!-- Enlaces rápidos -->
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-2xl">
+                    <h3 class="text-2xl font-bold mb-4">🔗 Enlaces Rápidos al Sistema</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <a href="/venta" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">💰 Realizar Venta</div>
+                        </a>
+                        <a href="/inventario" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">📦 Ver Inventario</div>
+                        </a>
+                        <a href="/compra" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">🛒 Registrar Compra</div>
+                        </a>
+                        <a href="/cliente" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">👥 Gestionar Clientes</div>
+                        </a>
+                        <a href="/reporte" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">📊 Ver Reportes</div>
+                        </a>
+                        <a href="/dashboard" class="bg-white/10 hover:bg-white/20 p-3 rounded-lg text-center transition-colors duration-300 text-white no-underline">
+                            <div class="font-semibold">🏠 Ir al Dashboard</div>
+                        </a>
+                    </div>
                 </div>
 
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Clientes y Pedidos</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Administra clientes en <code>/cliente</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Listado de clientes" class="my-2 w-full max-w-[600px]">
-                            <p>Captura información de contacto, direcciones y preferencias comerciales para cada cliente.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Haz clic en <strong>Nuevo cliente</strong>.</li>
-                                <li>Completa el formulario con datos generales y de contacto.</li>
-                                <li>Guarda para que el cliente esté disponible en ventas y pedidos.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Registra pedidos internos en <code>/pedidos/index</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Pedidos internos" class="my-2 w-full max-w-[600px]">
-                            <p>Asocia los pedidos a clientes, define fechas de entrega y monitorea su estado hasta la entrega.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Inicia un nuevo pedido seleccionando al cliente.</li>
-                                <li>Agrega productos y establece cantidades.</li>
-                                <li>Define la fecha de entrega y actualiza el estatus conforme avanza.</li>
-                            </ol>
-                        </li>
-                    </ol>
+                <!-- Índice de contenidos -->
+                <div class="bg-blue-50 p-6 rounded-2xl">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-4">📚 Índice de Contenidos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-blue-600">
+                            <h4 class="text-lg font-semibold text-blue-600 mb-2">🚀 Primeros Pasos</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#que-es-agrosys" class="text-gray-600 hover:text-blue-600 transition-colors">¿Qué es AgroSys?</a></li>
+                                <li><a href="#como-entrar" class="text-gray-600 hover:text-blue-600 transition-colors">Cómo entrar al sistema</a></li>
+                                <li><a href="#pantalla-principal" class="text-gray-600 hover:text-blue-600 transition-colors">Tu pantalla principal</a></li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-green-600">
+                            <h4 class="text-lg font-semibold text-green-600 mb-2">💰 Ventas Diarias</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#hacer-venta" class="text-gray-600 hover:text-green-600 transition-colors">Cómo hacer una venta</a></li>
+                                <li><a href="#buscar-productos" class="text-gray-600 hover:text-green-600 transition-colors">Buscar productos</a></li>
+                                <li><a href="#imprimir-tickets" class="text-gray-600 hover:text-green-600 transition-colors">Imprimir tickets</a></li>
+                                <li><a href="#devoluciones" class="text-gray-600 hover:text-green-600 transition-colors">Hacer devoluciones</a></li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-yellow-600">
+                            <h4 class="text-lg font-semibold text-yellow-600 mb-2">📦 Control de Inventario</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#ver-productos" class="text-gray-600 hover:text-yellow-600 transition-colors">Ver qué productos tienes</a></li>
+                                <li><a href="#agregar-productos" class="text-gray-600 hover:text-yellow-600 transition-colors">Agregar nuevos productos</a></li>
+                                <li><a href="#registrar-mercancia" class="text-gray-600 hover:text-yellow-600 transition-colors">Registrar mercancía</a></li>
+                                <li><a href="#poco-stock" class="text-gray-600 hover:text-yellow-600 transition-colors">Productos con poco stock</a></li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-purple-600">
+                            <h4 class="text-lg font-semibold text-purple-600 mb-2">🛒 Compras a Proveedores</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#registrar-compra" class="text-gray-600 hover:text-purple-600 transition-colors">Registrar una compra</a></li>
+                                <li><a href="#pagos-plazos" class="text-gray-600 hover:text-purple-600 transition-colors">Manejar pagos a plazos</a></li>
+                                <li><a href="#estado-pagos" class="text-gray-600 hover:text-purple-600 transition-colors">Estado de pagos</a></li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-indigo-600">
+                            <h4 class="text-lg font-semibold text-indigo-600 mb-2">👥 Clientes</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#registrar-clientes" class="text-gray-600 hover:text-indigo-600 transition-colors">Registrar nuevos clientes</a></li>
+                                <li><a href="#buscar-clientes" class="text-gray-600 hover:text-indigo-600 transition-colors">Buscar clientes existentes</a></li>
+                                <li><a href="#manejar-facturas" class="text-gray-600 hover:text-indigo-600 transition-colors">Manejar facturas</a></li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border-l-4 border-red-600">
+                            <h4 class="text-lg font-semibold text-red-600 mb-2">📊 Reportes</h4>
+                            <ul class="space-y-1 text-sm">
+                                <li><a href="#reportes-ventas" class="text-gray-600 hover:text-red-600 transition-colors">Ver reportes de ventas</a></li>
+                                <li><a href="#consultar-inventario" class="text-gray-600 hover:text-red-600 transition-colors">Consultar inventario</a></li>
+                                <li><a href="#productos-vendidos" class="text-gray-600 hover:text-red-600 transition-colors">Productos más vendidos</a></li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Administración</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Gestiona empresas en <code>/empresa</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Administración de empresas" class="my-2 w-full max-w-[600px]">
-                            <p>Registra datos fiscales y define parámetros generales de la organización.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Accede a la lista de empresas.</li>
-                                <li>Edita o crea una nueva con los datos fiscales requeridos.</li>
-                                <li>Guarda los cambios para aplicarlos en todo el sistema.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Administra usuarios en <code>/usuario</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Administración de usuarios" class="my-2 w-full max-w-[600px]">
-                            <p>Asigna roles y permisos a cada colaborador para controlar el acceso a los distintos módulos.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Haz clic en <strong>Agregar usuario</strong>.</li>
-                                <li>Captura nombre, correo y contraseña temporal.</li>
-                                <li>Elige el rol adecuado y guarda.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Controla sucursales en <code>/sucursal</code>, incluyendo el ancho del ticket térmico.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Administración de sucursales" class="my-2 w-full max-w-[600px]">
-                            <p>Define datos de contacto y configuraciones específicas para cada punto de venta.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Abre el módulo de sucursales.</li>
-                                <li>Registra dirección, datos fiscales y ancho de ticket.</li>
-                                <li>Asocia usuarios responsables y guarda.</li>
-                            </ol>
-                        </li>
-                    </ol>
+                <!-- Primeros Pasos -->
+                <section id="primeros-pasos" data-section="primeros-pasos" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-green-600">
+                    <h2 class="text-3xl font-bold text-green-800 mb-6 flex items-center gap-2">
+                        🚀 Primeros Pasos
+                    </h2>
+                    
+                    <h3 id="que-es-agrosys" class="text-2xl font-semibold text-green-700 mb-4 pb-2 border-b-2 border-gray-200">¿Qué es AgroSys?</h3>
+                    <p class="text-gray-700 mb-6">AgroSys es tu aliado para manejar todo lo relacionado con tu negocio agrícola. Con este sistema puedes:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">💰 Vender productos</h4>
+                            <p class="text-gray-600 text-sm">De manera rápida y eficiente con búsqueda inteligente y tickets automáticos</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">📦 Controlar tu inventario</h4>
+                            <p class="text-gray-600 text-sm">Para nunca quedarte sin mercancía y conocer exactamente qué tienes</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">🛒 Registrar compras</h4>
+                            <p class="text-gray-600 text-sm">A tus proveedores y manejar pagos a plazos de forma organizada</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">👥 Gestionar clientes</h4>
+                            <p class="text-gray-600 text-sm">Y sus facturas para mejorar el servicio y fidelización</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">📊 Generar reportes</h4>
+                            <p class="text-gray-600 text-sm">Para saber cómo va tu negocio y tomar mejores decisiones</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow duration-300">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">⚙️ Organizar catálogos</h4>
+                            <p class="text-gray-600 text-sm">De productos, marcas y clasificaciones de forma sistemática</p>
+                        </div>
+                    </div>
+
+                    <h3 id="como-entrar" class="text-2xl font-semibold text-green-700 mb-4 pb-2 border-b-2 border-gray-200">Cómo entrar al sistema</h3>
+                    <div class="bg-white rounded-lg p-4 mb-4 border">
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">Paso 1:</strong> <span class="text-gray-700">Abre tu navegador (Chrome, Firefox, Safari, etc.)</span>
+                            </div>
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">Paso 2:</strong> <span class="text-gray-700">Escribe la dirección web de tu AgroSys (te la proporcionó tu administrador)</span>
+                            </div>
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">Paso 3:</strong> <span class="text-gray-700">Verás una pantalla de entrada donde debes escribir:</span>
+                                <ul class="list-disc list-inside mt-2 ml-4 text-gray-600">
+                                    <li>Tu <strong>nombre de usuario</strong></li>
+                                    <li>Tu <strong>contraseña</strong></li>
+                                </ul>
+                            </div>
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">Paso 4:</strong> <span class="text-gray-700">Haz clic en "Iniciar Sesión"</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-4">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">💡</span>
+                            <div>
+                                <strong class="text-yellow-800">Consejo:</strong> 
+                                <span class="text-yellow-700">Si olvidas tu contraseña, contacta a tu administrador para que la restablezca.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 id="pantalla-principal" class="text-2xl font-semibold text-green-700 mb-4 pb-2 border-b-2 border-gray-200">Tu pantalla principal</h3>
+                    <p class="text-gray-700 mb-4">Una vez que entres, verás el <strong>Dashboard</strong> (tablero principal). Aquí encontrarás:</p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">En la parte superior:</h4>
+                            <ul class="list-disc list-inside text-gray-600 space-y-1">
+                                <li><strong>Menú principal:</strong> Para navegar a diferentes secciones</li>
+                                <li><strong>Buscador:</strong> Para encontrar productos o soluciones rápidamente</li>
+                                <li><strong>Tu nombre:</strong> En la esquina derecha, con opción para salir del sistema</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">En el centro:</h4>
+                            <ul class="list-disc list-inside text-gray-600 space-y-1">
+                                <li><strong>Buscador de soluciones:</strong> Escribe el nombre de una plaga o enfermedad para encontrar tratamientos</li>
+                                <li><strong>Accesos rápidos:</strong> Botones para las tareas más comunes según tu rol</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ventas -->
+                <section id="ventas" data-section="ventas" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-green-600">
+                    <h2 class="text-3xl font-bold text-green-800 mb-6 flex items-center gap-2">
+                        💰 Ventas Diarias
+                    </h2>
+                    
+                    <h3 id="hacer-venta" class="text-2xl font-semibold text-green-700 mb-4 pb-2 border-b-2 border-gray-200">Cómo hacer una venta</h3>
+                    
+                    <h4 class="text-xl font-medium text-gray-800 mb-4">Paso a paso para vender:</h4>
+                    <div class="bg-white rounded-lg p-4 mb-6 border">
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">1. Ir al módulo de ventas</strong><br>
+                                <span class="text-gray-700">En el menú superior, haz clic en <strong>"Venta"</strong><br>
+                                Luego selecciona <strong>"Venta"</strong> (la primera opción)</span>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">2. Buscar el producto</strong><br>
+                                <span class="text-gray-700">En el campo de búsqueda, escribe:</span>
+                                <ul class="list-disc list-inside mt-2 ml-4 text-gray-600">
+                                    <li>El nombre del producto (ej: "Fertilizante")</li>
+                                    <li>El código de barras</li>
+                                    <li>El ingrediente activo (ej: "Glifosato")</li>
+                                </ul>
+                                <span class="text-gray-700">Los productos aparecerán automáticamente mientras escribes</span>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">3. Agregar productos a la venta</strong><br>
+                                <span class="text-gray-700">Haz clic en el producto que quieres vender<br>
+                                Aparecerá una ventana donde puedes:</span>
+                                <ul class="list-disc list-inside mt-2 ml-4 text-gray-600">
+                                    <li>Cambiar la <strong>cantidad</strong> (por defecto es 1)</li>
+                                    <li>Ver el <strong>precio</strong></li>
+                                </ul>
+                                <span class="text-gray-700">Haz clic en <strong>"Agregar"</strong></span>
+                            </div>
+
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">4. Revisar tu carrito</strong><br>
+                                <span class="text-gray-700">En el lado derecho verás todos los productos agregados<br>
+                                Puedes cambiar cantidades o quitar productos</span>
+                            </div>
+
+                            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                                <strong class="text-blue-600">5. Finalizar la venta</strong><br>
+                                <span class="text-gray-700">Revisa que todo esté correcto<br>
+                                Haz clic en <strong>"Finalizar Venta"</strong><br>
+                                El ticket se imprimirá automáticamente</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">💡</span>
+                            <div>
+                                <strong class="text-yellow-800">Trucos para buscar mejor:</strong>
+                                <ul class="list-disc list-inside mt-2 text-yellow-700">
+                                    <li>Escribe solo las primeras letras</li>
+                                    <li>Usa nombres comunes (ej: "ferti" para fertilizantes)</li>
+                                    <li>Prueba con la marca si no encuentras por nombre</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Inventario -->
+                <section id="inventario" data-section="inventario" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-yellow-600">
+                    <h2 class="text-3xl font-bold text-yellow-800 mb-6 flex items-center gap-2">
+                        📦 Control de Inventario
+                    </h2>
+                    
+                    <h3 id="ver-productos" class="text-2xl font-semibold text-yellow-700 mb-4 pb-2 border-b-2 border-gray-200">Ver qué productos tienes</h3>
+                    
+                    <h4 class="text-xl font-medium text-gray-800 mb-2">Para consultar tu inventario:</h4>
+                    <p class="text-gray-700 mb-4">Ve a <strong>"Administración de Inventario"</strong> → <strong>"Inventario"</strong></p>
+
+                    <h4 class="text-xl font-medium text-gray-800 mb-2">Información que verás:</h4>
+                    <div class="bg-white p-4 rounded-lg border mb-4">
+                        <ul class="list-disc list-inside text-gray-600 space-y-1">
+                            <li><strong>Nombre del producto</strong></li>
+                            <li><strong>Existencias actuales</strong> (cuántos tienes)</li>
+                            <li><strong>Precio de venta</strong></li>
+                            <li><strong>Clasificación</strong> (tipo de producto)</li>
+                            <li><strong>Marca</strong></li>
+                            <li><strong>Código de barras</strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-4">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">💡</span>
+                            <div>
+                                <strong class="text-yellow-800">Cómo buscar productos específicos:</strong> 
+                                <span class="text-yellow-700">Usa el campo de búsqueda arriba de la tabla. Puedes buscar por nombre o ingrediente activo. Los resultados se filtran automáticamente.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 id="agregar-productos" class="text-2xl font-semibold text-yellow-700 mb-4 pb-2 border-b-2 border-gray-200">Agregar nuevos productos</h3>
+                    
+                    <div class="bg-white rounded-lg p-4 mb-4 border">
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Cuándo agregar un producto nuevo:</h4>
+                        <ul class="list-disc list-inside text-gray-600 space-y-1">
+                            <li>Cuando empiezas a vender una marca nueva</li>
+                            <li>Cuando llega un producto que nunca habías manejado</li>
+                            <li>Cuando cambia la presentación de un producto existente</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Compras -->
+                <section id="compras" data-section="compras" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-purple-600">
+                    <h2 class="text-3xl font-bold text-purple-800 mb-6 flex items-center gap-2">
+                        🛒 Compras a Proveedores
+                    </h2>
+                    
+                    <h3 id="registrar-compra" class="text-2xl font-semibold text-purple-700 mb-4 pb-2 border-b-2 border-gray-200">Registrar una compra</h3>
+                    
+                    <p class="text-gray-700 mb-6">El sistema te permite manejar diferentes estados de pago para tus compras:</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded-lg border border-green-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
+                                <span class="font-semibold text-green-800">Pagada</span>
+                            </div>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>Ya no debes nada</li>
+                                <li>No puedes modificar la compra</li>
+                                <li>Solo para consulta</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg border border-yellow-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full"></span>
+                                <span class="font-semibold text-yellow-800">Adeudo</span>
+                            </div>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>Tienes pagos pendientes</li>
+                                <li>Puedes agregar abonos</li>
+                                <li>Puedes cambiar el estado</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg border border-red-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
+                                <span class="font-semibold text-red-800">Retrasada</span>
+                            </div>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>Se pasó la fecha de pago</li>
+                                <li>Requiere atención inmediata</li>
+                                <li>Puedes agregar abonos</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">⚠️</span>
+                            <div>
+                                <strong class="text-red-800">Cambiar estados:</strong> 
+                                <span class="text-red-700">Puedes cambiar entre "Adeudo" y "Retrasada" según convenga. Si cambias de "Pagada" a "Adeudo", se borra el historial de pagos (ten cuidado).</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Clientes -->
+                <section id="clientes" data-section="clientes" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-indigo-600">
+                    <h2 class="text-3xl font-bold text-indigo-800 mb-6 flex items-center gap-2">
+                        👥 Clientes
+                    </h2>
+                    
+                    <p class="text-gray-700 mb-4">Gestiona la información de tus clientes y lleva un control de sus compras y facturas.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-indigo-800 mb-2">Información necesaria:</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Nombre completo</li>
+                                <li>• Dirección (para entregas)</li>
+                                <li>• Teléfono (para contacto)</li>
+                                <li>• Email (opcional, para enviar facturas)</li>
+                                <li>• RFC (si necesita factura)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-indigo-800 mb-2">Cuándo registrar:</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Primera vez que compra</li>
+                                <li>• Para llevar historial de compras</li>
+                                <li>• Para poder facturar</li>
+                                <li>• Para brindar mejor servicio</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">💡</span>
+                            <div>
+                                <strong class="text-yellow-800">Consejo:</strong> 
+                                <span class="text-yellow-700">Registra toda la información posible de cada cliente desde el primer contacto. Esto te ayudará a brindar un mejor servicio.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reportes -->
+                <section id="reportes" data-section="reportes" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-red-600">
+                    <h2 class="text-3xl font-bold text-red-800 mb-6 flex items-center gap-2">
+                        📊 Reportes
+                    </h2>
+                    
+                    <p class="text-gray-700 mb-4">Los reportes te ayudan a entender el rendimiento de tu negocio y tomar decisiones informadas.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-red-800 mb-2">📈 Reporte de Ventas</h4>
+                            <p class="text-gray-600 text-sm">Analiza tus ventas por período, productos más vendidos y rendimiento general.</p>
+                            <ul class="text-xs text-gray-500 mt-2 space-y-1">
+                                <li>• Cuánto vendiste en un período</li>
+                                <li>• Comparar ventas entre días/meses</li>
+                                <li>• Planificar compras futuras</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-red-800 mb-2">📦 Reporte de Inventario</h4>
+                            <p class="text-gray-600 text-sm">Consulta el estado actual de tu inventario y productos con poco stock.</p>
+                            <ul class="text-xs text-gray-500 mt-2 space-y-1">
+                                <li>• Todos los productos que tienes</li>
+                                <li>• Existencias actuales</li>
+                                <li>• Valor del inventario</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Configuración -->
+                <section id="configuracion" data-section="configuracion" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-gray-600">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        ⚙️ Configuración
+                    </h2>
+                    
+                    <p class="text-gray-700 mb-4">Administra los catálogos y configuraciones básicas del sistema.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">📋 Clasificaciones</h4>
+                            <p class="text-gray-600 text-sm">Tipos de producto como Fertilizantes, Pesticidas, Herbicidas, Fungicidas, etc.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">🏷️ Marcas</h4>
+                            <p class="text-gray-600 text-sm">Lista de todas las marcas que manejas. Útil para organizar productos y reportes.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">🐛 Enfermedades</h4>
+                            <p class="text-gray-600 text-sm">Base de datos de problemas agrícolas. Cada enfermedad tiene síntomas y tratamientos.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">👥 Usuarios</h4>
+                            <p class="text-gray-600 text-sm">Gestión de usuarios y permisos del sistema (solo para administradores).</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ayuda -->
+                <section id="ayuda" data-section="ayuda" class="bg-gray-50 p-6 rounded-2xl border-l-4 border-orange-600">
+                    <h2 class="text-3xl font-bold text-orange-800 mb-6 flex items-center gap-2">
+                        🆘 ¿Necesitas Ayuda?
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-red-50 p-4 rounded-lg border-l-4 border-red-400">
+                            <div class="flex items-start">
+                                <span class="text-lg mr-2">⚠️</span>
+                                <div>
+                                    <h4 class="font-semibold text-red-800 mb-2">Problemas Comunes</h4>
+                                    <ul class="text-red-700 text-sm space-y-1">
+                                        <li>• No puedo entrar al sistema</li>
+                                        <li>• No aparecen productos</li>
+                                        <li>• No se imprime el ticket</li>
+                                        <li>• El sistema está lento</li>
+                                        <li>• Borré algo por error</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-400">
+                            <div class="flex items-start">
+                                <span class="text-lg mr-2">💡</span>
+                                <div>
+                                    <h4 class="font-semibold text-green-800 mb-2">Consejos Útiles</h4>
+                                    <ul class="text-green-700 text-sm space-y-1">
+                                        <li>• Practica en horarios de poca actividad</li>
+                                        <li>• Haz respaldos regulares</li>
+                                        <li>• Mantén actualizada la información</li>
+                                        <li>• No tengas miedo de explorar</li>
+                                        <li>• Contacta a tu administrador si necesitas ayuda</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
+                        <div class="flex items-start">
+                            <span class="text-lg mr-2">📞</span>
+                            <div>
+                                <h4 class="font-semibold text-blue-800 mb-2">Para soporte técnico:</h4>
+                                <ul class="text-blue-700 text-sm space-y-1">
+                                    <li>• Contacta a tu administrador del sistema</li>
+                                    <li>• Ten a la mano la descripción exacta del problema</li>
+                                    <li>• Menciona qué estabas haciendo cuando ocurrió el error</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer de finalización -->
+                <div class="text-center bg-gradient-to-r from-green-800 to-green-600 text-white p-8 rounded-2xl">
+                    <h2 class="text-3xl font-bold mb-4">🎉 ¡Felicidades!</h2>
+                    <p class="text-xl mb-4">Has completado la guía de AgroSys. Con esta información podrás manejar eficientemente tu negocio agrícola.</p>
+                    <p class="text-lg">Recuerda que la práctica hace al maestro, así que no dudes en explorar todas las funcionalidades del sistema.</p>
+                    <p class="text-xl font-bold mt-6">🌱 AgroSys está diseñado para crecer contigo y hacer tu trabajo más fácil.</p>
                 </div>
-
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Reportes</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Accede al panel de reportes en <code>/reporte</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Panel de reportes" class="my-2 w-full max-w-[600px]">
-                            <p>Selecciona rangos de fechas y sucursales para generar estadísticas personalizadas.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Elige el tipo de reporte.</li>
-                                <li>Define rango de fechas y sucursal.</li>
-                                <li>Haz clic en <strong>Generar</strong>.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Genera reportes de ventas, inventario y ventas por producto o marca, con versiones para impresión térmica.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Reportes específicos" class="my-2 w-full max-w-[600px]">
-                            <p>Los reportes pueden exportarse a PDF o Excel para su análisis y contabilidad.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Visualiza la vista previa generada.</li>
-                                <li>Usa los botones de <strong>PDF</strong> o <strong>Excel</strong> para exportar.</li>
-                                <li>Imprime la versión térmica si es necesario.</li>
-                            </ol>
-                        </li>
-                    </ol>
-                </div>
-
-                <div class="space-y-4">
-                    <h3 class="text-lg font-semibold">Compras, Facturas y API</h3>
-                    <ol class="list-decimal ml-5 space-y-4">
-                        <li>
-                            Registra compras en <code>/compra</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Módulo de compras" class="my-2 w-full max-w-[600px]">
-                            <p>Vincula proveedores, especifica costos y cantidades recibidas para mantener actualizado el inventario.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Selecciona al proveedor correspondiente.</li>
-                                <li>Registra los productos adquiridos y sus costos.</li>
-                                <li>Confirma la compra para aumentar existencias.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Administra facturas en <code>/facturas/index</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="Módulo de facturas" class="my-2 w-full max-w-[600px]">
-                            <p>Consulta el estado de emisión, descarga los archivos XML y PDF y envía comprobantes a los clientes.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Busca la factura por folio o cliente.</li>
-                                <li>Descarga el XML o PDF según requieras.</li>
-                                <li>Envía el comprobante al cliente o marca como pagado.</li>
-                            </ol>
-                        </li>
-                        <li>
-                            Consulta la API pública para sucursales, productos y pedidos mediante la cabecera <code>X-API-KEY</code>.<br>
-                            <img src="https://via.placeholder.com/600x400?text=Captura" alt="API pública" class="my-2 w-full max-w-[600px]">
-                            <p>La documentación incluye ejemplos de peticiones y respuestas para integraciones externas.</p>
-                            <ol class="list-decimal ml-5">
-                                <li>Obtén tu clave desde el módulo de administración.</li>
-                                <li>Realiza solicitudes HTTP incluyendo la cabecera <code>X-API-KEY</code>.</li>
-                                <li>Consulta los endpoints de sucursales, productos y pedidos según lo necesites.</li>
-                            </ol>
-                        </li>
-                    </ol>
-                </div>
-            </section>
-
-            <section class="space-y-4">
-                <h2 class="text-xl font-semibold">Roles y seguridad</h2>
-                <p>Cada ruta está protegida por roles (<code>vendedor</code>, <code>inventario</code>, <code>admin</code> y <code>superAdmin</code>). Asegúrate de disponer del rol adecuado para acceder a cada módulo.</p>
-            </section>
-
-            <section class="space-y-4">
-                <h2 class="text-xl font-semibold">Soporte</h2>
-                <p>Para más información consulta la documentación Swagger disponible en <code>/api/documentation</code>.</p>
-            </section>
+            </div>
         </div>
     </AppLayout>
 </template>
-

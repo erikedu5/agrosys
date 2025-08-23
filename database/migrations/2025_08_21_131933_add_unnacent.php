@@ -1,31 +1,42 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        DB::statement('ALTER TABLE productos
-            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci,
-            MODIFY ingrediente_activo VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;
+        Schema::table('productos', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_0900_ai_ci')->change();
+            $table->string('ingrediente_activo', 255)->collation('utf8mb4_0900_ai_ci')->change();
+        });
 
-            ALTER TABLE cat_enfermedades
-            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;
+        Schema::table('cat_enfermedades', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_0900_ai_ci')->change();
+        });
 
-            ALTER TABLE cat_tipo_flors
-            MODIFY nombre VARCHAR(255) COLLATE utf8mb4_0900_ai_ci;');
+        Schema::table('cat_tipo_flors', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_0900_ai_ci')->change();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        //
+        // Ajusta la collation de "regreso" a la que usabas antes si es distinta.
+        // Aquí uso utf8mb4_unicode_ci como ejemplo común.
+        Schema::table('productos', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_unicode_ci')->change();
+            $table->string('ingrediente_activo', 255)->collation('utf8mb4_unicode_ci')->change();
+        });
+
+        Schema::table('cat_enfermedades', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_unicode_ci')->change();
+        });
+
+        Schema::table('cat_tipo_flors', function (Blueprint $table) {
+            $table->string('nombre', 255)->collation('utf8mb4_unicode_ci')->change();
+        });
     }
 };
