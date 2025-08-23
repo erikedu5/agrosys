@@ -183,6 +183,10 @@ const searchItems = computed(() => {
                                             Perfil
                                         </DropdownLink>
 
+                                        <DropdownLink :href="route('manual')" target="_blank">
+                                            Manual de usuario
+                                        </DropdownLink>
+
                                         <div class="border-t border-gray-200 dark:border-gray-600" />
 
                                         <!-- Autenticación -->
