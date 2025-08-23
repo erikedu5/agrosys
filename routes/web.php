@@ -22,7 +22,7 @@ Route::get('/', function() {
 
 
 Route::get('/manual', function () {
-    return response()->file(base_path('docs/manual-usuario.html'));
+    return Inertia::render('Manual');
 })->middleware('auth:sanctum')->name('manual');
 
 Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
