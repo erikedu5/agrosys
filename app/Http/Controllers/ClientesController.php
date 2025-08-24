@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Clientes;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,7 @@ class ClientesController extends Controller
     public function index(Request $request)
     {
         $clientes = Clientes::where('nombre', 'LIKE', "%$request->q%")
-            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('id_sucursal', SucursalService::getSucursalActiva())
             ->where('activo', true)
             ->latest()
             ->paginate(10);
@@ -61,7 +62,7 @@ class ClientesController extends Controller
             'requiereFactura' => $request->requiereFactura,
             'activo' => true,
             'rfc' => $request->rfc,
-            'id_sucursal' => Auth::user()->id_sucursal,
+            'id_sucursal' => SucursalService::getSucursalActiva(),
         ];
         Clientes::create($cliente);
         return redirect()->route('cliente.index');

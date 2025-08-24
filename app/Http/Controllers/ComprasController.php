@@ -8,6 +8,7 @@ use App\Models\Compras;
 use App\Models\ComprasAbonos;
 use App\Models\ComprasProductos;
 use App\Models\Producto;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -24,23 +25,23 @@ class ComprasController extends Controller
     public function index(Request $request)
     {
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
-        ->where('id_sucursal', Auth::user()->id_sucursal)
-        ->latest()
-        ->paginate(10);
+            ->where('id_sucursal', SucursalService::getSucursalActiva())
+            ->latest()
+            ->paginate(10);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,
         ]);
     }
 
-     /**
+    /**
      * Show the form for creating a new resource.
      */
     public function create(Request $request)
     {
         $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-        ->orWhere('barcode', 'LIKE', "%$request->q%")
-        ->get();
+            ->orWhere('barcode', 'LIKE', "%$request->q%")
+            ->get();
 
         foreach ($productos as $product) {
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
@@ -68,8 +69,8 @@ class ComprasController extends Controller
             'status' => 'required',
             'productos' => 'required',
         ]);
-        $fecha_compra= Carbon::parse($request->fecha_compra)->format('Y-m-d H:i:s');
-        $fecha_credito =Carbon::parse($fecha_compra)->addDays(30);
+        $fecha_compra = Carbon::parse($request->fecha_compra)->format('Y-m-d H:i:s');
+        $fecha_credito = Carbon::parse($fecha_compra)->addDays(30);
         $compra = Compras::create([
             'proveedor' => $request->proveedor,
             'fecha_compra' => $fecha_compra,
@@ -77,32 +78,32 @@ class ComprasController extends Controller
             'status' => $request->status,
             'fecha_credito' => $fecha_credito,
             'total_credito' => $request->total_credito,
-            'id_sucursal' => Auth::user()->id_sucursal
+            'id_sucursal' => SucursalService::getSucursalActiva()
         ]);
 
-        foreach($request->productos as $producto) {
+        foreach ($request->productos as $producto) {
             ComprasProductos::create([
-                'id_compra' =>$compra->id,
+                'id_compra' => $compra->id,
                 'id_producto' => $producto['id'],
                 'cantidad' => $producto['cantidad'],
                 'precio' => $producto['precio_compra']
             ]);
 
             $altaInventarioSaved = AltaInventario::where('id_producto', $producto['id'])
-            ->where('id_sucursal',  Auth::user()->id_sucursal)
-            ->orderBy('created_at', 'desc')->first();
+                ->where('id_sucursal',  SucursalService::getSucursalActiva())
+                ->orderBy('created_at', 'desc')->first();
 
             $altaInventario = new AltaInventario();
             $altaInventario->cantidad_actual = $altaInventarioSaved->cantidad_nueva;
             $altaInventario->cantidad_nueva = $altaInventarioSaved->cantidad_nueva + $producto['cantidad'];
-            $altaInventario->id_usuario = Auth::user()->id ;
+            $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto['id'];
-            $altaInventario->id_sucursal = Auth::user()->id_sucursal;
+            $altaInventario->id_sucursal = SucursalService::getSucursalActiva();
             Log::info($altaInventario);
             $altaInventario->save();
         }
 
-        foreach($request->abonos as $abono) {
+        foreach ($request->abonos as $abono) {
             $abono = ComprasAbonos::create([
                 'id_compra' => $compra->id,
                 'cantidad_abonada' => $abono['cantidad_abonada']
@@ -110,9 +111,9 @@ class ComprasController extends Controller
         }
 
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
-        ->where('id_sucursal', Auth::user()->id_sucursal)
-        ->latest()
-        ->paginate(10);
+            ->where('id_sucursal', SucursalService::getSucursalActiva())
+            ->latest()
+            ->paginate(10);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,
@@ -123,7 +124,7 @@ class ComprasController extends Controller
     public function show(Request $request, $id)
     {
         $compra = Compras::where('id', $id)->first();
-        $compra_productos = ComprasProductos::where('id_compra','=',$id)->get();
+        $compra_productos = ComprasProductos::where('id_compra', '=', $id)->get();
         $productos_array = [];
         foreach ($compra_productos as $product) {
             $producto_db = Producto::find($product->id_producto);
@@ -133,10 +134,10 @@ class ComprasController extends Controller
             array_push($productos_array, $producto_db);
         }
         $compra->productos = $productos_array;
-        $compra->abonos = ComprasAbonos::where('id_compra','=',$id)->get();
+        $compra->abonos = ComprasAbonos::where('id_compra', '=', $id)->get();
         $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-        ->orWhere('barcode', 'LIKE', "%$request->q%")
-        ->get();
+            ->orWhere('barcode', 'LIKE', "%$request->q%")
+            ->get();
 
         foreach ($productos as $product) {
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
@@ -172,10 +173,10 @@ class ComprasController extends Controller
         $compra->save();
 
         if (!$compra) {
-            return  redirect()->route('compras.index')->with(['error'=>'No existe compra que intenta actualizar']);
+            return  redirect()->route('compras.index')->with(['error' => 'No existe compra que intenta actualizar']);
         }
 
-        foreach($request->abonos as $abono) {
+        foreach ($request->abonos as $abono) {
             if (!isset($abono['id'])) {
                 $abono = ComprasAbonos::create([
                     'id_compra' => $request->id,
@@ -185,13 +186,12 @@ class ComprasController extends Controller
         }
 
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
-        ->where('id_sucursal', Auth::user()->id_sucursal)
-        ->latest()
-        ->paginate(10);
+            ->where('id_sucursal', SucursalService::getSucursalActiva())
+            ->latest()
+            ->paginate(10);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,
         ]);
     }
-
 }

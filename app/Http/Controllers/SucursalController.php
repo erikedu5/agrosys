@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Empresa;
 use App\Models\Sucursales;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,7 @@ class SucursalController extends Controller
         $empresa = Empresa::find(1);
         $query = Sucursales::where('nombre', 'LIKE', "%$request->q%");
         if (Auth::user()->tipo != 'superAdmin') {
-            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
             $query = $query->where('id_empresa', $sucursalUser->id_empresa);
             $empresa = Empresa::find($sucursalUser->id_empresa);
         }
@@ -29,7 +30,7 @@ class SucursalController extends Controller
         }
 
         $sucursales = $query->latest()
-        ->paginate(10);
+            ->paginate(10);
 
         $count = $query->get()->count();
 
@@ -41,7 +42,7 @@ class SucursalController extends Controller
         ]);
     }
 
- /**
+    /**
      * Show the form for creating a new resource.
      */
     public function create()
@@ -50,7 +51,7 @@ class SucursalController extends Controller
         if (Auth::user()->tipo == 'superAdmin') {
             $empresas = Empresa::get();
         } else {
-            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
             $empresas = Empresa::where('id', $sucursalUser->id_empresa)->get();
         }
         return Inertia::render('Sucursal/CreateSucursal', [
@@ -67,7 +68,7 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
-        ],[
+        ], [
             'nombre.required' => 'Agregar un nombre de sucursal.',
             'direccion.required' => 'Agregar una dirección.',
             'ticket_width_mm' => 'Agregar un formato de ticket valido.'
@@ -90,13 +91,13 @@ class SucursalController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit( $id)
+    public function edit($id)
     {
         $empresas = [];
         if (Auth::user()->tipo == 'superAdmin') {
             $empresas = Empresa::get();
         } else {
-            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
             $empresas = Empresa::where('id', $sucursalUser->id_empresa)->get();
         }
         $sucursal = Sucursales::find($id);
@@ -112,7 +113,7 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
-        ],[
+        ], [
             'nombre.required' => 'Agregar un nombre de sucursal.',
             'direccion.required' => 'Agregar una dirección.',
             'ticket_width_mm.required' => 'Agregar un formato de ticket valido.'
@@ -121,7 +122,7 @@ class SucursalController extends Controller
         $sucursal->nombre = $request->nombre;
         $sucursal->direccion = $request->direccion;
         $sucursal->telefono = $request->telefono;
-        $sucursal->email= $request->email;
+        $sucursal->email = $request->email;
         $sucursal->es_matriz = $request->es_matriz;
         $sucursal->id_empresa = $request->id_empresa;
         if ($request->filled('ticket_width_mm')) {
@@ -133,7 +134,7 @@ class SucursalController extends Controller
 
     /**
      * Remove the specified resource from storage.
-    */
+     */
     public function destroy(Sucursales $sucursal)
     {
         $sucursal->delete(); // Soft delete

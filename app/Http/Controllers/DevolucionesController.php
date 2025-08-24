@@ -9,6 +9,7 @@ use App\Models\DevolucionesDetalle;
 use App\Models\Producto;
 use App\Models\ProductoVenta;
 use App\Models\Venta;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,7 @@ class DevolucionesController extends Controller
 {
     public function index()
     {
-        $ventas = Venta::where('id_sucursal', Auth::user()->id_sucursal)
+        $ventas = Venta::where('id_sucursal', SucursalService::getSucursalActiva())
             ->whereDate('created_at', now()->toDateString())
             ->orderByDesc('created_at')
             ->get(['id', 'total']);
@@ -37,7 +38,7 @@ class DevolucionesController extends Controller
 
     public function list()
     {
-        $devoluciones = Devoluciones::where('id_sucursal', Auth::user()->id_sucursal)
+        $devoluciones = Devoluciones::where('id_sucursal', SucursalService::getSucursalActiva())
             ->with('detalles', 'detalles.producto')
             ->orderByDesc('created_at')
             ->get(['id', 'id_venta', 'total_devuelto', 'created_at']);
@@ -74,7 +75,7 @@ class DevolucionesController extends Controller
             $yaDevuelto = (float) ($devueltos[$pv->id_producto] ?? 0);
             $items[] = [
                 'producto_id' => $pv->id_producto,
-                'producto_nombre' => $prod ? $prod->nombre : ('ID '.$pv->id_producto),
+                'producto_nombre' => $prod ? $prod->nombre : ('ID ' . $pv->id_producto),
                 'vendido' => (float) $pv->cantidad,
                 'devuelto' => $yaDevuelto,
                 'max_devolver' => max(0, (float)$pv->cantidad - $yaDevuelto),
@@ -142,7 +143,7 @@ class DevolucionesController extends Controller
             $Devoluciones = Devoluciones::create([
                 'id_venta' => $venta->id,
                 'id_usuario' => Auth::id(),
-                'id_sucursal' => Auth::user()->id_sucursal,
+                'id_sucursal' => SucursalService::getSucursalActiva(),
                 'total_devuelto' => $totalDevuelto,
                 'observaciones' => $data['observaciones'] ?? null,
             ]);
@@ -157,7 +158,7 @@ class DevolucionesController extends Controller
 
                 // Regresar al inventario
                 $ultima = AltaInventario::where('id_producto', $det['id_producto'])
-                    ->where('id_sucursal', Auth::user()->id_sucursal)
+                    ->where('id_sucursal', SucursalService::getSucursalActiva())
                     ->orderByDesc('id')
                     ->first();
 
@@ -167,7 +168,7 @@ class DevolucionesController extends Controller
                 $alta->cantidad_nueva = $actual + (float)$det['cantidad'];
                 $alta->id_usuario = Auth::id();
                 $alta->id_producto = $det['id_producto'];
-                $alta->id_sucursal = Auth::user()->id_sucursal;
+                $alta->id_sucursal = SucursalService::getSucursalActiva();
                 $alta->save();
             }
 
@@ -192,4 +193,3 @@ class DevolucionesController extends Controller
         return redirect()->route('devoluciones.list')->with('success', 'Devolución registrada correctamente');
     }
 }
-
