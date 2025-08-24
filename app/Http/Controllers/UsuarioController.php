@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Empresa;
 use App\Models\Sucursales;
 use App\Models\User;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -21,7 +22,8 @@ class UsuarioController extends Controller
         $query = User::where('name', 'LIKE', "%$request->q%");
 
         if (Auth::user()->tipo !== 'superAdmin') {
-            $query = $query->where('id_sucursal',  Auth::user()->id_sucursal);
+            $sucursal = SucursalService::getSucursalActiva();
+            $query = $query->where('id_sucursal', $sucursal);
         }
 
         if ($request->boolean('deleted')) {
@@ -57,7 +59,7 @@ class UsuarioController extends Controller
             $empresas = Empresa::get();
         } else {
             // Para admin empresa: solo sucursales de su empresa
-            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
@@ -137,7 +139,7 @@ class UsuarioController extends Controller
             $empresas = Empresa::get();
         } else {
             // Para admin empresa: solo sucursales de su empresa
-            $sucursalUser = Sucursales::where('id',  Auth::user()->id_sucursal)->first();
+            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
