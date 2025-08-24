@@ -1,11 +1,12 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
-    import { ref, watch, defineProps } from 'vue';
+    import { ref, watch, defineProps, onMounted } from 'vue';
     import { usePersistedForm } from '@/stores/formStore';
     import Pagination from '@/Components/Pagination.vue'
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
     import InputError from '@/Components/InputError.vue';
+    import AddInventarioModal from '@/Components/AddInventarioModal.vue';
 
     const props = defineProps({
         producto: Object,
@@ -14,6 +15,9 @@
         solucionesByProduct: Array,
     });
 
+    // Modal state
+    const showInventarioModal = ref(false);
+
     const { form, reset } = usePersistedForm('agregarSolucionForm', {
         id_producto: props.solucion != null ? props.solucion.id_producto : props.producto.id,
         id_enfermedad_tipo_flor: props.solucion != null ? props.solucion.id_enfermedad_tipo_flor : 0,
@@ -21,6 +25,19 @@
         dosis_tambo_ml: props.solucion != null ? props.solucion.dosis_tambo_ml: 0,
         condiciones: props.solucion != null ? props.solucion.condiciones: '',
         id: props.solucion != null ? props.solucion.id: null,
+    });
+
+    // Detectar si viene de la creación de un producto
+    onMounted(() => {
+        // Verificar si hay un parámetro que indique que viene de producto recién creado
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromProductCreation = urlParams.get('from_product_creation');
+        
+        if (fromProductCreation === 'true') {
+            showInventarioModal.value = true;
+            // Limpiar el parámetro de la URL sin recargar la página
+            window.history.replaceState({}, document.title, window.location.pathname + '?id_producto=' + props.producto.id);
+        }
     });
 
     const submit = async() => {
@@ -43,15 +60,51 @@
         form.dosis_bomba_ml = form.dosis_tambo_ml / 15;
     }
 
+    // Funciones del modal de inventario
+    const openInventarioModal = () => {
+        showInventarioModal.value = true;
+    };
+
+    const closeInventarioModal = () => {
+        showInventarioModal.value = false;
+    };
+
+    const onInventarioSuccess = () => {
+        // Recargar la página para actualizar el stock del producto
+        window.location.reload();
+    };
+
 
 </script>
 
 <template>
     <AppLayout title="CrearProducto">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Crear solucion para el producto: {{ props.producto.nombre }}
-            </h2>
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                        Crear solucion para el producto: {{ props.producto.nombre }}
+                    </h2>
+                    <p class="text-sm text-gray-600 mt-1">
+                        Stock actual: 
+                        <span :class="(props.producto.cantidad || 0) > 0 ? 'font-bold text-blue-600' : 'font-bold text-red-600'">
+                            {{ props.producto.cantidad || 0 }}
+                        </span>
+                        unidades
+                        <span v-if="(props.producto.cantidad || 0) === 0" class="text-red-500 text-xs ml-2">
+                            (Sin stock disponible)
+                        </span>
+                    </p>
+                </div>
+                <button 
+                    @click="openInventarioModal"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Agregar Inventario
+                </button>
+            </div>
         </template>
 
         <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -143,5 +196,12 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal de agregar inventario -->
+        <AddInventarioModal 
+            :show="showInventarioModal"
+            :producto="props.producto"
+            @close="closeInventarioModal"
+            @success="onInventarioSuccess" />
     </AppLayout>
 </template>

@@ -7,6 +7,7 @@ import DialogModal from '@/Components/DialogModal.vue';
 import InputError from '@/Components/InputError.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import PasswordInput from '@/Components/PasswordInput.vue';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -68,14 +69,11 @@ const closeModal = () => {
                     ¿Estás seguro de que deseas eliminar tu cuenta? Una vez que tu cuenta sea eliminada, todos sus recursos y datos serán borrados de forma permanente. Por favor, ingresa tu contraseña para confirmar que deseas eliminar tu cuenta permanentemente.
 
                     <div class="mt-4">
-                        <TextInput
-                            ref="passwordInput"
+                        <PasswordInput
                             v-model="form.password"
-                            type="password"
-                            class="mt-1 block w-3/4"
                             placeholder="Contraseña"
+                            input-class="mt-1 block w-3/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             autocomplete="current-password"
-                            @keyup.enter="deleteUser"
                         />
 
                         <InputError :message="form.errors.password" class="mt-2" />

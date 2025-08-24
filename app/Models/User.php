@@ -31,6 +31,7 @@ class User extends Authenticatable
         'password',
         'tipo',
         'id_sucursal',
+        'id_empresa',
     ];
 
     /**
@@ -64,11 +65,56 @@ class User extends Authenticatable
     ];
 
 
-    protected function getCreatedAtAttribute() {
+    protected function getCreatedAtAttribute()
+    {
         return $this->attributes['created_at'];
     }
 
-    protected function getUpdatedAtAttribute() {
+    protected function getUpdatedAtAttribute()
+    {
         return $this->attributes['updated_at'];
+    }
+
+    /**
+     * Relación con Sucursal
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursales::class, 'id_sucursal');
+    }
+
+    /**
+     * Relación con Empresa
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'id_empresa');
+    }
+
+    /**
+     * Obtener todas las sucursales de la empresa del usuario
+     */
+    public function sucursalesEmpresa()
+    {
+        if ($this->tipo === 'adminEmpresa' && $this->id_empresa) {
+            return Sucursales::where('id_empresa', $this->id_empresa)->get();
+        }
+        return collect();
+    }
+
+    /**
+     * Verificar si el usuario es administrador de empresa
+     */
+    public function isAdminEmpresa()
+    {
+        return $this->tipo === 'adminEmpresa';
+    }
+
+    /**
+     * Verificar si el usuario es super administrador
+     */
+    public function isSuperAdmin()
+    {
+        return $this->tipo === 'superAdmin';
     }
 }

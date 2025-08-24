@@ -143,7 +143,8 @@
                     <div class="md-col-span-2 mt-5 md:mt-0" id="ventas"
                         v-if="$page.props.auth.user.tipo == 'vendedor' ||
                             $page.props.auth.user.tipo == 'admin' ||
-                            $page.props.auth.user.tipo == 'superAdmin'" >
+                            $page.props.auth.user.tipo == 'superAdmin' ||
+                            $page.props.auth.user.tipo == 'adminEmpresa'" >
                         <label><strong>Reporte de ventas</strong></label>
                         <br>
                         <br>
@@ -165,7 +166,8 @@
                     <div class="md-col-span-2 mt-5 md:mt-0" id="pormarca"
                         v-if="$page.props.auth.user.tipo == 'vendedor' ||
                             $page.props.auth.user.tipo == 'admin' ||
-                            $page.props.auth.user.tipo == 'superAdmin'" >
+                            $page.props.auth.user.tipo == 'superAdmin' ||
+                            $page.props.auth.user.tipo == 'adminEmpresa'" >
                         <label><strong>Reporte de ventas por marca o producto</strong></label>
                         <br>
                         <br>
@@ -213,7 +215,8 @@
                     <div class="md-col-span-2 mt-5 md:mt-0" id="inventario"
                         v-if="$page.props.auth.user.tipo == 'inventario' ||
                             $page.props.auth.user.tipo == 'admin' ||
-                            $page.props.auth.user.tipo == 'superAdmin'" >
+                            $page.props.auth.user.tipo == 'superAdmin' ||
+                            $page.props.auth.user.tipo == 'adminEmpresa'" >
                         <label><strong>Reporte de inventario</strong></label>
                         <br>
                         <br>

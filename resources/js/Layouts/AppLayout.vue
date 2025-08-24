@@ -10,6 +10,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import Toast from '@/Components/Toast.vue';
 import SearchBar from '@/Components/SearchBar.vue';
 import Loading from '@/Components/Loading.vue';
+import SucursalSelectionModal from '@/Components/SucursalSelectionModal.vue';
 
 defineProps({
     title: String,
@@ -33,6 +34,7 @@ const fechaFin = new Date();
 const fechaInicio = minusDays(fechaFin, 1);
 
 const showingNavigationDropdown = ref(false);
+const showingSucursalModal = ref(false);
 const page = usePage();
 const isLoading = ref(false);
 
@@ -43,6 +45,18 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+const abrirModalSucursal = () => {
+    console.log('Abriendo modal de sucursal...');
+    console.log('Estado actual del modal:', showingSucursalModal.value);
+    showingSucursalModal.value = true;
+    console.log('Estado después de abrir:', showingSucursalModal.value);
+};
+
+const cerrarModalSucursal = () => {
+    console.log('Cerrando modal de sucursal...');
+    showingSucursalModal.value = false;
+};
+
 const navItems = computed(() => {
     const tipo = page.props.auth.user.tipo;
     return [
@@ -50,7 +64,7 @@ const navItems = computed(() => {
         {
             type: 'dropdown',
             label: 'Venta',
-            condition: ['vendedor', 'superAdmin', 'admin'].includes(tipo),
+            condition: ['vendedor', 'superAdmin', 'admin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Venta', route: 'venta.index' },
                 { label: 'Devoluciones', route: 'devoluciones.list' },
@@ -59,7 +73,7 @@ const navItems = computed(() => {
         {
             type: 'dropdown',
             label: 'Administración de Inventario',
-            condition: ['inventario', 'admin', 'superAdmin'].includes(tipo),
+            condition: ['inventario', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Inventario', route: 'inventario.index' },
                 { label: 'Compra a proveedores', route: 'compra.index' },
@@ -68,18 +82,22 @@ const navItems = computed(() => {
         {
             type: 'dropdown',
             label: 'Clientes',
-            condition: ['vendedor', 'admin', 'superAdmin'].includes(tipo),
+            condition: ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Clientes', route: 'cliente.index' },
                 { label: 'Facturas de ventas', route: 'facturas.index', params: { fechaInicio, fechaFin } },
             ],
         },
         { type: 'link', label: 'Reportes', route: 'reporte' },
-        { type: 'link', label: 'Pedidos', route: 'pedidos.index' },
+        {
+            type: 'link',
+            condition: ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
+            label: 'Pedidos', route: 'pedidos.index'
+        },
         {
             type: 'dropdown',
             label: 'Administración de Catálogos',
-            condition: ['inventario', 'admin', 'superAdmin'].includes(tipo),
+            condition: ['inventario', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Catálogo de Clasificación', route: 'clasificacion.index' },
                 { label: 'Catálogo de Marca', route: 'marca.index' },
@@ -90,7 +108,7 @@ const navItems = computed(() => {
         {
             type: 'dropdown',
             label: 'Administración',
-            condition: ['admin', 'superAdmin'].includes(tipo),
+            condition: ['superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Empresas', route: 'empresa.index' },
                 { label: 'Sucursal', route: 'sucursal.index' },
@@ -125,136 +143,221 @@ const searchItems = computed(() => {
             <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 fixed top-0 w-full z-50">
                 <!-- Menú de navegación principal -->
                 <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between h-16">
-                        <div class="flex">
-                            <!-- Logotipo -->
-                            <div class="shrink-0 flex items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationMark class="block h-9 w-auto" />
-                                </Link>
-                            </div>
-
-                            <!-- Enlaces de navegación -->
-                            <div class="hidden space-x-10 md:-my-px md:ml-10 md:flex flex-row flex-wrap justify-center">
-                                <template v-for="item in navItems" :key="item.label">
-                                    <NavLink v-if="item.type === 'link'" :href="route(item.route, item.params)" :active="route().current(item.route + '*')">
-                                        {{ item.label }}
-                                    </NavLink>
-                                    <div v-else-if="item.type === 'dropdown' && item.condition" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 focus:border-gray-300 dark:focus:border-gray-700 transition duration-150 ease-in-out">
-                                        <Dropdown>
-                                            <template #trigger>
-                                                <button type="button">{{ item.label }}</button>
-                                            </template>
-                                            <template #content>
-                                                <DropdownLink v-for="child in item.children" :key="child.label" :href="route(child.route, child.params)" :active="route().current(child.route)">
-                                                    {{ child.label }}
-                                                </DropdownLink>
-                                            </template>
-                                        </Dropdown>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div class="hidden md:flex md:items-center md:ml-6 space-x-4">
-                            <SearchBar :items="searchItems" />
-                            <!-- Menú de configuración -->
-                            <div class="ml-3 relative">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <button v-if="$page.props.jetstream.managesProfilePhotos" class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition">
-                                            <img class="h-8 w-8 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
-                                        </button>
-
-                                        <span v-else class="inline-flex rounded-md">
-                                            <button type="button" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:bg-gray-50 dark:focus:bg-gray-700 active:bg-gray-50 dark:active:bg-gray-700 transition ease-in-out duration-150">
-                                                {{ $page.props.auth.user.name }}
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <!-- Gestión de la cuenta -->
-                                        <div class="block px-4 py-2 text-xs text-gray-400">
-                                            Administración de la cuenta
-                                        </div>
-
-                                        <DropdownLink :href="route('profile.show')">
-                                            Perfil
-                                        </DropdownLink>
-
-                                        <DropdownLink :href="route('manual')" target="_blank">
-                                            Manual de usuario
-                                        </DropdownLink>
-
-                                        <div class="border-t border-gray-200 dark:border-gray-600" />
-
-                                        <!-- Autenticación -->
-                                        <form @submit.prevent="logout">
-                                            <DropdownLink as="button">
-                                                Cerrar sesión
-                                            </DropdownLink>
-                                        </form>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Botón de menú -->
-                        <div class="-mr-2 flex items-center md:hidden">
+                    <div class="flex justify-between items-center h-16">
+                        <!-- Lado izquierdo: Botón del menú + Logo -->
+                        <div class="flex items-center space-x-4">
+                            <!-- Botón del menú hamburguesa -->
                             <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
                                 <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                                     <path :class="{'hidden': showingNavigationDropdown, 'inline-flex': ! showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                     <path :class="{'hidden': ! showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
+                            
+                            <!-- Logo -->
+                            <div class="shrink-0 flex items-center">
+                                <Link :href="route('dashboard')">
+                                    <ApplicationMark class="block h-9 w-auto" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        <!-- Lado derecho: Información del usuario y sucursal -->
+                        <div class="flex items-center space-x-4">
+                            <button 
+                                v-if="$page.props.auth.user.tipo === 'adminEmpresa' && $page.props.sucursalActiva?.sucursalesDisponibles?.length > 1"
+                                @click="abrirModalSucursal"
+                                class="text-right p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 group">
+                                <div class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                                    {{ $page.props.auth.user.name }}
+                                </div>
+                                <div class="text-xs text-green-600 dark:text-green-400 flex items-center justify-end group-hover:text-green-700 dark:group-hover:text-green-300">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    {{ $page.props.sucursalActiva.nombre }}
+                                    <!-- Icono de cambio -->
+                                    <svg class="w-3 h-3 ml-1 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                            
+                            <!-- Versión no clickeable para otros tipos de usuario -->
+                            <div 
+                                v-else
+                                class="text-right p-2">
+                                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ $page.props.auth.user.name }}
+                                </div>
+                                <div v-if="$page.props.sucursalActiva" class="text-xs text-green-600 dark:text-green-400 flex items-center justify-end">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    {{ $page.props.sucursalActiva.nombre }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Menú de navegación adaptable -->
-                <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="md:hidden">
-                    <div class="pt-2 pb-3 space-y-1">
-                        <ResponsiveNavLink v-for="item in searchItems" :key="item.label" :href="route(item.route, item.params)" :active="route().current(item.route)">
-                            {{ item.label }}
-                        </ResponsiveNavLink>
+                <!-- Sidebar de navegación lateral con cuadrícula -->
+                <div 
+                    :class="{'translate-x-0': showingNavigationDropdown, '-translate-x-full': !showingNavigationDropdown}" 
+                    class="fixed top-16 left-0 z-40 w-80 h-[calc(100vh-4rem)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-lg transform transition-transform duration-300 ease-in-out overflow-y-auto menu-scroll">
+                    
+                    <!-- Sección de navegación con cuadrícula -->
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-600 pb-2">
+                            Navegación
+                        </h3>
+                        
+                        <!-- Grid de 3 columnas para los botones de navegación -->
+                        <div class="grid grid-cols-3 gap-3 mb-6">
+                            <template v-for="item in searchItems" :key="item.label">
+                                <Link 
+                                    :href="route(item.route, item.params)"
+                                    :class="route().current(item.route) ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'"
+                                    class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                    
+                                    <!-- Iconos para cada tipo de menú -->
+                                    <div class="mb-2">
+                                        <!-- Icono de Dashboard -->
+                                        <svg v-if="item.label.includes('Inicio')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Venta -->
+                                        <svg v-else-if="item.label.includes('Venta')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Inventario -->
+                                        <svg v-else-if="item.label.includes('Inventario')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Compras -->
+                                        <svg v-else-if="item.label.includes('Compra')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Clientes -->
+                                        <svg v-else-if="item.label.includes('Cliente')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Reportes -->
+                                        <svg v-else-if="item.label.includes('Reporte')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono de Pedidos -->
+                                        <svg v-else-if="item.label.includes('Pedido')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        </svg>
+                                        
+                                        <!-- Icono genérico para otros elementos -->
+                                        <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                        </svg>
+                                    </div>
+                                    
+                                    <span class="text-xs font-medium leading-tight">{{ item.label }}</span>
+                                </Link>
+                            </template>
+                        </div>
                     </div>
 
-                    <!-- Opciones de configuración adaptables -->
-                    <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
-                        <div class="flex items-center px-4">
+                    <!-- Sección de usuario y configuración -->
+                    <div class="p-4 border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            Usuario
+                        </h3>
+                        
+                        <!-- Información del usuario -->
+                        <div class="flex items-center mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border">
                             <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 mr-3">
-                                <img class="h-10 w-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
+                                <img class="h-12 w-12 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
                             </div>
-
-                            <div>
+                            <div class="flex-1">
                                 <div class="font-medium text-base text-gray-800 dark:text-gray-200">
                                     {{ $page.props.auth.user.name }}
                                 </div>
                                 <div class="font-medium text-sm text-gray-500">
                                     {{ $page.props.auth.user.email }}
                                 </div>
+                                <div v-if="$page.props.sucursalActiva" class="font-medium text-sm text-green-600 dark:text-green-400">
+                                    📍 {{ $page.props.sucursalActiva.nombre }}
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
-                                Perfil
-                            </ResponsiveNavLink>
+                        <!-- Botones de configuración en cuadrícula -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <!-- Botón de Perfil -->
+                            <Link 
+                                :href="route('profile.show')"
+                                :class="route().current('profile.show') ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
+                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span class="text-xs font-medium">Perfil</span>
+                            </Link>
 
-                            <!-- Autenticación -->
-                            <form method="POST" @submit.prevent="logout">
-                                <ResponsiveNavLink as="button">
-                                    Cerrar sesión
-                                </ResponsiveNavLink>
-                            </form>
-
+                            <!-- Botón de Manual -->
+                            <a 
+                                :href="route('manual')" 
+                                target="_blank"
+                                class="flex flex-col items-center justify-center p-3 border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                                <span class="text-xs font-medium">Manual</span>
+                            </a>
                         </div>
+
+                        <!-- Botón de cambiar sucursal si aplica -->
+                        <div v-if="$page.props.auth.user.tipo === 'adminEmpresa' && $page.props.sucursalActiva?.sucursalesDisponibles?.length > 1" class="mb-4">
+                            <button 
+                                @click="abrirModalSucursal"
+                                class="w-full flex items-center justify-center p-3 border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:border-green-600 dark:text-green-300 dark:hover:bg-green-800 rounded-lg transition-all duration-200 hover:shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Cambiar Sucursal</span>
+                            </button>
+                        </div>
+
+                        <!-- Botón de cerrar sesión -->
+                        <form @submit.prevent="logout" class="w-full">
+                            <button 
+                                type="submit"
+                                class="w-full flex items-center justify-center p-3 border-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-800 rounded-lg transition-all duration-200 hover:shadow-md">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                                <span class="text-sm font-medium">Cerrar Sesión</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
+
             </nav>
 
-            <div class="pt-16">
+            <!-- Overlay para cerrar el sidebar en móviles -->
+            <div 
+                v-if="showingNavigationDropdown"
+                @click="showingNavigationDropdown = false"
+                class="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden">
+            </div>
+
+            <div 
+                :class="{'lg:ml-80': showingNavigationDropdown}"
+                class="pt-16 transition-all duration-300 ease-in-out">
                 <!-- Encabezado de la página -->
                 <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
                     <div class="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -268,5 +371,56 @@ const searchItems = computed(() => {
                 </main>
             </div>
         </div>
+
+        <!-- Modal de selección de sucursal -->
+        <SucursalSelectionModal 
+            :show="showingSucursalModal"
+            :sucursal-activa="$page.props.sucursalActiva"
+            @close="cerrarModalSucursal"
+        />
     </div>
 </template>
+
+<style scoped>
+/* Estilo personalizado para el scroll del menú */
+.menu-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.menu-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.menu-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Para modo oscuro */
+.dark .menu-scroll::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .menu-scroll::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Para Firefox */
+.menu-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.dark .menu-scroll {
+    scrollbar-color: #6b7280 #374151;
+}
+</style>

@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import PasswordInput from '@/Components/PasswordInput.vue';
 
 defineProps({
     canResetPassword: Boolean,
@@ -38,20 +39,13 @@ const submit = () => {
             <AuthenticationCardLogo />
         </template>
 
-        <div v-if="status" class="mb-4 font-medium text-sm text-green-600 dark:text-green-400">
-            {{ status }}
-        </div>
-
         <div>
-            <div class="mb-4 text-center">
-            <h1 class="text-2xl md:text-4xl font-bold text-green-700">Bienvenido</h1>
-            </div>
             <div class="text-gray-700">
             <p class="mb-4 text-justify">
-                Agrosys es una plataforma diseñada para gestionar eficientemente el inventario
+                Plataforma diseñada para gestionar eficientemente el inventario
                 de tiendas de agroquímicos, donde puede:
             </p>
-            <ul class="list-none  pl-5 mb-4">
+            <ul class="list-none pl-5 ">
                     <li>📦 Registrar productos y controlar el inventario.</li>
                     <li>📊 Generar ventas.</li>
                     <li>🚜 Administrar clientes.</li>
@@ -59,7 +53,6 @@ const submit = () => {
             </ul>
             </div>
         </div>
-        <br>
         <p class="text-center">
            <b> Inicia Sessión aquí </b>
         </p>
@@ -82,13 +75,12 @@ const submit = () => {
 
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
-                <TextInput
-                    id="password"
+                <PasswordInput
                     v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
+                    placeholder="Ingrese su contraseña"
+                    input-class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     autocomplete="current-password"
+                    required
                 />
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>

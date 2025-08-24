@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Empresa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class EmpresaController extends Controller
@@ -16,6 +18,12 @@ class EmpresaController extends Controller
     {
         $query = Empresa::query()
             ->where('nombre', 'LIKE', "%$request->q%");
+        
+        Log::info(Auth::user());
+
+        if (Auth::user()->tipo === 'adminEmpresa') {
+            $query->where('id', Auth::user()->id_empresa);
+        }
 
         if ($request->boolean('deleted')) {
             $query->onlyTrashed();
@@ -25,6 +33,7 @@ class EmpresaController extends Controller
 
         return Inertia::render('Empresa/Empresa', [
             'empresas' => $empresas,
+            'all' => Auth::user()->tipo === 'adminEmpresa',
             'showDeleted' => $request->boolean('deleted'),
         ]);
     }
@@ -65,6 +74,7 @@ class EmpresaController extends Controller
         return Inertia::render('Empresa/CrearEmpresa',
         [
             'empresa' => $empresa,
+            'all' => Auth::user()->tipo === 'adminEmpresa',
         ]);
     }
 
@@ -85,7 +95,9 @@ class EmpresaController extends Controller
         $empresa->email= $request->email;
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
-        $empresa->numero_sucursales = $request->numero_sucursales;
+        if (Auth::user()->tipo === 'superAdmin') {
+            $empresa->numero_sucursales = $request->numero_sucursales;
+        }
         $empresa->save();
 
         $empresas = Empresa::get();

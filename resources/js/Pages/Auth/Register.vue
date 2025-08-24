@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import PasswordInput from '@/Components/PasswordInput.vue';
 
 const { form, reset } = usePersistedForm('registerForm', {
     name: '',
@@ -62,26 +63,24 @@ const submit = () => {
 
             <div class="mt-4">
                 <InputLabel for="password" value="Password" />
-                <TextInput
-                    id="password"
+                <PasswordInput
                     v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
+                    placeholder="Ingrese su contraseña"
+                    input-class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     autocomplete="new-password"
+                    required
                 />
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
             <div class="mt-4">
                 <InputLabel for="password_confirmation" value="Confirm Password" />
-                <TextInput
-                    id="password_confirmation"
+                <PasswordInput
                     v-model="form.password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
+                    placeholder="Confirme su contraseña"
+                    input-class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     autocomplete="new-password"
+                    required
                 />
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>

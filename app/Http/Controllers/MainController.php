@@ -8,29 +8,36 @@ use App\Models\CatEnfermedades;
 use App\Models\CatTipoFlor;
 use App\Models\Producto;
 use App\Models\SolucionEnfermedad;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class MainController extends Controller
 {
-      /**
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        $sucursalActiva = SucursalService::getSucursalActiva();
+
+        if (!$sucursalActiva) {
+            return redirect()->route('sucursal.selection');
+        }
+
         $q = trim((string) $request->input('q', ''));
         $escaped = str_replace(['%', '_'], ['\%', '\_'], $q);
         $pattern = "%{$escaped}%";
 
-        $collation = 'utf8mb4_0900_ai_ci'; 
+        $collation = 'utf8mb4_0900_ai_ci';
 
         $solucionesByProduct = SolucionEnfermedad::query()
             ->join('productos', 'productos.id', '=', 'solucion_enfermedads.id_producto')
             ->join('enfermedades_tipo_flors', 'enfermedades_tipo_flors.id', '=', 'solucion_enfermedads.id_enfermedad_tipo_flor')
             ->join('cat_tipo_flors', 'cat_tipo_flors.id', '=', 'enfermedades_tipo_flors.id_tipo_flor')
             ->join('cat_enfermedades', 'cat_enfermedades.id', '=', 'enfermedades_tipo_flors.id_enfermedad')
-            ->where('solucion_enfermedads.id_sucursal', Auth::user()->id_sucursal)
+            ->where('solucion_enfermedads.id_sucursal', $sucursalActiva)
             ->when($q !== '', function ($query) use ($pattern, $collation) {
                 $query->where(function ($w) use ($pattern, $collation) {
                     $w->orWhereRaw("productos.nombre COLLATE {$collation} LIKE ?", [$pattern])
@@ -51,7 +58,7 @@ class MainController extends Controller
             $producto = Producto::find($solucionByProd->id_producto);
 
             $actualStock = AltaInventario::where('id_producto', $producto->id)
-                ->where('id_sucursal', Auth::user()->id_sucursal)
+                ->where('id_sucursal', $sucursalActiva)
                 ->latest('created_at')
                 ->first();
 
@@ -62,8 +69,16 @@ class MainController extends Controller
             $solucionByProd->producto = $producto;
         }
 
+        $sucursalInfo = SucursalService::getSucursalActivaCompleta();
+
         return Inertia::render('Dashboard', [
             'solucionesByProduct' => $solucionesByProduct,
+            'sucursalActiva' => [
+                'id' => $sucursalInfo->id ?? null,
+                'nombre' => SucursalService::getNombreSucursalActiva(),
+                'esAdminEmpresa' => Auth::user()->tipo === 'adminEmpresa',
+                'sucursalesDisponibles' => Auth::user()->tipo === 'adminEmpresa' ? SucursalService::getSucursalesDisponibles() : []
+            ]
         ]);
     }
 }

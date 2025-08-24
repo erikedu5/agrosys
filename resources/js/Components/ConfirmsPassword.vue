@@ -5,6 +5,7 @@ import InputError from './InputError.vue';
 import PrimaryButton from './PrimaryButton.vue';
 import SecondaryButton from './SecondaryButton.vue';
 import TextInput from './TextInput.vue';
+import PasswordInput from './PasswordInput.vue';
 
 const emit = defineEmits(['confirmed']);
 
@@ -85,14 +86,11 @@ const closeModal = () => {
                 {{ content }}
 
                 <div class="mt-4">
-                    <TextInput
-                        ref="passwordInput"
+                    <PasswordInput
                         v-model="form.password"
-                        type="password"
-                        class="mt-1 block w-3/4"
-                        placeholder="Password"
+                        placeholder="Contraseña"
+                        input-class="mt-1 block w-3/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         autocomplete="current-password"
-                        @keyup.enter="confirmPassword"
                     />
 
                     <InputError :message="form.error" class="mt-2" />

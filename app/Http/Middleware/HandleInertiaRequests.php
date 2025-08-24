@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -36,8 +38,48 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = Auth::user();
+        $sucursalActiva = null;
+
+        if ($user) {
+            $sucursalId = SucursalService::getSucursalActiva();
+            $sucursalCompleta = SucursalService::getSucursalActivaCompleta();
+
+            if ($sucursalCompleta) {
+                $sucursalActiva = [
+                    'id' => $sucursalCompleta->id,
+                    'nombre' => $sucursalCompleta->nombre,
+                    'direccion' => $sucursalCompleta->direccion,
+                    'esAdminEmpresa' => $user->tipo === 'adminEmpresa',
+                    'sucursalesDisponibles' => []
+                ];
+
+                // Si es admin de empresa, agregar las sucursales disponibles
+                if ($user->tipo === 'adminEmpresa') {
+                    $sucursalesDisponibles = SucursalService::getSucursalesDisponibles();
+                    $sucursalActiva['sucursalesDisponibles'] = $sucursalesDisponibles->map(function ($sucursal) {
+                        return [
+                            'id' => $sucursal->id,
+                            'nombre' => $sucursal->nombre,
+                            'direccion' => $sucursal->direccion
+                        ];
+                    })->toArray();
+                }
+            }
+        }
+
         return array_merge(parent::share($request), [
-            
+            'auth' => [
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'tipo' => $user->tipo,
+                    'id_empresa' => $user->id_empresa,
+                    'id_sucursal' => $user->id_sucursal,
+                ] : null,
+            ],
+            'sucursalActiva' => $sucursalActiva,
         ]);
     }
 }
