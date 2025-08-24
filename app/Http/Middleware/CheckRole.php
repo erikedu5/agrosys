@@ -29,9 +29,11 @@ class CheckRole
                 break;
             }
         }
+
         if (!$hasRole) {
             abort(403, 'No tienes permiso para acceder a esta página.');
         }
+
         return $next($request);
     }
 }

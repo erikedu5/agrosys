@@ -4,7 +4,13 @@
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
-    const props=defineProps({empresa: Object});
+const props = defineProps({
+    empresa: Object,
+    all: {
+        type: Boolean,
+        default: false
+    }
+});
 
     const { form, reset } = usePersistedForm('empresaForm', {
         id: props.empresa !== undefined ? props.empresa.id: null,
@@ -91,12 +97,14 @@
                             <br>
                             <br>
 
+                            <div v-if="!all">
                             <label class="block font-medium text-sm text-gray-700">Máximo número de sucursales</label>
                             <input type="number" step="0.01"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.numero_sucursales">
                             <br>
                             <br>
+                            </div>
 
                             <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                             hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700

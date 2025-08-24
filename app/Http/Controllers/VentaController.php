@@ -12,6 +12,7 @@ use App\Models\AltaInventario;
 use App\Models\Factura;
 use App\Models\Sucursales;
 use App\Models\User;
+use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -25,7 +26,12 @@ class VentaController extends Controller
      */
     public function index(Request $request)
     {
-        $sucursal = Auth::user()->id_sucursal;
+        $sucursal = SucursalService::getSucursalActiva();
+
+        if (!$sucursal) {
+            return redirect()->route('sucursal.selection');
+        }
+
         $productosSucursalFiltrado = [];
         if ($request->b != null) {
             $sucursales = Sucursales::where('id_empresa', function ($query) use ($sucursal) {
@@ -36,13 +42,13 @@ class VentaController extends Controller
                 ->pluck('id')
                 ->toArray();
 
-            $productosSucursal = Producto::where(function($query) use ($request) {
+            $productosSucursal = Producto::where(function ($query) use ($request) {
                 $query->where('productos.nombre', 'LIKE', "%$request->b%")
-                      ->orWhere('productos.barcode', 'LIKE', "%$request->b%");
+                    ->orWhere('productos.barcode', 'LIKE', "%$request->b%");
             })
-            ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
-            ->select('productos.*', 'cat_marcas.nombre as marca')
-            ->get();
+                ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
+                ->select('productos.*', 'cat_marcas.nombre as marca')
+                ->get();
 
             foreach ($productosSucursal as $product) {
                 $actualStock = AltaInventario::where('id_producto', $product->id)
@@ -58,23 +64,23 @@ class VentaController extends Controller
             }
         }
 
-        $productos = Producto::where(function($query) use ($request) {
+        $productos = Producto::where(function ($query) use ($request) {
             $query->where('nombre', 'LIKE', "%$request->q%")
-                  ->orWhere('barcode', 'LIKE', "%$request->q%");
+                ->orWhere('barcode', 'LIKE', "%$request->q%");
         })
-        ->get();
+            ->get();
         $productoFiltrado = [];
 
         foreach ($productos as $product) {
             $actualStock = AltaInventario::where('id_producto', $product->id)
-                ->where('id_sucursal', Auth::user()->id_sucursal)
+                ->where('id_sucursal', $sucursal)
                 ->orderBy('created_at', 'desc')->first();
             $product->cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
             if ($product->cantidad > 0) {
                 array_push($productoFiltrado, $product);
             }
         }
-        $clientes = Clientes::where('id_sucursal', Auth::user()->id_sucursal)
+        $clientes = Clientes::where('id_sucursal', $sucursal)
             ->where('activo', true)
             ->get();
 
@@ -90,13 +96,16 @@ class VentaController extends Controller
      */
     public function store(Request $request)
     {
+        $sucursal = SucursalService::getSucursalActiva();
+
         $validated = $request->validate(
             [
                 'id_cliente' => ['required'],
                 'total' => ['required'],
                 'tipo_venta' => ['required'],
                 'producto_venta' => ['required']
-            ], [
+            ],
+            [
                 'id_cliente.required' => 'El cliente es requerido',
                 'total.required' => 'El total es requerido.',
                 'tipo_venta.required' => 'El tipo de venta es requerido.',
@@ -118,7 +127,7 @@ class VentaController extends Controller
             'tipo_venta' => $request->tipo_venta,
             'venta_pagada' => $venta_pagada,
             'fecha_pago' => $fecha_pago,
-            'id_sucursal' => Auth::user()->id_sucursal,
+            'id_sucursal' => $sucursal,
         ]);
 
         foreach ($request->producto_venta as $producto_venta) {
@@ -138,7 +147,7 @@ class VentaController extends Controller
             $altaInventario->cantidad_nueva = $stockStatus->cantidad_nueva - $producto_venta['cantidad'];
             $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto_venta['producto']['id'];
-            $altaInventario->id_sucursal = Auth::user()->id_sucursal;
+            $altaInventario->id_sucursal = $sucursal;
             $altaInventario->save();
         }
 
@@ -152,7 +161,7 @@ class VentaController extends Controller
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
                 'is_active' => false,
-                'id_sucursal' => Auth::user()->id_sucursal,
+                'id_sucursal' => $sucursal,
             ];
         } else if ($request->tipo_venta == 'Credito') {
             $abonado = $request->abono;
@@ -162,7 +171,7 @@ class VentaController extends Controller
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
                 'is_active' => true,
-                'id_sucursal' => Auth::user()->id_sucursal,
+                'id_sucursal' => $sucursal,
             ];
         }
 
@@ -197,6 +206,8 @@ class VentaController extends Controller
 
     public function ticket(\Illuminate\Http\Request $request, Venta $venta)
     {
+        $sucursal = SucursalService::getSucursalActiva();
+
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
             $producto->detail = Producto::find($producto->id_producto);
@@ -205,16 +216,16 @@ class VentaController extends Controller
         $cliente = Clientes::where('id', $venta->id_cliente)->first();
         $usuario = User::where('id', $venta->id_usuario)->first();
 
-        $sucursalUser = Sucursales::where('id', Auth::user()->id_sucursal)->first();
+        $sucursalUser = Sucursales::where('id', $sucursal)->first();
         $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
 
         $abonos = AbonoCuenta::where('id_cliente', $venta->id_cliente)
-            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('id_sucursal', $sucursal)
             ->where('is_active', true)
             ->get();
 
         // Elegir ancho por parámetro ?size=80|58 (mm); por sucursal por defecto (80 si no definido)
-        $sucursalPref = optional(Sucursales::find(Auth::user()->id_sucursal))->ticket_width_mm ?? 80;
+        $sucursalPref = optional(Sucursales::find($sucursal))->ticket_width_mm ?? 80;
         $ticketWidthMm = (int) $request->query('size', $sucursalPref);
         $ticketWidthMm = in_array($ticketWidthMm, [58, 80]) ? $ticketWidthMm : 80;
         $widthPoints = $ticketWidthMm * 2.83465; // mm a puntos
@@ -232,6 +243,8 @@ class VentaController extends Controller
 
     public function ticketHtml(\Illuminate\Http\Request $request, Venta $venta)
     {
+        $sucursal = SucursalService::getSucursalActiva();
+
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
             $producto->detail = Producto::find($producto->id_producto);
@@ -240,16 +253,16 @@ class VentaController extends Controller
         $cliente = Clientes::find($venta->id_cliente);
         $usuario = User::find($venta->id_usuario);
 
-        $sucursalUser = Sucursales::find(Auth::user()->id_sucursal);
+        $sucursalUser = Sucursales::find($sucursal);
         $empresa = $sucursalUser ? Empresa::find($sucursalUser->id_empresa) : null;
 
         $abonos = AbonoCuenta::where('id_cliente', $venta->id_cliente)
-            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('id_sucursal', $sucursal)
             ->where('is_active', true)
             ->get();
 
         // 58 o 80 mm
-        $sucursalPref = optional(Sucursales::find(Auth::user()->id_sucursal))->ticket_width_mm ?? 80;
+        $sucursalPref = optional(Sucursales::find($sucursal))->ticket_width_mm ?? 80;
         $ticketWidthMm = (int) $request->query('size', $sucursalPref);
         $ticketWidthMm = in_array($ticketWidthMm, [58, 80]) ? $ticketWidthMm : 80;
 
@@ -270,13 +283,15 @@ class VentaController extends Controller
      */
     public function show(Request $request, $id)
     {
+        $sucursal = SucursalService::getSucursalActiva();
+
         $cliente = clientes::where('id', $id)
-            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('id_sucursal', $sucursal)
             ->first();
 
         $ventas = Venta::where('id_cliente', $id)
             ->where('venta_pagada', false)
-            ->where('id_sucursal', Auth::user()->id_sucursal)
+            ->where('id_sucursal', $sucursal)
             ->latest()
             ->paginate(5);
 
@@ -308,11 +323,13 @@ class VentaController extends Controller
      */
     public function update(Request $request)
     {
+        $sucursal = SucursalService::getSucursalActiva();
+
         AbonoCuenta::Create([
             'cantidad_abonada' => $request->abono,
             'cuenta_pagada' => true,
             'id_usuario' => Auth::user()->id,
-            'id_sucursal' => Auth::user()->id_sucursal,
+            'id_sucursal' => $sucursal,
             'id_cliente' => $request->id,
             'is_active' => true
         ]);

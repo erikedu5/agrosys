@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import PasswordInput from '@/Components/PasswordInput.vue';
 
 defineProps({
     sessions: Array,
@@ -106,14 +107,11 @@ const closeModal = () => {
                 <template #content>
                     Por favor, ingresa tu contraseña para confirmar que deseas cerrar sesión en tus otras sesiones del navegador en todos tus dispositivos.
                     <div class="mt-4">
-                        <TextInput
-                            ref="passwordInput"
+                        <PasswordInput
                             v-model="form.password"
-                            type="password"
-                            class="mt-1 block w-3/4"
                             placeholder="Contraseña"
+                            input-class="mt-1 block w-3/4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                             autocomplete="current-password"
-                            @keyup.enter="logoutOtherBrowserSessions"
                         />
 
                         <InputError :message="form.errors.password" class="mt-2" />
