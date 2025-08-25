@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Empresa;
 use App\Models\Sucursales;
+use App\Models\Clientes;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -74,7 +75,7 @@ class SucursalController extends Controller
             'ticket_width_mm' => 'Agregar un formato de ticket valido.'
         ]);
 
-        Sucursales::create([
+        $sucursal = Sucursales::create([
             'nombre' => $request->nombre,
             'direccion' => $request->direccion,
             'telefono' => $request->telefono,
@@ -83,6 +84,22 @@ class SucursalController extends Controller
             'es_matriz' => $request->es_matriz,
             'ticket_width_mm' => $request->ticket_width_mm ?? 80,
         ]);
+
+        // Crear cliente "Público en general" para la nueva sucursal
+        $clientePublico = Clientes::create([
+            'nombre' => 'Público en general',
+            'porcentaje_descuento' => 0,
+            'adeudo_total' => 0,
+            'abono_total' => 0,
+            'balance' => 0,
+            'requiereFactura' => false,
+            'activo' => true,
+            'rfc' => null,
+            'id_sucursal' => $sucursal->id,
+        ]);
+
+        // Actualizar la sucursal con el ID del cliente público
+        $sucursal->update(['id_cliente_publico' => $clientePublico->id]);
 
         return redirect()->route('sucursal.index');
     }
