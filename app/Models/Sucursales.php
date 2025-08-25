@@ -19,10 +19,16 @@ class Sucursales extends Model
         'es_matriz',
         'id_empresa',
         'ticket_width_mm',
+        'id_cliente_publico',
     ];
 
     public function empresa()
     {
         return $this->belongsTo(Empresa::class, 'id_empresa', 'id');
+    }
+
+    public function clientePublico()
+    {
+        return $this->belongsTo(Clientes::class, 'id_cliente_publico', 'id');
     }
 }

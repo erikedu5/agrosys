@@ -27,6 +27,14 @@ const props = defineProps({
         type: Array,
         default: []
     },
+    clientePublicoDefault: {
+        type: Number,
+        default: null
+    },
+    tipoVentaDefault: {
+        type: String,
+        default: 'contado'
+    },
 });
 
 const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + p.tamano })));
@@ -48,6 +56,12 @@ const formVenta = useForm({
     total: 0
 });
 
+// Estado del modal de búsqueda de precio
+const isPriceSearchModalOpen = ref(false);
+const priceSearchQuery = ref('');
+const priceSearchResults = ref([]);
+const isSearching = ref(false);
+
 const tipoVentaOptions = [
     { value: 'Contado', label: 'Contado' },
     { value: 'Credito', label: 'Credito' }
@@ -55,6 +69,15 @@ const tipoVentaOptions = [
 const tipoVentaSeleccionado = ref(tipoVentaOptions.find(o => o.value === formVenta.tipoVenta) || null);
 watch(tipoVentaSeleccionado, (v) => {
     formVenta.tipoVenta = v ? v.value : '';
+});
+
+// Watcher para búsqueda de precio en tiempo real
+watch(priceSearchQuery, (newQuery) => {
+    if (newQuery && newQuery.trim().length > 0) {
+        searchProductPrice();
+    } else {
+        priceSearchResults.value = [];
+    }
 });
 
 const canAddProducto = computed(() =>
@@ -212,29 +235,124 @@ const eliminarProducto = (producto) => {
     recalculateTotal();
 }
 
-// Estado del modal
+// Estado del modal de búsqueda en sucursales
 const isModalOpen = ref(false);
 
-// Función para manejar la tecla F2
+// Función para manejar las teclas F2 y F3
 const handleKeydown = (event) => {
     if (event.key === "F2") {
         event.preventDefault(); // Evita acciones predeterminadas del navegador
         isModalOpen.value = true;
+    } else if (event.key === "F3") {
+        event.preventDefault(); // Evita acciones predeterminadas del navegador
+        isPriceSearchModalOpen.value = true;
+        // Limpiar resultados anteriores
+        priceSearchResults.value = [];
+        priceSearchQuery.value = '';
+        // Focus en el input después de un pequeño delay para que el modal se renderice
+        setTimeout(() => {
+            const searchInput = document.getElementById('price-search-input');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }, 100);
+    } else if (event.key === "Escape") {
+        event.preventDefault();
+        // Cerrar cualquier modal que esté abierto
+        if (isModalOpen.value) {
+            closeModal();
+        }
+        if (isPriceSearchModalOpen.value) {
+            closePriceSearchModal();
+        }
     }
 };
 
 // Agregar y remover el evento cuando el componente se monta/desmonta
 onMounted(() => {
     window.addEventListener("keydown", handleKeydown);
+    
+    // Establecer valores por defecto
+    if (props.clientePublicoDefault && props.clientes.length > 0) {
+        const clientePublico = props.clientes.find(c => c.id === props.clientePublicoDefault);
+        if (clientePublico) {
+            form.cliente = clientePublico;
+            form.porcentaje_descuento = clientePublico.porcentaje_descuento;
+        }
+    }
+    
+    if (props.tipoVentaDefault) {
+        const tipoDefault = tipoVentaOptions.find(o => o.value.toLowerCase() === props.tipoVentaDefault.toLowerCase());
+        if (tipoDefault) {
+            tipoVentaSeleccionado.value = tipoDefault;
+            formVenta.tipoVenta = tipoDefault.value;
+        }
+    }
 });
 
 onUnmounted(() => {
     window.removeEventListener("keydown", handleKeydown);
+    // Limpiar timeout de búsqueda si existe
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
 });
 
-// Función para cerrar el modal
+// Función para cerrar el modal de búsqueda en sucursales
 const closeModal = () => {
     isModalOpen.value = false;
+};
+
+// Función para cerrar el modal de búsqueda de precio
+const closePriceSearchModal = () => {
+    isPriceSearchModalOpen.value = false;
+    priceSearchQuery.value = '';
+    priceSearchResults.value = [];
+};
+
+// Función para buscar precios de productos con debounce
+let searchTimeout = null;
+const searchProductPrice = async () => {
+    if (!priceSearchQuery.value.trim()) {
+        priceSearchResults.value = [];
+        return;
+    }
+
+    // Limpiar timeout anterior
+    if (searchTimeout) {
+        clearTimeout(searchTimeout);
+    }
+
+    // Usar debounce para evitar múltiples peticiones
+    searchTimeout = setTimeout(async () => {
+        isSearching.value = true;
+        
+        try {
+            const response = await fetch(`/buscar-precio?q=${encodeURIComponent(priceSearchQuery.value)}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                priceSearchResults.value = data.productos || [];
+            } else {
+                console.error('Error en la búsqueda:', response.statusText);
+                priceSearchResults.value = [];
+                notify('error', 'Error al buscar productos');
+            }
+        } catch (error) {
+            console.error('Error al buscar precios:', error);
+            priceSearchResults.value = [];
+            notify('error', 'Error de conexión al buscar productos');
+        } finally {
+            isSearching.value = false;
+        }
+    }, 300); // Esperar 300ms antes de hacer la búsqueda
 };
 </script>
 
@@ -263,8 +381,10 @@ const closeModal = () => {
         <template #header>
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 Venta de agroquimicos
-            </h2>                    
-            <span>F2: Buscar en sucursal</span>
+            </h2>
+            <br>
+            <span class="dark:text-gray-400">F2: Buscar en sucursal</span>
+            <span class="ml-4 dark:text-gray-400">F3: Buscar precio y existencias</span>
         </template>
 
         <hr class="my-6">
@@ -402,6 +522,7 @@ const closeModal = () => {
 
                 <!-- Input de búsqueda -->
                 <input v-model="b" type="text" placeholder="Buscar producto..."
+                    @keyup.escape="closeModal"
                     class="w-full p-2 border rounded-md focus:ring focus:ring-blue-300" />
 
                 <!-- Tabla de productos -->
@@ -435,7 +556,110 @@ const closeModal = () => {
                 <div class="mt-4 flex justify-end">
                     <button @click="closeModal"
                         class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
-                        Cerrar
+                        Cerrar (ESC)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Búsqueda de Precio (F3) -->
+        <div v-if="isPriceSearchModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0 z-50">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-4xl max-w-4xl overflow-y-auto max-h-full">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Buscar Precio y Stock</h2>
+
+                <!-- Input de búsqueda -->
+                <div class="mb-4">
+                    <input 
+                        id="price-search-input"
+                        v-model="priceSearchQuery" 
+                        @input="searchProductPrice"
+                        @keyup.escape="closePriceSearchModal"
+                        type="text" 
+                        placeholder="Buscar por nombre o código de barras..."
+                        class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg" 
+                    />
+                </div>
+
+                <!-- Indicador de búsqueda -->
+                <div v-if="isSearching" class="text-center py-4">
+                    <div class="inline-flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Buscando...
+                    </div>
+                </div>
+
+                <!-- Resultados de búsqueda -->
+                <div v-if="!isSearching && priceSearchResults.length > 0" class="max-h-96 overflow-y-auto">
+                    <div class="grid gap-4">
+                        <div 
+                            v-for="producto in priceSearchResults" 
+                            :key="producto.id"
+                            class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                        >
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <!-- Info del producto -->
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-lg text-gray-800">{{ producto.nombre_completo }}</h3>
+                                    <div class="text-sm text-gray-600 mt-1">
+                                        <span class="inline-block mr-4"><strong>Marca:</strong> {{ producto.marca }}</span>
+                                        <span class="inline-block mr-4"><strong>Categoría:</strong> {{ producto.clasificacion }}</span>
+                                        <span v-if="producto.barcode" class="inline-block"><strong>Código:</strong> {{ producto.barcode }}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Precios y Stock -->
+                                <div class="flex flex-col md:flex-row gap-3 md:gap-6 text-center">
+                                    
+                                    <!-- Precio IEPS -->
+                                    <div class="bg-green-100 rounded-lg p-3 min-w-24">
+                                        <p class="text-xs text-green-600 font-medium">PRECIO</p>
+                                        <p class="text-lg font-bold text-green-800">${{ parseFloat(producto.precio_ieps).toFixed(2) }}</p>
+                                    </div>
+                                    
+                                    <!-- Stock -->
+                                    <div class="rounded-lg p-3 min-w-24" :class="producto.stock > 0 ? 'bg-orange-100' : 'bg-red-100'">
+                                        <p class="text-xs font-medium" :class="producto.stock > 0 ? 'text-orange-600' : 'text-red-600'">STOCK</p>
+                                        <p class="text-lg font-bold" :class="producto.stock > 0 ? 'text-orange-800' : 'text-red-800'">
+                                            {{ producto.stock }}
+                                            <span v-if="producto.stock <= 0" class="text-xs">🚫 Sin stock</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sin resultados -->
+                <div v-if="!isSearching && priceSearchQuery && priceSearchResults.length === 0" class="text-center py-8">
+                    <div class="text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        <p class="text-lg">No se encontraron productos</p>
+                        <p class="text-sm">Intenta con otro término de búsqueda</p>
+                    </div>
+                </div>
+
+                <!-- Estado inicial -->
+                <div v-if="!priceSearchQuery && !isSearching" class="text-center py-8">
+                    <div class="text-gray-500">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <p class="text-lg">Busca productos por nombre o código</p>
+                        <p class="text-sm">Escribe en el campo de búsqueda para ver precios y stock</p>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="mt-6 flex justify-center">
+                    <button @click="closePriceSearchModal"
+                        class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:ring-2 focus:ring-gray-500">
+                        Cerrar (ESC)
                     </button>
                 </div>
             </div>

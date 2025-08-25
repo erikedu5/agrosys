@@ -13,6 +13,7 @@ use App\Models\Factura;
 use App\Models\Sucursales;
 use App\Models\User;
 use App\Services\SucursalService;
+use App\Helpers\DatabaseHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -43,8 +44,11 @@ class VentaController extends Controller
                 ->toArray();
 
             $productosSucursal = Producto::where(function ($query) use ($request) {
-                $query->where('productos.nombre', 'LIKE', "%$request->b%")
-                    ->orWhere('productos.barcode', 'LIKE', "%$request->b%");
+                [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('productos.nombre', "%$request->b%");
+                [$barcodeSql, $barcodeValue] = DatabaseHelper::getUnaccentFunction('productos.barcode', "%$request->b%");
+
+                $query->whereRaw($nombreSql, [$nombreValue])
+                    ->orWhereRaw($barcodeSql, [$barcodeValue]);
             })
                 ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
                 ->select('productos.*', 'cat_marcas.nombre as marca')
@@ -65,8 +69,11 @@ class VentaController extends Controller
         }
 
         $productos = Producto::where(function ($query) use ($request) {
-            $query->where('nombre', 'LIKE', "%$request->q%")
-                ->orWhere('barcode', 'LIKE', "%$request->q%");
+            [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('nombre', "%$request->q%");
+            [$barcodeSql, $barcodeValue] = DatabaseHelper::getUnaccentFunction('barcode', "%$request->q%");
+
+            $query->whereRaw($nombreSql, [$nombreValue])
+                ->orWhereRaw($barcodeSql, [$barcodeValue]);
         })
             ->get();
         $productoFiltrado = [];
@@ -84,10 +91,16 @@ class VentaController extends Controller
             ->where('activo', true)
             ->get();
 
+        // Obtener la sucursal actual para acceder al cliente público por defecto
+        $sucursalInfo = Sucursales::find($sucursal);
+        $clientePublicoId = $sucursalInfo ? $sucursalInfo->id_cliente_publico : null;
+
         return Inertia::render('Venta/Venta', [
             'productos' => $productoFiltrado,
             'clientes' => $clientes,
-            'productosSucursal' => $productosSucursalFiltrado
+            'productosSucursal' => $productosSucursalFiltrado,
+            'clientePublicoDefault' => $clientePublicoId,
+            'tipoVentaDefault' => 'contado'
         ]);
     }
 
@@ -191,7 +204,8 @@ class VentaController extends Controller
             $this->limpiarCredito($cliente);
         }
 
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
+        [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('nombre', "%$request->q%");
+        $productos = Producto::whereRaw($nombreSql, [$nombreValue])
             ->where('cantidad', '!=', 0)
             ->get();
 
@@ -375,5 +389,55 @@ class VentaController extends Controller
             'id_venta' => $venta->id,
             'id_cliente' => $cliente->id
         ]);
+    }
+
+    /**
+     * Buscar precio y stock de productos por nombre o código de barras
+     */
+    public function buscarPrecio(Request $request)
+    {
+        $query = $request->get('q', '');
+
+        if (empty($query)) {
+            return response()->json(['productos' => []]);
+        }
+
+        $sucursalActiva = SucursalService::getSucursalActiva();
+
+        $productos = Producto::where(function ($q) use ($query) {
+            [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('productos.nombre', "%{$query}%");
+            [$barcodeSql, $barcodeValue] = DatabaseHelper::getUnaccentFunction('productos.barcode', "%{$query}%");
+
+            $q->whereRaw($nombreSql, [$nombreValue])
+                ->orWhereRaw($barcodeSql, [$barcodeValue]);
+        })
+            ->join('cat_marcas', 'cat_marcas.id', '=', 'productos.id_marca')
+            ->join('cat_clasificacions', 'cat_clasificacions.id', '=', 'productos.id_clasificacion')
+            ->select(
+                'productos.id',
+                'productos.nombre',
+                'productos.barcode',
+                'productos.tamano',
+                'productos.precio_unitario',
+                'productos.precio_ieps',
+                'cat_marcas.nombre as marca',
+                'cat_clasificacions.nombre as clasificacion'
+            )
+            ->get();
+
+        // Agregar información de stock para cada producto
+        $productosConStock = $productos->map(function ($producto) use ($sucursalActiva) {
+            $stock = AltaInventario::where('id_producto', $producto->id)
+                ->where('id_sucursal', $sucursalActiva)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $producto->stock = $stock ? $stock->cantidad_nueva : 0;
+            $producto->nombre_completo = $producto->nombre . ' - ' . $producto->tamano;
+
+            return $producto;
+        });
+
+        return response()->json(['productos' => $productosConStock]);
     }
 }
