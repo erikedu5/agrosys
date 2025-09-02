@@ -4,8 +4,12 @@ import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
 
-defineProps({
+const props = defineProps({
     productos: {
+        type: Object,
+        default: {}
+    },
+    auth: {
         type: Object,
         default: {}
     }
@@ -19,6 +23,12 @@ watch(q, (value) => {
 
 const agregarInventario = (id) => {
     useForm({}).get(route('inventario.show', id));
+}
+
+const resetInventario = (id) => {
+    if (confirm('¿Seguro que deseas resetear el inventario a cero?')) {
+        useForm({}).post(route('inventario.reset', id));
+    }
 }
 </script>
 
@@ -39,12 +49,12 @@ const agregarInventario = (id) => {
         <hr class="my-6">
         <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <Link :href="route('inventario.create')"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                 Nuevo producto +
-                </Link>
+            </Link>
         </div>
         <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <!-- Vista en tarjetas -->
@@ -75,11 +85,15 @@ const agregarInventario = (id) => {
                         <div class="inline-flex rounded-md shadow-sm" role="group">
                             <Link :href="route('inventario.edit', producto.id)"
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
-                            Actualizar
+                                Actualizar
                             </Link>
                             <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                            Agregar al inventario
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
+                                Agregar al inventario
+                            </Link>
+                            <Link v-if="props.auth.user.tipo == 'adminEmpresa'  || props.auth.user.tipo == 'superAdmin'" href="" @click="resetInventario(producto.id)"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                Resetear inventario a cero
                             </Link>
                         </div>
                     </div>
@@ -118,11 +132,15 @@ const agregarInventario = (id) => {
                                 <div class="inline-flex rounded-md shadow-sm" role="group">
                                     <Link :href="route('inventario.edit', producto.id)"
                                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Actualizar
+                                        Actualizar
                                     </Link>
                                     <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Agregar al inventario
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                        Agregar al inventario
+                                    </Link>
+                                    <Link  href=""  v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'" @click="resetInventario(producto.id)"
+                                               class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                               Resetear inventario a cero
                                     </Link>
                                 </div>
                             </td>

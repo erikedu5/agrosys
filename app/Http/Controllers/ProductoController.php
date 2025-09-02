@@ -201,4 +201,26 @@ class ProductoController extends Controller
             'id_producto' => $request->id
         ]);
     }
+
+    public function resetInventario(Producto $producto)
+    {
+        $sucursal = SucursalService::getSucursalActiva();
+
+        $actualStock = AltaInventario::where('id_producto', $producto->id)
+            ->where('id_sucursal', $sucursal)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
+
+        $altaInventario = new AltaInventario();
+        $altaInventario->cantidad_actual = $cantidad;
+        $altaInventario->cantidad_nueva = 0;
+        $altaInventario->id_usuario = Auth::user()->id;
+        $altaInventario->id_producto = $producto->id;
+        $altaInventario->id_sucursal = $sucursal;
+        $altaInventario->save();
+
+        return redirect()->route('inventario.index');
+    }
 }
