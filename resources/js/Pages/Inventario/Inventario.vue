@@ -20,6 +20,12 @@ watch(q, (value) => {
 const agregarInventario = (id) => {
     useForm({}).get(route('inventario.show', id));
 }
+
+const resetInventario = (id) => {
+    if (confirm('¿Seguro que deseas resetear el inventario a cero?')) {
+        useForm({}).post(route('inventario.reset', id));
+    }
+}
 </script>
 
 <template>
@@ -39,12 +45,12 @@ const agregarInventario = (id) => {
         <hr class="my-6">
         <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <Link :href="route('inventario.create')"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                 Nuevo producto +
-                </Link>
+            </Link>
         </div>
         <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <!-- Vista en tarjetas -->
@@ -75,12 +81,16 @@ const agregarInventario = (id) => {
                         <div class="inline-flex rounded-md shadow-sm" role="group">
                             <Link :href="route('inventario.edit', producto.id)"
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
-                            Actualizar
+                                Actualizar
                             </Link>
                             <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                            Agregar al inventario
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
+                                Agregar al inventario
                             </Link>
+                            <button v-if="$page.props.auth.user.tipo === 'adminEmpresa'" @click="resetInventario(producto.id)"
+                                class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-r-md hover:bg-red-700 focus:z-10 focus:ring-2 focus:ring-red-500 flex flex-center">
+                                Resetear
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -118,12 +128,16 @@ const agregarInventario = (id) => {
                                 <div class="inline-flex rounded-md shadow-sm" role="group">
                                     <Link :href="route('inventario.edit', producto.id)"
                                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Actualizar
+                                        Actualizar
                                     </Link>
                                     <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Agregar al inventario
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                        Agregar al inventario
                                     </Link>
+                                    <button v-if="$page.props.auth.user.tipo === 'adminEmpresa'" @click="resetInventario(producto.id)"
+                                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-r-md hover:bg-red-700 focus:z-10 focus:ring-2 focus:ring-red-500 flex flex-center">
+                                        Resetear
+                                    </button>
                                 </div>
                             </td>
                         </tr>

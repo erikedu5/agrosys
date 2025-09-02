@@ -80,6 +80,11 @@ Route::post('/inventario/addInventario', [App\Http\Controllers\ProductoControlle
     ->name('inventario.addInventario')
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
+Route::post('/inventario/{producto}/reset', [App\Http\Controllers\ProductoController::class, 'resetInventario'])
+    ->name('inventario.reset')
+    ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa', 'sucursal.selection'])
+    ->whereNumber('producto');
+
 Route::resource('/solucion', App\Http\Controllers\SolucionEnfermedadController::class)
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
