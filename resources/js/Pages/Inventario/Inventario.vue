@@ -4,8 +4,12 @@ import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
 
-defineProps({
+const props = defineProps({
     productos: {
+        type: Object,
+        default: {}
+    },
+    auth: {
         type: Object,
         default: {}
     }
@@ -87,10 +91,10 @@ const resetInventario = (id) => {
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
                                 Agregar al inventario
                             </Link>
-                            <button v-if="$page.props.auth.user.tipo === 'adminEmpresa'" @click="resetInventario(producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-r-md hover:bg-red-700 focus:z-10 focus:ring-2 focus:ring-red-500 flex flex-center">
-                                Resetear
-                            </button>
+                            <Link v-if="props.auth.user.tipo == 'adminEmpresa'  || props.auth.user.tipo == 'superAdmin'" href="" @click="resetInventario(producto.id)"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                Resetear inventario a cero
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -134,10 +138,10 @@ const resetInventario = (id) => {
                                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
                                         Agregar al inventario
                                     </Link>
-                                    <button v-if="$page.props.auth.user.tipo === 'adminEmpresa'" @click="resetInventario(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-r-md hover:bg-red-700 focus:z-10 focus:ring-2 focus:ring-red-500 flex flex-center">
-                                        Resetear
-                                    </button>
+                                    <Link  href=""  v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'" @click="resetInventario(producto.id)"
+                                               class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
+                                               Resetear inventario a cero
+                                    </Link>
                                 </div>
                             </td>
                         </tr>
