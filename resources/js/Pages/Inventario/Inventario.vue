@@ -76,6 +76,11 @@ const resetInventario = (id) => {
                             <div class="text-gray-500">Marca</div>
                             <div>{{ producto.marca.nombre }}</div>
                         </div>
+
+                        <div>
+                            <div class="text-gray-500">Precio con IEPS</div>
+                            <div>{{ producto.precio_ieps }}</div>
+                        </div>
                         <div>
                             <div class="text-gray-500">Cantidad en stock</div>
                             <div> {{ producto.cantidad }}</div>
@@ -115,6 +120,7 @@ const resetInventario = (id) => {
                             <th>Tamaño</th>
                             <th>Marca</th>
                             <th>Cantidad en stock</th>
+                            <th>precio con ieps</th>
                             <th>Ultima actualización</th>
                             <th>Acciones</th>
                         </tr>
@@ -127,6 +133,7 @@ const resetInventario = (id) => {
                             <td class="whitespace-nowrap"> {{ producto.tamano }} </td>
                             <td class="whitespace-nowrap"> {{ producto.marca.nombre }}</td>
                             <td class="whitespace-nowrap"> {{ producto.cantidad }}</td>
+                            <td class="whitespace-nowrap"> {{ producto.precio_ieps }}</td>
                             <td class="whitespace-nowrap"> {{ producto.updated_at }} </td>
                             <td class="whitespace-nowrap">
                                 <div class="inline-flex rounded-md shadow-sm" role="group">
