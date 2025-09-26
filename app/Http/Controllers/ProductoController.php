@@ -64,23 +64,38 @@ class ProductoController extends Controller
 
         $request->validate(
             [
-                'nombre' => 'required',
-                'id_clasificacion' => 'required',
-                'id_marca' => 'required',
-                'precio_unitario' => 'required',
-                'precio_ieps' => 'required',
-                'ieps' => 'required',
-                'tamano' => 'required',
-                'barcode' => 'nullable',
+                'nombre' => 'required|string|max:255',
+                'id_clasificacion' => 'required|integer|min:1',
+                'id_marca' => 'required|integer|min:1',
+                'precio_unitario' => 'required|numeric|min:0.01',
+                'precio_ieps' => 'required|numeric|min:0.01',
+                'ieps' => 'required|numeric|min:0',
+                'tamano' => 'required|string|max:100',
+                'ingrediente_activo' => 'nullable|string|max:255',
+                'barcode' => 'nullable|string|max:255',
             ],
             [
-                'nombre.required' => 'Por favor ingresa el nombre del producto.',
-                'id_clasificacion.required' => 'Selecciona una clasificación.',
-                'id_marca.required' => 'Selecciona una marca.',
-                'precio_unitario.required' => 'Ingresa el precio unitario.',
-                'precio_ieps.required' => 'Ingresa el precio con IEPS.',
-                'ieps.required' => 'Indica el valor de IEPS.',
-                'tamano.required' => 'Indica el tamaño del producto.',
+                'nombre.required' => 'El nombre del producto es requerido.',
+                'nombre.string' => 'El nombre debe ser un texto válido.',
+                'nombre.max' => 'El nombre no puede exceder 255 caracteres.',
+                'id_clasificacion.required' => 'Debe seleccionar una clasificación.',
+                'id_clasificacion.integer' => 'La clasificación debe ser válida.',
+                'id_clasificacion.min' => 'Debe seleccionar una clasificación válida.',
+                'id_marca.required' => 'Debe seleccionar una marca.',
+                'id_marca.integer' => 'La marca debe ser válida.',
+                'id_marca.min' => 'Debe seleccionar una marca válida.',
+                'precio_unitario.required' => 'El precio de compra es requerido.',
+                'precio_unitario.numeric' => 'El precio de compra debe ser un número.',
+                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0.',
+                'precio_ieps.required' => 'El precio con IEPS es requerido.',
+                'precio_ieps.numeric' => 'El precio con IEPS debe ser un número.',
+                'precio_ieps.min' => 'El precio con IEPS debe ser mayor a 0.',
+                'ieps.required' => 'Debe ingresar un valor de IEPS.',
+                'ieps.numeric' => 'El IEPS debe ser un número válido.',
+                'ieps.min' => 'El IEPS debe ser mayor o igual a 0.',
+                'tamano.required' => 'El tamaño del producto es requerido.',
+                'tamano.string' => 'El tamaño debe ser un texto válido.',
+                'tamano.max' => 'El tamaño no puede exceder 100 caracteres.',
             ]
         );
 
@@ -134,16 +149,42 @@ class ProductoController extends Controller
      */
     public function update(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required',
-            'id_clasificacion' => 'required',
-            'id_marca' => 'required',
-            'precio_unitario' => 'required',
-            'tamano' => 'required',
-            'precio_ieps' => 'required',
-            'ieps' => 'required',
-            'barcode' => 'nullable',
-        ]);
+        $request->validate(
+            [
+                'nombre' => 'required|string|max:255',
+                'id_clasificacion' => 'required|integer|min:1',
+                'id_marca' => 'required|integer|min:1',
+                'precio_unitario' => 'required|numeric|min:0.01',
+                'tamano' => 'required|string|max:100',
+                'precio_ieps' => 'required|numeric|min:0.01',
+                'ieps' => 'required|numeric|min:0',
+                'ingrediente_activo' => 'nullable|string|max:255',
+                'barcode' => 'nullable|string|max:255',
+            ],
+            [
+                'nombre.required' => 'El nombre del producto es requerido.',
+                'nombre.string' => 'El nombre debe ser un texto válido.',
+                'nombre.max' => 'El nombre no puede exceder 255 caracteres.',
+                'id_clasificacion.required' => 'Debe seleccionar una clasificación.',
+                'id_clasificacion.integer' => 'La clasificación debe ser válida.',
+                'id_clasificacion.min' => 'Debe seleccionar una clasificación válida.',
+                'id_marca.required' => 'Debe seleccionar una marca.',
+                'id_marca.integer' => 'La marca debe ser válida.',
+                'id_marca.min' => 'Debe seleccionar una marca válida.',
+                'precio_unitario.required' => 'El precio de compra es requerido.',
+                'precio_unitario.numeric' => 'El precio de compra debe ser un número.',
+                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0.',
+                'precio_ieps.required' => 'El precio con IEPS es requerido.',
+                'precio_ieps.numeric' => 'El precio con IEPS debe ser un número.',
+                'precio_ieps.min' => 'El precio con IEPS debe ser mayor a 0.',
+                'ieps.required' => 'Debe ingresar un valor de IEPS.',
+                'ieps.numeric' => 'El IEPS debe ser un número válido.',
+                'ieps.min' => 'El IEPS debe ser mayor o igual a 0.',
+                'tamano.required' => 'El tamaño del producto es requerido.',
+                'tamano.string' => 'El tamaño debe ser un texto válido.',
+                'tamano.max' => 'El tamaño no puede exceder 100 caracteres.',
+            ]
+        );
 
         $catProducto = Producto::find($request->id);
         $catProducto->nombre = $request->nombre;
