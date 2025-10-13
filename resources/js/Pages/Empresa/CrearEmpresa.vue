@@ -21,6 +21,9 @@ const props = defineProps({
         rfc: props.empresa !== undefined ? props.empresa.rfc : '',
         aviso: props.empresa !== undefined ? props.empresa.aviso : '',
         numero_sucursales: props.empresa !== undefined ? props.empresa.numero_sucursales: 1,
+        mostrar_campos_precio: props.empresa !== undefined
+            ? Boolean(props.empresa.mostrar_campos_precio)
+            : true,
     });
 
     const submit = () => {
@@ -94,6 +97,17 @@ const props = defineProps({
                                 v-model="form.aviso"
                                 rows="6">
                             </textarea>
+                            <br>
+                            <br>
+
+                            <label class="inline-flex items-center">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                    v-model="form.mostrar_campos_precio">
+                                <span class="ml-2 text-sm text-gray-700">
+                                    Mostrar precio de compra y porcentaje de ganancia en productos
+                                </span>
+                            </label>
                             <br>
                             <br>
 

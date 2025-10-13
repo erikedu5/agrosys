@@ -140,6 +140,10 @@ Route::get('/reporte/ventaPorProductoMarca', [App\Http\Controllers\ReporteContro
     ->name("reporte.ventaPorProductoMarca")
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
 
+Route::get('/reporte/ganancias-diarias', [App\Http\Controllers\ReporteController::class, 'gananciasDiarias'])
+    ->name('reporte.gananciasDiarias')
+    ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa-superAdmin']);
+
 // Versiones para impresión térmica (80mm)
 Route::get('/reporte/venta-ticket', [App\Http\Controllers\ReporteController::class, 'ventaTicket'])
     ->name('reporte.ventaTicket')

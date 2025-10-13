@@ -18,6 +18,7 @@ class Empresa extends Model
         'email',
         'rfc',
         'aviso',
-        'numero_sucursales'
+        'numero_sucursales',
+        'mostrar_campos_precio',
     ];
 }

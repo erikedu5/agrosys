@@ -10,6 +10,7 @@ use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class ProductoController extends Controller
 {
@@ -62,14 +63,29 @@ class ProductoController extends Controller
     {
         $sucursal = SucursalService::getSucursalActiva();
 
+        $request->merge([
+            'precio_unitario' => $request->filled('precio_unitario') ? $request->precio_unitario : null,
+            'precio_ieps' => $request->precio_ieps,
+            'ieps' => $request->filled('ieps') ? $request->ieps : null,
+            'ingrediente_activo' => $request->filled('ingrediente_activo') ? $request->ingrediente_activo : null,
+            'barcode' => $request->filled('barcode') ? $request->barcode : null,
+        ]);
+
         $request->validate(
             [
-                'nombre' => 'required|string|max:255',
+                'nombre' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('productos')->where(function ($query) use ($request) {
+                        return $query->where('tamano', $request->tamano);
+                    }),
+                ],
                 'id_clasificacion' => 'required|integer|min:1',
                 'id_marca' => 'required|integer|min:1',
-                'precio_unitario' => 'required|numeric|min:0.01',
+                'precio_unitario' => 'nullable|numeric|min:0.01',
                 'precio_ieps' => 'required|numeric|min:0.01',
-                'ieps' => 'required|numeric|min:0',
+                'ieps' => 'nullable|numeric|min:0',
                 'tamano' => 'required|string|max:100',
                 'ingrediente_activo' => 'nullable|string|max:255',
                 'barcode' => 'nullable|string|max:255',
@@ -84,25 +100,29 @@ class ProductoController extends Controller
                 'id_marca.required' => 'Debe seleccionar una marca.',
                 'id_marca.integer' => 'La marca debe ser válida.',
                 'id_marca.min' => 'Debe seleccionar una marca válida.',
-                'precio_unitario.required' => 'El precio de compra es requerido.',
                 'precio_unitario.numeric' => 'El precio de compra debe ser un número.',
-                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0.',
-                'precio_ieps.required' => 'El precio con IEPS es requerido.',
-                'precio_ieps.numeric' => 'El precio con IEPS debe ser un número.',
-                'precio_ieps.min' => 'El precio con IEPS debe ser mayor a 0.',
-                'ieps.required' => 'Debe ingresar un valor de IEPS.',
-                'ieps.numeric' => 'El IEPS debe ser un número válido.',
-                'ieps.min' => 'El IEPS debe ser mayor o igual a 0.',
+                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0 cuando se capture.',
+                'precio_ieps.required' => 'El precio de venta es requerido.',
+                'precio_ieps.numeric' => 'El precio de venta debe ser un número.',
+                'precio_ieps.min' => 'El precio de venta debe ser mayor a 0.',
+                'ieps.numeric' => 'El porcentaje de ganancia debe ser un número válido.',
+                'ieps.min' => 'El porcentaje de ganancia debe ser mayor o igual a 0 cuando se capture.',
                 'tamano.required' => 'El tamaño del producto es requerido.',
                 'tamano.string' => 'El tamaño debe ser un texto válido.',
                 'tamano.max' => 'El tamaño no puede exceder 100 caracteres.',
+                'nombre.unique' => 'Ya existe un producto con ese nombre y tamaño. Edítalo en lugar de duplicarlo.',
             ]
         );
 
-        $data['id_usuario'] = Auth::user()->id;
-        $data['cantidad'] = 0;
-        $request->merge($data);
-        $producto = Producto::create($request->all());
+        $payload = $request->all();
+        $payload['id_usuario'] = Auth::user()->id;
+        $payload['cantidad'] = 0;
+        $payload['precio_unitario'] = $request->precio_unitario ?? 0;
+        $payload['ieps'] = $request->ieps ?? 0;
+        $payload['ingrediente_activo'] = $request->ingrediente_activo ?? '';
+        $payload['barcode'] = $request->barcode ?? '';
+
+        $producto = Producto::create($payload);
 
         $altaInventario = new AltaInventario();
         $altaInventario->cantidad_actual = 0;
@@ -149,15 +169,29 @@ class ProductoController extends Controller
      */
     public function update(Request $request)
     {
+        $request->merge([
+            'precio_unitario' => $request->filled('precio_unitario') ? $request->precio_unitario : null,
+            'ieps' => $request->filled('ieps') ? $request->ieps : null,
+            'ingrediente_activo' => $request->filled('ingrediente_activo') ? $request->ingrediente_activo : null,
+            'barcode' => $request->filled('barcode') ? $request->barcode : null,
+        ]);
+
         $request->validate(
             [
-                'nombre' => 'required|string|max:255',
+                'nombre' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('productos')->ignore($request->id)->where(function ($query) use ($request) {
+                        return $query->where('tamano', $request->tamano);
+                    }),
+                ],
                 'id_clasificacion' => 'required|integer|min:1',
                 'id_marca' => 'required|integer|min:1',
-                'precio_unitario' => 'required|numeric|min:0.01',
+                'precio_unitario' => 'nullable|numeric|min:0.01',
                 'tamano' => 'required|string|max:100',
                 'precio_ieps' => 'required|numeric|min:0.01',
-                'ieps' => 'required|numeric|min:0',
+                'ieps' => 'nullable|numeric|min:0',
                 'ingrediente_activo' => 'nullable|string|max:255',
                 'barcode' => 'nullable|string|max:255',
             ],
@@ -171,18 +205,17 @@ class ProductoController extends Controller
                 'id_marca.required' => 'Debe seleccionar una marca.',
                 'id_marca.integer' => 'La marca debe ser válida.',
                 'id_marca.min' => 'Debe seleccionar una marca válida.',
-                'precio_unitario.required' => 'El precio de compra es requerido.',
                 'precio_unitario.numeric' => 'El precio de compra debe ser un número.',
-                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0.',
-                'precio_ieps.required' => 'El precio con IEPS es requerido.',
-                'precio_ieps.numeric' => 'El precio con IEPS debe ser un número.',
-                'precio_ieps.min' => 'El precio con IEPS debe ser mayor a 0.',
-                'ieps.required' => 'Debe ingresar un valor de IEPS.',
-                'ieps.numeric' => 'El IEPS debe ser un número válido.',
-                'ieps.min' => 'El IEPS debe ser mayor o igual a 0.',
+                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0 cuando se capture.',
+                'precio_ieps.required' => 'El precio de venta es requerido.',
+                'precio_ieps.numeric' => 'El precio de venta debe ser un número.',
+                'precio_ieps.min' => 'El precio de venta debe ser mayor a 0.',
+                'ieps.numeric' => 'El porcentaje de ganancia debe ser un número válido.',
+                'ieps.min' => 'El porcentaje de ganancia debe ser mayor o igual a 0 cuando se capture.',
                 'tamano.required' => 'El tamaño del producto es requerido.',
                 'tamano.string' => 'El tamaño debe ser un texto válido.',
                 'tamano.max' => 'El tamaño no puede exceder 100 caracteres.',
+                'nombre.unique' => 'Ya existe un producto con ese nombre y tamaño. Edítalo en lugar de duplicarlo.',
             ]
         );
 
@@ -190,12 +223,12 @@ class ProductoController extends Controller
         $catProducto->nombre = $request->nombre;
         $catProducto->id_clasificacion = $request->id_clasificacion;
         $catProducto->id_marca = $request->id_marca;
-        $catProducto->precio_unitario = $request->precio_unitario;
-        $catProducto->ieps = $request->ieps;
+        $catProducto->precio_unitario = $request->precio_unitario ?? 0;
+        $catProducto->ieps = $request->ieps ?? 0;
         $catProducto->precio_ieps = $request->precio_ieps;
         $catProducto->tamano = $request->tamano;
-        $catProducto->ingrediente_activo = $request->ingrediente_activo;
-        $catProducto->barcode = $request->barcode;
+        $catProducto->ingrediente_activo = $request->ingrediente_activo ?? '';
+        $catProducto->barcode = $request->barcode ?? '';
         $catProducto->id_usuario = Auth::user()->id;
         $catProducto->save();
 

@@ -9,6 +9,7 @@ import VCalendar from 'v-calendar';
 import InputError from '@/Components/InputError.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import { notify } from '@/utils/notify';
+import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     compra: Object,
@@ -24,6 +25,13 @@ const props = defineProps({
         type: Array,
         default: []
     },
+});
+
+const page = usePage();
+const mostrarCamposPrecio = computed(() => {
+    const config = page.props.empresaConfig?.mostrar_campos_precio ?? true;
+    const esAdminEmpresa = page.props.auth?.user?.tipo === 'adminEmpresa';
+    return esAdminEmpresa ? true : config;
 });
 
 const statusOptions = [
@@ -141,9 +149,9 @@ const productoForm = reactive({
     nombre: '',
     id_clasificacion: '',
     id_marca: '',
-    precio_unitario: 0,
-    ieps: 0,
-    precio_ieps: 0,
+    precio_unitario: '',
+    ieps: '',
+    precio_ieps: '',
     tamano: '',
     ingrediente_activo: '',
     barcode: '',
@@ -160,19 +168,6 @@ watch(productoMarcaSeleccionada, (v) => {
     productoForm.id_marca = v ? v.id : '';
 });
 
-const productoIepsOptions = [
-    { value: 0, label: '0%' },
-    { value: 3, label: '3%' },
-    { value: 6, label: '6%' },
-    { value: 7, label: '7%' },
-    { value: 9, label: '9%' }
-];
-const productoIepsSeleccionado = ref(null);
-watch(productoIepsSeleccionado, (v) => {
-    productoForm.ieps = v ? v.value : '';
-    calcularIpsProducto();
-});
-
 const openProductoModal = () => {
     showProductoModal.value = true;
 };
@@ -182,21 +177,41 @@ const closeProductoModal = () => {
     productoForm.nombre = '';
     productoForm.id_clasificacion = '';
     productoForm.id_marca = '';
-    productoForm.precio_unitario = 0;
-    productoForm.ieps = 0;
-    productoForm.precio_ieps = 0;
+    productoForm.precio_unitario = '';
+    productoForm.ieps = '';
+    productoForm.precio_ieps = '';
     productoForm.tamano = '';
     productoForm.ingrediente_activo = '';
     productoForm.barcode = '';
     productoErrors.value = {};
 };
 
-const calcularIpsProducto = () => {
-    productoForm.precio_ieps = (((parseFloat(productoForm.precio_unitario) / 100) * parseFloat(productoForm.ieps)) + parseFloat(productoForm.precio_unitario)).toFixed(2);
+const toNumberOrNull = (value) => {
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
 };
 
-const calcularPrecioCompraProducto = () => {
-    productoForm.precio_unitario = (parseFloat(productoForm.precio_ieps) - ((parseFloat(productoForm.precio_ieps) / 100) * parseFloat(productoForm.ieps))).toFixed(2);
+const recalcularValoresProducto = (trigger) => {
+    const precioCompra = toNumberOrNull(productoForm.precio_unitario);
+    const margen = toNumberOrNull(productoForm.ieps);
+    const precioVenta = toNumberOrNull(productoForm.precio_ieps);
+
+    if (precioCompra !== null && margen !== null && trigger !== 'precio_ieps') {
+        productoForm.precio_ieps = (precioCompra * (1 + (margen / 100))).toFixed(2);
+        return;
+    }
+
+    if (precioVenta !== null && margen !== null && trigger !== 'precio_unitario') {
+        const divisor = 1 + (margen / 100);
+        if (divisor !== 0) {
+            productoForm.precio_unitario = (precioVenta / divisor).toFixed(2);
+        }
+        return;
+    }
+
+    if (precioCompra !== null && precioVenta !== null && trigger !== 'ieps' && precioCompra !== 0) {
+        productoForm.ieps = (((precioVenta - precioCompra) / precioCompra) * 100).toFixed(2);
+    }
 };
 
 const guardarProducto = () => {
@@ -210,6 +225,11 @@ const guardarProducto = () => {
         .catch(error => {
             if (error.response && error.response.status === 422) {
                 productoErrors.value = error.response.data.errors;
+                Object.values(productoErrors.value).forEach((message) => {
+                    if (message) {
+                        notify(message, 'error');
+                    }
+                });
             }
         });
 };
@@ -502,22 +522,25 @@ const changeStatus = (event) => {
                     <InputError class="mt-2" :message="productoErrors.id_marca" />
                     <br>
 
-                    <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
-                    <input type="number" step="0.01" @change="calcularIpsProducto" class="form-input w-full rounded-md shadow-sm"
-                        v-model="productoForm.precio_unitario">
-                    <InputError class="mt-2" :message="productoErrors.precio_unitario" />
-                    <br><br>
+                    <div v-if="mostrarCamposPrecio">
+                        <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
+                        <input type="number" step="0.01" @input="recalcularValoresProducto('precio_unitario')" class="form-input w-full rounded-md shadow-sm"
+                            v-model="productoForm.precio_unitario">
+                        <InputError class="mt-2" :message="productoErrors.precio_unitario" />
+                        <br><br>
 
-                    <label class="block font-medium text-sm text-gray-700">IEPS</label>
-                    <vue-single-select v-model="productoIepsSeleccionado" :options="productoIepsOptions" option-key="value" option-label="label" placeholder="Selecione" class="w-full" />
-                    <InputError class="mt-2" :message="productoErrors.ieps" />
-                    <br>
+                        <label class="block font-medium text-sm text-gray-700">Porcentaje de ganancia (%)</label>
+                        <input type="number" step="0.01" min="0" @input="recalcularValoresProducto('ieps')" class="form-input w-full rounded-md shadow-sm"
+                            v-model="productoForm.ieps">
+                        <InputError class="mt-2" :message="productoErrors.ieps" />
+                        <br>
 
-                    <label class="block font-medium text-sm text-gray-700">Precio con ieps</label>
-                    <input type="number" step="0.01" @change="calcularPrecioCompraProducto" class="form-input w-full rounded-md shadow-sm"
-                        v-model="productoForm.precio_ieps">
-                    <InputError class="mt-2" :message="productoErrors.precio_ieps" />
-                    <br><br>
+                        <label class="block font-medium text-sm text-gray-700">Precio Venta</label>
+                        <input type="number" step="0.01" @input="recalcularValoresProducto('precio_ieps')" class="form-input w-full rounded-md shadow-sm"
+                            v-model="productoForm.precio_ieps">
+                        <InputError class="mt-2" :message="productoErrors.precio_ieps" />
+                        <br><br>
+                    </div>
 
                     <label class="block font-medium text-sm text-gray-700">Tamaño</label>
                     <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.tamano">

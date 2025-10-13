@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Empresa;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,12 +41,17 @@ class HandleInertiaRequests extends Middleware
     {
         $user = Auth::user();
         $sucursalActiva = null;
+        $empresaConfig = [
+            'mostrar_campos_precio' => true,
+        ];
 
         if ($user) {
             $sucursalId = SucursalService::getSucursalActiva();
             $sucursalCompleta = SucursalService::getSucursalActivaCompleta();
 
             if ($sucursalCompleta) {
+                $sucursalCompleta->loadMissing('empresa');
+
                 $sucursalActiva = [
                     'id' => $sucursalCompleta->id,
                     'nombre' => $sucursalCompleta->nombre,
@@ -66,6 +72,23 @@ class HandleInertiaRequests extends Middleware
                     })->toArray();
                 }
             }
+
+            $empresa = $user->empresa;
+            if (!$empresa && $sucursalCompleta) {
+                $empresa = $sucursalCompleta->empresa;
+            }
+
+            if (!$empresa && $user->id_empresa) {
+                $empresa = Empresa::find($user->id_empresa);
+            }
+
+            if (!$empresa && $sucursalCompleta?->id_empresa) {
+                $empresa = Empresa::find($sucursalCompleta->id_empresa);
+            }
+
+            if ($empresa) {
+                $empresaConfig['mostrar_campos_precio'] = (bool) $empresa->mostrar_campos_precio;
+            }
         }
 
         return array_merge(parent::share($request), [
@@ -80,6 +103,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'sucursalActiva' => $sucursalActiva,
+            'empresaConfig' => $empresaConfig,
         ]);
     }
 }

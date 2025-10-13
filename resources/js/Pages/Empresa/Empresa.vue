@@ -100,6 +100,10 @@ const restaurar = (id) => {
                             <div class="text-gray-500">RFC</div>
                             <div>{{ empresa.rfc }}</div>
                         </div>
+                        <div>
+                            <div class="text-gray-500">Campos de precio visibles</div>
+                            <div>{{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}</div>
+                        </div>
                     </div>
                     <div>
                             <div class="text-gray-500">Aviso</div>
@@ -141,6 +145,7 @@ const restaurar = (id) => {
                             <th>Telefono</th>
                             <th>Email</th>
                             <th>RFC</th>
+                            <th>Campos de precio visibles</th>
                             <th>Aviso</th>
                             <th>Acciones</th>
                         </tr>
@@ -153,6 +158,9 @@ const restaurar = (id) => {
                             <td class="px-4 py-2"> {{ empresa.telefono }} </td>
                             <td class="px-4 py-2"> {{ empresa.email }} </td>
                             <td class="px-4 py-2"> {{ empresa.rfc }} </td>
+                            <td class="px-4 py-2">
+                                {{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}
+                            </td>
                             <td class="px-4 py-2"> {{ empresa.aviso }} </td>
                             <td class="px-4 py-2">
                                 <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">

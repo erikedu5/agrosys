@@ -199,6 +199,12 @@ const searchItems = computed(() => {
                                     {{ $page.props.sucursalActiva.nombre }}
                                 </div>
                             </div>
+
+                            <button
+                                @click="logout"
+                                class="px-3 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 dark:border-red-500 dark:text-red-300 dark:hover:bg-red-900 transition-colors duration-200">
+                                Cerrar sesión
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -246,7 +252,31 @@ const searchItems = computed(() => {
                                         
                                         <!-- Icono de Clientes -->
                                         <svg v-else-if="item.label.includes('Cliente')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a3 3 0 100-6 3 3 0 000 6zM6 18a4 4 0 014-4h4a4 4 0 014 4"></path>
+                                        </svg>
+
+                                        <!-- Icono de Clasificación -->
+                                        <svg v-else-if="item.label.includes('Clasificación')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12l3-3 4 4 7-7"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 21l-4-4-2 2-2-2-2 2"></path>
+                                        </svg>
+
+                                        <!-- Icono de Marca -->
+                                        <svg v-else-if="item.label.includes('Marca')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7a1 1 0 011-1h4l5 5a1 1 0 010 1.414l-4.586 4.586a1 1 0 01-1.414 0L7 12V7z"></path>
+                                            <circle cx="10.5" cy="9.5" r="0.75"></circle>
+                                        </svg>
+
+                                        <!-- Icono de Enfermedades -->
+                                        <svg v-else-if="item.label.includes('Enfermedad')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="4"></circle>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 16v-2m6-6h2M4 12h2m11.5 4.5l1.4 1.4M6.1 6.1l1.4 1.4m8 0l1.4-1.4M6.1 17.9l1.4-1.4m3.1-2.6l1.4 1.4m0-1.4l-1.4 1.4"></path>
+                                        </svg>
+
+                                        <!-- Icono de Flores -->
+                                        <svg v-else-if="item.label.includes('Tipo de Flores') || item.label.includes('Flor')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="2"></circle>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4c1.8 0 3 1.2 3 3s-1.2 3-3 3-3-1.2-3-3 1.2-3 3-3zm0 10c1.8 0 3 1.2 3 3s-1.2 3-3 3-3-1.2-3-3 1.2-3 3-3zm-6-4c0-1.8 1.2-3 3-3s3 1.2 3 3-1.2 3-3 3-3-1.2-3-3zm12 0c0 1.8-1.2 3-3 3s-3-1.2-3-3 1.2-3 3-3 3 1.2 3 3z"></path>
                                         </svg>
                                         
                                         <!-- Icono de Reportes -->
