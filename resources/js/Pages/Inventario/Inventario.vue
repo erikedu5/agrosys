@@ -78,7 +78,7 @@ const resetInventario = (id) => {
                         </div>
 
                         <div>
-                            <div class="text-gray-500">Precio con IEPS</div>
+                            <div class="text-gray-500">Precio de venta</div>
                             <div>{{ producto.precio_ieps }}</div>
                         </div>
                         <div>
@@ -121,7 +121,7 @@ const resetInventario = (id) => {
                             <th>Tamaño</th>
                             <th>Marca</th>
                             <th>Cantidad en stock</th>
-                            <th>precio con ieps</th>
+                            <th>Precio de venta</th>
                             <th>Ultima actualización</th>
                             <th>Acciones</th>
                         </tr>

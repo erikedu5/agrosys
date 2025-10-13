@@ -1,9 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
+import { notify } from '@/utils/notify';
 
 const props = defineProps({
     producto: Object,
@@ -12,14 +13,21 @@ const props = defineProps({
     enfermedadesFlor: Array,
 });
 
+const page = usePage();
+const mostrarCamposPrecio = computed(() => {
+    const config = page.props.empresaConfig?.mostrar_campos_precio ?? true;
+    const esAdminEmpresa = page.props.auth?.user?.tipo === 'adminEmpresa' || page.props.auth?.user?.tipo === 'superAdmin';
+    return esAdminEmpresa ? true : config;
+});
+
 const form = useForm({
     nombre: '',
     id_clasificacion: 0,
     id_marca: 0,
     id: null,
-    precio_unitario: 0.0,
-    ieps: 0,
-    precio_ieps: 0.0,
+    precio_unitario: '',
+    ieps: '',
+    precio_ieps: '',
     tamano: '',
     cantidad: 0,
     ingrediente_activo: '',
@@ -69,6 +77,18 @@ watch(marcaSeleccionada, (v) => {
     form.id_marca = v ? v.id : 0;
 });
 
+watch(() => form.precio_unitario, (value) => {
+    if (value === '' || value === null || value === undefined) {
+        form.clearErrors('precio_unitario');
+    }
+});
+
+watch(() => form.ieps, (value) => {
+    if (value === '' || value === null || value === undefined) {
+        form.clearErrors('ieps');
+    }
+});
+
 const validateForm = () => {
     form.clearErrors();
     let hasErrors = false;
@@ -88,23 +108,35 @@ const validateForm = () => {
         hasErrors = true;
     }
 
-    if (!form.precio_unitario || parseFloat(form.precio_unitario) <= 0) {
-        form.setError('precio_unitario', 'El precio de compra debe ser mayor a 0');
-        hasErrors = true;
-    }
+    if (mostrarCamposPrecio.value) {
+        if (
+            form.precio_unitario !== null &&
+            form.precio_unitario !== undefined &&
+            form.precio_unitario !== '' &&
+            parseFloat(form.precio_unitario) <= 0
+        ) {
+            form.setError('precio_unitario', 'El precio de compra debe ser mayor a 0 cuando se capture');
+            hasErrors = true;
+        }
 
-    if (!form.precio_ieps || parseFloat(form.precio_ieps) <= 0) {
-        form.setError('precio_ieps', 'El precio con IEPS debe ser mayor a 0');
-        hasErrors = true;
+        if (!form.precio_ieps || parseFloat(form.precio_ieps) <= 0) {
+            form.setError('precio_ieps', 'El precio de venta debe ser mayor a 0');
+            hasErrors = true;
+        }
+
+        if (
+            form.ieps !== null &&
+            form.ieps !== undefined &&
+            form.ieps !== '' &&
+            parseFloat(form.ieps) < 0
+        ) {
+            form.setError('ieps', 'El porcentaje de ganancia debe ser mayor o igual a 0 cuando se capture');
+            hasErrors = true;
+        }
     }
 
     if (!form.tamano || form.tamano.trim() === '') {
         form.setError('tamano', 'El tamaño del producto es requerido');
-        hasErrors = true;
-    }
-
-    if (form.ieps === null || form.ieps === undefined || form.ieps === '' || parseFloat(form.ieps) < 0) {
-        form.setError('ieps', 'El IEPS debe ser mayor o igual a 0');
         hasErrors = true;
     }
 
@@ -116,40 +148,71 @@ const submit = () => {
         return;
     }
 
+    const handleErrors = (errors) => {
+        Object.values(errors).forEach((message) => {
+            if (message) {
+                notify(message, 'error');
+            }
+        });
+    };
+
     if (props.producto == undefined) {
         form.post(route('inventario.store'), {
             onSuccess: () => {
                 form.reset();
             },
+            onError: handleErrors,
         });
     } else {
         form.put(route('inventario.update', props.producto.id), {
             onSuccess: () => {
                 // No resetear en edición
             },
+            onError: handleErrors,
         });
     }
 }
 
-const calcularIps = () => {
-    if (form.precio_unitario && form.ieps !== null && form.ieps !== undefined) {
-        const precioBase = parseFloat(form.precio_unitario) || 0;
-        const iepsPercent = parseFloat(form.ieps) || 0;
-        form.precio_ieps = (precioBase + (precioBase * iepsPercent / 100)).toFixed(2);
-    }
-}
+const toNumberOrNull = (value) => {
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+};
 
-const calcularPrecioCompra = () => {
-    if (form.precio_ieps && form.ieps !== null && form.ieps !== undefined) {
-        const precioConIeps = parseFloat(form.precio_ieps) || 0;
-        const iepsPercent = parseFloat(form.ieps) || 0;
-        if (iepsPercent > 0) {
-            form.precio_unitario = (precioConIeps / (1 + iepsPercent / 100)).toFixed(2);
-        } else {
-            form.precio_unitario = precioConIeps.toFixed(2);
-        }
+const recalcularValores = (trigger) => {
+    const precioCompra = toNumberOrNull(form.precio_unitario);
+    const porcentajeGanancia = toNumberOrNull(form.ieps);
+    const precioVenta = toNumberOrNull(form.precio_ieps);
+
+    if (
+        precioCompra !== null &&
+        porcentajeGanancia !== null &&
+        trigger !== 'precio_ieps'
+    ) {
+        form.precio_ieps = (precioCompra * (1 + (porcentajeGanancia / 100))).toFixed(2);
+        return;
     }
-}
+
+    if (
+        precioVenta !== null &&
+        porcentajeGanancia !== null &&
+        trigger !== 'precio_unitario'
+    ) {
+        const divisor = 1 + (porcentajeGanancia / 100);
+        if (divisor !== 0) {
+            form.precio_unitario = (precioVenta / divisor).toFixed(2);
+        }
+        return;
+    }
+
+    if (
+        precioCompra !== null &&
+        precioVenta !== null &&
+        trigger !== 'ieps' &&
+        precioCompra !== 0
+    ) {
+        form.ieps = (((precioVenta - precioCompra) / precioCompra) * 100).toFixed(2);
+    }
+};
 </script>
 
 <template>
@@ -186,25 +249,28 @@ const calcularPrecioCompra = () => {
                             <InputError class="mt-2" :message="form.errors.id_marca" />
                             <br>
 
-                            <label class="block font-medium text-sm text-gray-700">Precio Compra *</label>
-                            <input type="number" step="0.01" min="0.01" @change="calcularIps()"
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{ 'border-red-500': form.errors.precio_unitario }"
-                                v-model="form.precio_unitario" required>
-                            <InputError class="mt-2" :message="form.errors.precio_unitario" />
-                            <br>
-                            <br>
+                            <div v-if="mostrarCamposPrecio">
+                                <label class="block font-medium text-sm text-gray-700">Precio Compra (opcional)</label>
+                                <input type="number" step="0.01" min="0.01" @input="recalcularValores('precio_unitario')"
+                                    class="form-input w-full rounded-md shadow-sm"
+                                    :class="{ 'border-red-500': form.errors.precio_unitario }"
+                                    v-model="form.precio_unitario">
+                                <InputError class="mt-2" :message="form.errors.precio_unitario" />
+                                <br>
+                                <br>
 
-                            <label class="block font-medium text-sm text-gray-700">IEPS (%) *</label>
-                            <input type="number" step="0.01" min="0" @change="calcularIps()" @input="calcularIps()"
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{ 'border-red-500': form.errors.ieps }" v-model="form.ieps"
-                                placeholder="Ingrese el porcentaje de IEPS (ej: 7.5)" required>
-                            <InputError class="mt-2" :message="form.errors.ieps" />
-                            <br>
+                                <label class="block font-medium text-sm text-gray-700">Porcentaje de ganancia (%) (opcional)</label>
+                                <input type="number" step="0.01" min="0" @input="recalcularValores('ieps')"
+                                    class="form-input w-full rounded-md shadow-sm"
+                                    :class="{ 'border-red-500': form.errors.ieps }" v-model="form.ieps"
+                                    placeholder="Ingrese el porcentaje de ganancia (ej: 15)">
+                                <InputError class="mt-2" :message="form.errors.ieps" />
+                                <br>
+                                <br>
+                            </div>
 
-                            <label class="block font-medium text-sm text-gray-700">Precio con IEPS *</label>
-                            <input type="number" step="0.01" min="0.01" @change="calcularPrecioCompra()"
+                            <label class="block font-medium text-sm text-gray-700">Precio Venta *</label>
+                            <input type="number" step="0.01" min="0.01" @input="recalcularValores('precio_ieps')"
                                 class="form-input w-full rounded-md shadow-sm"
                                 :class="{ 'border-red-500': form.errors.precio_ieps }" v-model="form.precio_ieps"
                                 required>

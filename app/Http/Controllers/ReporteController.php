@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use DateTime;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReporteController extends Controller
 {
@@ -30,8 +32,11 @@ class ReporteController extends Controller
 
         $sucursales = [];
         $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if (Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
+        $usuario = Auth::user();
+        if ($usuario->tipo === 'admin' && $sucursalUser && $sucursalUser->es_matriz) {
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
+        } elseif ($usuario->tipo === 'adminEmpresa') {
+            $sucursales = $usuario->sucursalesEmpresa();
         }
 
         return Inertia::render('Reporte/Reporte', [
@@ -281,6 +286,114 @@ class ReporteController extends Controller
         $pdf->setPaper($customPaper, 'portrait');
         $pdf->setOption('javascript-delay', 500);
         return $pdf->stream('inventario_ticket.pdf');
+    }
+
+    public function gananciasDiarias(Request $request)
+    {
+        $usuario = Auth::user();
+        Log::debug($usuario);
+        if ($usuario->tipo !== 'adminEmpresa' && $usuario->tipo !== 'superAdmin') {
+            abort(403);
+        }
+
+        $request->validate(
+            [
+                'fechaInicio' => ['required'],
+                'fechaFin' => ['required'],
+            ],
+            [
+                'fechaInicio.required' => 'La fecha de inicio es requerida.',
+                'fechaFin.required' => 'La fecha de fin es requerida.',
+            ]
+        );
+
+        $empresa = $usuario->empresa;
+        if (!$empresa) {
+            abort(404, 'No se encontró la empresa asociada al usuario.');
+        }
+
+        $fechaInicio = new DateTime($request->fechaInicio);
+        $fechaFin = new DateTime($request->fechaFin);
+        $fechaInicioTexto = $fechaInicio->format('d/m/Y');
+        $fechaFinTexto = $fechaFin->format('d/m/Y');
+
+        $fechaInicio->setTime(0, 0, 0);
+        $fechaFin->setTime(23, 59, 59);
+
+        $fechaInicioFiltro = $fechaInicio->format('Y-m-d H:i:s');
+        $fechaFinFiltro = $fechaFin->format('Y-m-d H:i:s');
+
+        $sucursalesEmpresa = Sucursales::where('id_empresa', $empresa->id)->get();
+        $sucursalIds = $sucursalesEmpresa->pluck('id');
+
+        $sucursalSeleccionada = null;
+        if ($request->filled('id_sucursal')) {
+            $sucursalSeleccionada = $sucursalesEmpresa->firstWhere('id', (int) $request->id_sucursal);
+            if ($sucursalSeleccionada) {
+                $sucursalIds = collect([$sucursalSeleccionada->id]);
+            }
+        }
+
+        $gananciasPorDia = collect();
+        $detallesGanancia = collect();
+        if ($sucursalIds->isNotEmpty()) {
+            $gananciasPorDia = ProductoVenta::selectRaw(
+                'DATE(ventas.created_at) as fecha,
+                 SUM((COALESCE(productos.precio_ieps, 0) - COALESCE(productos.precio_unitario, 0)) * producto_ventas.cantidad) AS ganancia_total,
+                 SUM(producto_ventas.cantidad) as unidades_vendidas'
+            )
+                ->join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
+                ->join('productos', 'producto_ventas.id_producto', '=', 'productos.id')
+                ->whereBetween('ventas.created_at', [$fechaInicioFiltro, $fechaFinFiltro])
+                ->whereIn('ventas.id_sucursal', $sucursalIds->all())
+                ->groupBy(DB::raw('DATE(ventas.created_at)'))
+                ->orderBy('fecha')
+                ->get();
+
+            $detallesGanancia = ProductoVenta::selectRaw(
+                'DATE(ventas.created_at) as fecha,
+                 ventas.id as id_venta,
+                 sucursales.nombre as sucursal_nombre,
+                 COALESCE(clientes.nombre, \'Cliente público\') as cliente_nombre,
+                 productos.nombre as producto_nombre,
+                 producto_ventas.cantidad,
+                 (COALESCE(productos.precio_ieps, 0) - COALESCE(productos.precio_unitario, 0)) * producto_ventas.cantidad as ganancia_linea'
+            )
+                ->join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
+                ->join('productos', 'producto_ventas.id_producto', '=', 'productos.id')
+                ->join('sucursales', 'ventas.id_sucursal', '=', 'sucursales.id')
+                ->leftJoin('clientes', 'ventas.id_cliente', '=', 'clientes.id')
+                ->whereBetween('ventas.created_at', [$fechaInicioFiltro, $fechaFinFiltro])
+                ->whereIn('ventas.id_sucursal', $sucursalIds->all())
+                ->orderBy('fecha')
+                ->orderBy('sucursal_nombre')
+                ->orderBy('cliente_nombre')
+                ->orderBy('producto_nombre')
+                ->get();
+        }
+
+        $gananciaTotal = (float) $gananciasPorDia->sum('ganancia_total');
+        $totalUnidades = (int) $gananciasPorDia->sum('unidades_vendidas');
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->getDomPDF()->set_option("enable_php", true);
+        $pdf->loadView(
+            'reportes/ganancias_diarias',
+            [
+                'empresa' => $empresa,
+                'fechaInicio' => $fechaInicioTexto,
+                'fechaFin' => $fechaFinTexto,
+                'gananciasPorDia' => $gananciasPorDia,
+                'gananciaTotal' => $gananciaTotal,
+                'totalUnidades' => $totalUnidades,
+                'sucursal' => $sucursalSeleccionada,
+                'incluyeTodasSucursales' => $sucursalSeleccionada === null,
+                'detallesGanancia' => $detallesGanancia,
+            ]
+        );
+        $pdf->setOption('javascript-delay', 3000);
+
+        return $pdf->stream('ganancias_diarias.pdf');
     }
 
     public function ventaPorProductoMarca(Request $request)

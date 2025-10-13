@@ -51,18 +51,33 @@ class EmpresaController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+            'mostrar_campos_precio' => 'nullable|boolean',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
         ]);
 
-        $empresas = Empresa::create($request->all());
-        return redirect()->route('empresa.index', [
-            'empresas' => $empresas
-        ]);
+        $empresa = new Empresa();
+        $empresa->nombre = $validated['nombre'];
+        $empresa->direccion = $validated['direccion'];
+        $empresa->telefono = $request->telefono;
+        $empresa->email = $request->email;
+        $empresa->rfc = $request->rfc;
+        $empresa->aviso = $request->aviso;
+        $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
+
+        if (Auth::user()->tipo === 'superAdmin') {
+            $empresa->numero_sucursales = $request->numero_sucursales ?? 1;
+        } else {
+            $empresa->numero_sucursales = 1;
+        }
+
+        $empresa->save();
+
+        return redirect()->route('empresa.index');
     }
 
      /**
@@ -80,30 +95,29 @@ class EmpresaController extends Controller
 
     public function update(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nombre' => 'required',
             'direccion' => 'required',
+            'mostrar_campos_precio' => 'nullable|boolean',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
         ]);
 
         $empresa = Empresa::find($request->id);
-        $empresa->nombre = $request->nombre;
-        $empresa->direccion = $request->direccion;
+        $empresa->nombre = $validated['nombre'];
+        $empresa->direccion = $validated['direccion'];
         $empresa->telefono = $request->telefono;
         $empresa->email= $request->email;
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
+        $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->numero_sucursales = $request->numero_sucursales;
         }
         $empresa->save();
 
-        $empresas = Empresa::get();
-        return redirect()->route('empresa.index', [
-            'empresas' => $empresas
-        ]);
+        return redirect()->route('empresa.index');
     }
 
     /**

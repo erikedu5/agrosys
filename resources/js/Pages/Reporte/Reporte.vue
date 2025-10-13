@@ -25,6 +25,7 @@
             type: Date
         },
         datesReportVenta: [],
+        datesReportProfit: [],
         tipoReporteVenta: 'marca',
         id_clasificacion: 0,
         id_marca:  0,
@@ -114,6 +115,21 @@
             query = query + 'id_sucursal=' + formReporte.id_sucursal + '&';
         }
         popup.location = '/reporte/inventario' + query;
+        location.replace('/reporte');
+    }
+
+    const generarReporteGanancias = () => {
+        errors.value = [];
+        if (!formReporte.datesReportProfit || formReporte.datesReportProfit.length !== 2) {
+            errors.value.push('Debe seleccionar un rango de fechas para el reporte de ganancias.');
+            return;
+        }
+
+        const fechaInicio = formReporte.datesReportProfit[0];
+        const fechaFin = formReporte.datesReportProfit[1];
+        let popup  = window.open( "_blank");
+        const sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        popup.location = '/reporte/ganancias-diarias?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
         location.replace('/reporte');
     }
 
@@ -234,11 +250,30 @@
                                     dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
                             Reporte de inventario</button>
                     </div>
+
+                    <hr class="my-6" v-if="$page.props.auth.user.tipo == 'adminEmpresa' || $page.props.auth.user.tipo == 'superAdmin'">
+
+                    <div class="md-col-span-2 mt-5 md:mt-0"
+                        v-if="$page.props.auth.user.tipo == 'adminEmpresa' || $page.props.auth.user.tipo == 'superAdmin'" >
+                        <label><strong>Reporte de ganancias diarias (solo admin empresa)</strong></label>
+                        <br>
+                        <br>
+                        <label>Rango de fechas para generar reporte:</label>
+                        <VueDatePicker
+                            v-model="formReporte.datesReportProfit"
+                            range
+                            model-type="dd-MM-yyyy"></VueDatePicker>
+                        <br>
+                        <button @click="generarReporteGanancias()"
+                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                            Reporte de ganancias diarias</button>
+                    </div>
                 </div>
             </div>
         </div>
     </AppLayout>
 </template>
-
-
 
