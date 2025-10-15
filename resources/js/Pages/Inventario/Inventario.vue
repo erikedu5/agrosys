@@ -1,8 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref, watch } from 'vue';
-import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import { ref, watch, computed } from 'vue';
+import { router, Link, useForm, usePage } from '@inertiajs/vue3';
+import Pagination from '@/Components/Pagination.vue';
+import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
+import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore } from '@mdi/js';
 
 const props = defineProps({
     productos: {
@@ -16,6 +18,21 @@ const props = defineProps({
 });
 
 const q = ref('');
+const page = usePage();
+const showPriceModal = ref(false);
+const selectedProduct = ref(null);
+const icons = {
+    price: mdiCashMultiple,
+    edit: mdiPencil,
+    add: mdiPlusBox,
+    reset: mdiBackupRestore,
+};
+
+const puedeGestionarCostos = computed(() => {
+    const tipoUsuario = page.props?.auth?.user?.tipo;
+    const configMostrar = page.props?.empresaConfig?.mostrar_campos_precio ?? true;
+    return tipoUsuario === 'adminEmpresa' || tipoUsuario === 'superAdmin' || configMostrar;
+});
 
 watch(q, (value) => {
     router.get(route('inventario.index', { q: value }), {}, { preserveState: true });
@@ -30,6 +47,34 @@ const resetInventario = (id) => {
         useForm({}).post(route('inventario.reset', id));
     }
 }
+
+const openPriceModal = (producto) => {
+    selectedProduct.value = producto;
+    showPriceModal.value = true;
+};
+
+const closePriceModal = () => {
+    showPriceModal.value = false;
+    selectedProduct.value = null;
+};
+
+const handlePriceUpdated = (payload) => {
+    if (selectedProduct.value) {
+        selectedProduct.value.precio_ieps = payload.precio_ieps;
+        if (payload.precio_unitario !== undefined) {
+            selectedProduct.value.precio_unitario = payload.precio_unitario;
+        }
+        if (payload.ieps !== undefined) {
+            selectedProduct.value.ieps = payload.ieps;
+        }
+    }
+
+    router.reload({
+        preserveState: true,
+        preserveScroll: true,
+        only: ['productos'],
+    });
+};
 </script>
 
 <template>
@@ -87,19 +132,39 @@ const resetInventario = (id) => {
                         </div>
                     </div>
                     <div class="mt-3 flex justify-end">
-                        <div class="inline-flex rounded-md shadow-sm" role="group">
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button type="button"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                @click="openPriceModal(producto)" title="Actualizar precios" aria-label="Actualizar precios">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.price"></path>
+                                </svg>
+                                <span class="sr-only">Actualizar precios</span>
+                            </button>
                             <Link :href="route('inventario.edit', producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
-                            Actualizar
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                title="Actualizar" aria-label="Actualizar">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.edit"></path>
+                                </svg>
+                                <span class="sr-only">Actualizar</span>
                             </Link>
                             <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center">
-                            Agregar al inventario
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                title="Agregar al inventario" aria-label="Agregar al inventario">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.add"></path>
+                                </svg>
+                                <span class="sr-only">Agregar al inventario</span>
                             </Link>
                             <Link v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"
                                 href="" @click="resetInventario(producto.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                            Resetear inventario a cero
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                title="Resetear inventario a cero" aria-label="Resetear inventario a cero">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.reset"></path>
+                                </svg>
+                                <span class="sr-only">Resetear inventario a cero</span>
                             </Link>
                         </div>
                     </div>
@@ -137,20 +202,41 @@ const resetInventario = (id) => {
                             <td class="whitespace-nowrap"> {{ producto.precio_ieps }}</td>
                             <td class="whitespace-nowrap"> {{ producto.updated_at }} </td>
                             <td class="whitespace-nowrap">
-                                <div class="inline-flex rounded-md shadow-sm" role="group">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                        @click="openPriceModal(producto)" title="Actualizar precios"
+                                        aria-label="Actualizar precios">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.price"></path>
+                                        </svg>
+                                        <span class="sr-only">Actualizar precios</span>
+                                    </button>
                                     <Link :href="route('inventario.edit', producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Actualizar
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                        title="Actualizar" aria-label="Actualizar">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.edit"></path>
+                                        </svg>
+                                        <span class="sr-only">Actualizar</span>
                                     </Link>
                                     <Link href="" @click.prevent="agregarInventario(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Agregar al inventario
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                        title="Agregar al inventario" aria-label="Agregar al inventario">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.add"></path>
+                                        </svg>
+                                        <span class="sr-only">Agregar al inventario</span>
                                     </Link>
                                     <Link href=""
                                         v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"
                                         @click="resetInventario(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white  flex flex-center">
-                                    Resetear inventario a cero
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                        title="Resetear inventario a cero" aria-label="Resetear inventario a cero">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.reset"></path>
+                                        </svg>
+                                        <span class="sr-only">Resetear inventario a cero</span>
                                     </Link>
                                 </div>
                             </td>
@@ -164,5 +250,7 @@ const resetInventario = (id) => {
 
 
         </div>
+        <UpdateProductPricesModal :show="showPriceModal" :producto="selectedProduct"
+            :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
     </AppLayout>
 </template>
