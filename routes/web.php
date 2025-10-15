@@ -85,6 +85,11 @@ Route::post('/inventario/{producto}/reset', [App\Http\Controllers\ProductoContro
     ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa', 'sucursal.selection'])
     ->whereNumber('producto');
 
+Route::put('/inventario/{producto}/precios', [App\Http\Controllers\ProductoController::class, 'updatePrecios'])
+    ->name('inventario.updatePrecios')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection'])
+    ->whereNumber('producto');
+
 Route::resource('/solucion', App\Http\Controllers\SolucionEnfermedadController::class)
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 

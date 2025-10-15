@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AltaInventario;
 use App\Models\CatClasificacion;
 use App\Models\CatMarca;
+use App\Models\Empresa;
 use App\Models\Producto;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
@@ -296,5 +297,72 @@ class ProductoController extends Controller
         $altaInventario->save();
 
         return redirect()->route('inventario.index');
+    }
+
+    public function updatePrecios(Request $request, Producto $producto)
+    {
+        $puedeGestionarCostos = $this->usuarioPuedeGestionarCostos();
+
+        $rules = [
+            'precio_ieps' => ['required', 'numeric', 'min:0.01'],
+        ];
+
+        $messages = [
+            'precio_ieps.required' => 'El precio de venta es requerido.',
+            'precio_ieps.numeric' => 'El precio de venta debe ser un número.',
+            'precio_ieps.min' => 'El precio de venta debe ser mayor a 0.',
+        ];
+
+        if ($puedeGestionarCostos) {
+            $rules['precio_unitario'] = ['nullable', 'numeric', 'min:0.01'];
+            $rules['ieps'] = ['nullable', 'numeric', 'min:0'];
+
+            $messages = array_merge($messages, [
+                'precio_unitario.numeric' => 'El precio de compra debe ser un número.',
+                'precio_unitario.min' => 'El precio de compra debe ser mayor a 0 cuando se capture.',
+                'ieps.numeric' => 'El porcentaje de ganancia debe ser un número válido.',
+                'ieps.min' => 'El porcentaje de ganancia debe ser mayor o igual a 0 cuando se capture.',
+            ]);
+        }
+
+        $validated = $request->validate($rules, $messages);
+
+        $producto->precio_ieps = $validated['precio_ieps'];
+
+        if ($puedeGestionarCostos) {
+            $producto->precio_unitario = $request->filled('precio_unitario') ? $validated['precio_unitario'] : 0;
+            $producto->ieps = $request->filled('ieps') ? $validated['ieps'] : 0;
+        }
+
+        $producto->id_usuario = Auth::id();
+        $producto->save();
+
+        return redirect()->route('inventario.index');
+    }
+
+    private function usuarioPuedeGestionarCostos(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        if (in_array($user->tipo, ['adminEmpresa', 'superAdmin'], true)) {
+            return true;
+        }
+
+        $empresa = $user->empresa;
+
+        if (!$empresa && $user->id_empresa) {
+            $empresa = Empresa::find($user->id_empresa);
+        }
+
+        if (!$empresa) {
+            $sucursal = SucursalService::getSucursalActivaCompleta();
+            $empresa = $sucursal?->empresa;
+        }
+
+        return $empresa?->mostrar_campos_precio ?? true;
     }
 }
