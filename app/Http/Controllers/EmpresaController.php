@@ -34,6 +34,7 @@ class EmpresaController extends Controller
         return Inertia::render('Empresa/Empresa', [
             'empresas' => $empresas,
             'all' => Auth::user()->tipo === 'adminEmpresa',
+            'isSuperAdmin' => Auth::user()->tipo === 'superAdmin',
             'showDeleted' => $request->boolean('deleted'),
         ]);
     }
@@ -43,7 +44,9 @@ class EmpresaController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Empresa/CrearEmpresa');
+        return Inertia::render('Empresa/CrearEmpresa', [
+            'isSuperAdmin' => Auth::user()->tipo === 'superAdmin',
+        ]);
     }
 
     /**
@@ -71,11 +74,16 @@ class EmpresaController extends Controller
         $empresa->rfc = $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
-        $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
-        $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
-        $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
-            ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
-            : null;
+        if (Auth::user()->tipo === 'superAdmin') {
+            $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
+            $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
+            $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
+                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+                : null;
+        } else {
+            $empresa->ventas_bloqueadas = false;
+            $empresa->motivo_bloqueo = null;
+        }
 
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->numero_sucursales = $request->numero_sucursales ?? 1;
@@ -98,6 +106,7 @@ class EmpresaController extends Controller
         [
             'empresa' => $empresa,
             'all' => Auth::user()->tipo === 'adminEmpresa',
+            'isSuperAdmin' => Auth::user()->tipo === 'superAdmin',
         ]);
     }
 
@@ -123,11 +132,13 @@ class EmpresaController extends Controller
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
-        $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
-        $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
-        $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
-            ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
-            : null;
+        if (Auth::user()->tipo === 'superAdmin') {
+            $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
+            $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
+            $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
+                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+                : null;
+        }
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->numero_sucursales = $request->numero_sucursales;
         }

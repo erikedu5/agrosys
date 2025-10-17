@@ -9,6 +9,10 @@ const props = defineProps({
     all: {
         type: Boolean,
         default: false
+    },
+    isSuperAdmin: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -116,32 +120,34 @@ const props = defineProps({
                             </label>
                             <br>
                             <br>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox"
-                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                                    v-model="form.ventas_bloqueadas">
-                                <span class="ml-2 text-sm text-gray-700">
-                                    Bloquear ventas por falta de pago
-                                </span>
-                            </label>
-                            <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />
-                            <br>
-                            <br>
-                            <div>
-                                <label class="block font-medium text-sm text-gray-700">
-                                    Motivo del bloqueo
+                            <div v-if="isSuperAdmin">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                        v-model="form.ventas_bloqueadas">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        Bloquear ventas por falta de pago
+                                    </span>
                                 </label>
-                                <textarea
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{ 'bg-gray-100 cursor-not-allowed': !form.ventas_bloqueadas }"
-                                    rows="3"
-                                    v-model="form.motivo_bloqueo"
-                                    :disabled="!form.ventas_bloqueadas"
-                                ></textarea>
-                                <InputError class="mt-2" :message="form.errors.motivo_bloqueo" />
+                                <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />
+                                <br>
+                                <br>
+                                <div>
+                                    <label class="block font-medium text-sm text-gray-700">
+                                        Motivo del bloqueo
+                                    </label>
+                                    <textarea
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="{ 'bg-gray-100 cursor-not-allowed': !form.ventas_bloqueadas }"
+                                        rows="3"
+                                        v-model="form.motivo_bloqueo"
+                                        :disabled="!form.ventas_bloqueadas"
+                                    ></textarea>
+                                    <InputError class="mt-2" :message="form.errors.motivo_bloqueo" />
+                                </div>
+                                <br>
+                                <br>
                             </div>
-                            <br>
-                            <br>
 
                             <div v-if="!all">
                             <label class="block font-medium text-sm text-gray-700">Máximo número de sucursales</label>

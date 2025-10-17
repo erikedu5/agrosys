@@ -7,11 +7,13 @@ use App\Models\CatClasificacion;
 use App\Models\CatMarca;
 use App\Models\Empresa;
 use App\Models\Producto;
+use App\Models\Sucursales;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductoController extends Controller
 {
@@ -20,7 +22,11 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, $sucursal, $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId || !$sucursal) {
+            return redirect()->route('sucursal.selection');
+        }
 
         $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
             ->orWhere('barcode', 'LIKE', "%$request->q%")
@@ -32,13 +38,15 @@ class ProductoController extends Controller
             $marca = CatMarca::where('id', $producto->id_marca)->first();
             $producto->marca = $marca;
             $altaInventario = AltaInventario::where('id_producto', $producto->id)
-                ->where('id_sucursal', $sucursal)
+                ->where('id_sucursal', $sucursalId)
                 ->orderBy('created_at', 'desc')->first();
             $producto->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
         }
 
         return Inertia::render('Inventario/Inventario', [
-            'productos' => $productos
+            'productos' => $productos,
+            'ventasBloqueadas' => $ventasBloqueadas,
+            'motivoBloqueo' => $motivoBloqueo,
         ]);
     }
 
@@ -48,6 +56,10 @@ class ProductoController extends Controller
      */
     public function create()
     {
+        [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
         $clasificaciones = CatClasificacion::get();
         $marca = CatMarca::get();
 
@@ -62,7 +74,15 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            throw ValidationException::withMessages([
+                'bloqueo' => 'No se encontró una sucursal activa. Selecciona una sucursal antes de continuar.',
+            ]);
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
         $request->merge([
             'precio_unitario' => $request->filled('precio_unitario') ? $request->precio_unitario : null,
@@ -130,7 +150,7 @@ class ProductoController extends Controller
         $altaInventario->cantidad_nueva = 0;
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $producto->id;
-        $altaInventario->id_sucursal = $sucursal;
+        $altaInventario->id_sucursal = $sucursalId;
         $altaInventario->save();
 
         if ($request->expectsJson()) {
@@ -149,10 +169,16 @@ class ProductoController extends Controller
      */
     public function edit(Producto $inventario)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
         $altaInventario = AltaInventario::where('id_producto', $inventario->id)
-            ->where('id_sucursal', $sucursal)
+            ->where('id_sucursal', $sucursalId)
             ->orderBy('created_at', 'desc')->first();
         $inventario->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
 
@@ -170,6 +196,9 @@ class ProductoController extends Controller
      */
     public function update(Request $request)
     {
+        [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
         $request->merge([
             'precio_unitario' => $request->filled('precio_unitario') ? $request->precio_unitario : null,
             'ieps' => $request->filled('ieps') ? $request->ieps : null,
@@ -240,10 +269,16 @@ class ProductoController extends Controller
 
     public function show(Producto $inventario)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
         $altaInventario = AltaInventario::where('id_producto', $inventario->id)
-            ->where('id_sucursal', $sucursal)
+            ->where('id_sucursal', $sucursalId)
             ->orderBy('created_at', 'desc')->first();
         $inventario->cantidad = $altaInventario !== null ? $altaInventario->cantidad_nueva : "0";
         return Inertia::render('Inventario/AddInventario', [
@@ -253,14 +288,22 @@ class ProductoController extends Controller
 
     public function addInventario(Request $request)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            throw ValidationException::withMessages([
+                'bloqueo' => 'No se encontró una sucursal activa. Selecciona una sucursal antes de continuar.',
+            ]);
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
         $request->validate(['cantidad' => 'required|numeric|gt:0']);
 
         $catProducto = Producto::find($request->id);
 
         $actualStock = AltaInventario::where('id_producto', $request->id)
-            ->where('id_sucursal', $sucursal)
+            ->where('id_sucursal', $sucursalId)
             ->orderBy('created_at', 'desc')->first();
 
         $altaInventario = new AltaInventario();
@@ -269,7 +312,7 @@ class ProductoController extends Controller
         $altaInventario->cantidad_nueva = $cantidad + $request->cantidad;
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $catProducto->id;
-        $altaInventario->id_sucursal = $sucursal;
+        $altaInventario->id_sucursal = $sucursalId;
         $altaInventario->save();
 
         return redirect()->route('inventario.index', [
@@ -279,10 +322,16 @@ class ProductoController extends Controller
 
     public function resetInventario(Producto $producto)
     {
-        $sucursal = SucursalService::getSucursalActiva();
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
         $actualStock = AltaInventario::where('id_producto', $producto->id)
-            ->where('id_sucursal', $sucursal)
+            ->where('id_sucursal', $sucursalId)
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -293,7 +342,7 @@ class ProductoController extends Controller
         $altaInventario->cantidad_nueva = 0;
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $producto->id;
-        $altaInventario->id_sucursal = $sucursal;
+        $altaInventario->id_sucursal = $sucursalId;
         $altaInventario->save();
 
         return redirect()->route('inventario.index');
@@ -301,6 +350,9 @@ class ProductoController extends Controller
 
     public function updatePrecios(Request $request, Producto $producto)
     {
+        [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
         $puedeGestionarCostos = $this->usuarioPuedeGestionarCostos();
 
         $rules = [
@@ -338,6 +390,42 @@ class ProductoController extends Controller
         $producto->save();
 
         return redirect()->route('inventario.index');
+    }
+
+    private function obtenerSucursalYEstado(): array
+    {
+        $sucursalId = SucursalService::getSucursalActiva();
+
+        if (!$sucursalId) {
+            return [null, null, false, null];
+        }
+
+        $sucursal = Sucursales::withTrashed()->with(['empresa' => function ($query) {
+            $query->withTrashed();
+        }])->find($sucursalId);
+
+        if (!$sucursal) {
+            return [$sucursalId, null, false, null];
+        }
+
+        $empresa = $sucursal->empresa;
+        $ventasBloqueadas = $empresa?->ventas_bloqueadas ?? false;
+        $motivoBloqueo = $ventasBloqueadas
+            ? ($empresa->motivo_bloqueo ?? 'Ventas bloqueadas por falta de pago.')
+            : null;
+
+        return [$sucursalId, $sucursal, $ventasBloqueadas, $motivoBloqueo];
+    }
+
+    private function asegurarAccesoInventario(bool $ventasBloqueadas, ?string $motivoBloqueo): void
+    {
+        $usuario = Auth::user();
+
+        if ($ventasBloqueadas && $usuario && $usuario->tipo !== 'superAdmin') {
+            throw ValidationException::withMessages([
+                'bloqueo' => $motivoBloqueo ?? 'Ventas bloqueadas por falta de pago.',
+            ]);
+        }
     }
 
     private function usuarioPuedeGestionarCostos(): bool

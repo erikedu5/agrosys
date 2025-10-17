@@ -9,6 +9,10 @@ const props = defineProps({
         type: Array,
         default: []
     },
+    isSuperAdmin: {
+        type: Boolean,
+        default: false
+    },
     showDeleted: {
         type: Boolean,
         default: false
@@ -104,7 +108,7 @@ const restaurar = (id) => {
                             <div class="text-gray-500">Campos de precio visibles</div>
                             <div>{{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}</div>
                         </div>
-                        <div>
+                        <div v-if="isSuperAdmin">
                             <div class="text-gray-500">Ventas bloqueadas</div>
                             <div>{{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}</div>
                         </div>
@@ -113,7 +117,7 @@ const restaurar = (id) => {
                             <div class="text-gray-500">Aviso</div>
                             <div>{{ empresa.aviso }}</div>
                         </div>
-                    <div v-if="empresa.ventas_bloqueadas">
+                    <div v-if="isSuperAdmin && empresa.ventas_bloqueadas">
                         <div class="text-gray-500">Motivo bloqueo</div>
                         <div>{{ empresa.motivo_bloqueo || 'Sin motivo registrado' }}</div>
                     </div>
@@ -154,8 +158,8 @@ const restaurar = (id) => {
                             <th>Email</th>
                             <th>RFC</th>
                             <th>Campos de precio visibles</th>
-                            <th>Ventas bloqueadas</th>
-                            <th>Motivo de bloqueo</th>
+                            <th v-if="isSuperAdmin">Ventas bloqueadas</th>
+                            <th v-if="isSuperAdmin">Motivo de bloqueo</th>
                             <th>Aviso</th>
                             <th>Acciones</th>
                         </tr>
@@ -171,10 +175,10 @@ const restaurar = (id) => {
                             <td class="px-4 py-2">
                                 {{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}
                             </td>
-                            <td class="px-4 py-2">
+                            <td v-if="isSuperAdmin" class="px-4 py-2">
                                 {{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}
                             </td>
-                            <td class="px-4 py-2">
+                            <td v-if="isSuperAdmin" class="px-4 py-2">
                                 {{ empresa.motivo_bloqueo ?? 'Sin motivo registrado' }}
                             </td>
                             <td class="px-4 py-2"> {{ empresa.aviso }} </td>

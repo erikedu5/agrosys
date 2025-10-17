@@ -5,15 +5,24 @@ import { router, Link, useForm, usePage } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
 import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore } from '@mdi/js';
+import { notify } from '@/utils/notify';
 
 const props = defineProps({
     productos: {
         type: Object,
-        default: {}
+        default: () => ({ data: [], links: [] })
     },
     auth: {
         type: Object,
         default: {}
+    },
+    ventasBloqueadas: {
+        type: Boolean,
+        default: false
+    },
+    motivoBloqueo: {
+        type: String,
+        default: null
     }
 });
 
@@ -34,21 +43,43 @@ const puedeGestionarCostos = computed(() => {
     return tipoUsuario === 'adminEmpresa' || tipoUsuario === 'superAdmin' || configMostrar;
 });
 
+const errors = computed(() => page.props?.errors ?? {});
+const mensajeBloqueo = computed(() => props.motivoBloqueo || errors.value.bloqueo || 'Ventas bloqueadas por falta de pago.');
+const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || Boolean(errors.value.bloqueo));
+
+watch(bloqueoActivo, (value) => {
+    if (value) {
+        notify(mensajeBloqueo.value, 'error');
+    }
+}, { immediate: true });
+
 watch(q, (value) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     router.get(route('inventario.index', { q: value }), {}, { preserveState: true });
 });
 
 const agregarInventario = (id) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     useForm({}).get(route('inventario.show', id));
 }
 
 const resetInventario = (id) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     if (confirm('¿Seguro que deseas resetear el inventario a cero?')) {
         useForm({}).post(route('inventario.reset', id));
     }
 }
 
 const openPriceModal = (producto) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     selectedProduct.value = producto;
     showPriceModal.value = true;
 };
@@ -84,7 +115,7 @@ const handlePriceUpdated = (payload) => {
                 Inventario
             </h2>
             <br>
-            <div class="flex justify-between">
+            <div v-if="!bloqueoActivo" class="flex justify-between">
                 <input type="text" class="form-input rounded-md shadow-sm w-full" v-model="q"
                     placeholder="Buscar Producto...">
 
@@ -92,7 +123,13 @@ const handlePriceUpdated = (payload) => {
         </template>
 
         <hr class="my-6">
-        <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div v-if="bloqueoActivo" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <div class="rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
+                <p class="font-semibold">Inventario bloqueado</p>
+                <p class="mt-1 text-sm">{{ mensajeBloqueo }}</p>
+            </div>
+        </div>
+        <div v-if="!bloqueoActivo" class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <Link :href="route('inventario.create')"
                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
@@ -101,7 +138,7 @@ const handlePriceUpdated = (payload) => {
             Nuevo producto +
             </Link>
         </div>
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div v-if="!bloqueoActivo" class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <!-- Vista en tarjetas -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                 <div v-for="producto in productos.data" :key="producto.id"
