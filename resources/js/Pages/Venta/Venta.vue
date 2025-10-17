@@ -47,7 +47,7 @@ const props = defineProps({
 
 const bloqueoManual = ref(false);
 const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || bloqueoManual.value);
-const mensajeBloqueo = computed(() => props.motivoBloqueo || 'Ventas bloqueadas por falta de pago.');
+const mensajeBloqueo = computed(() => props.motivoBloqueo || 'VEsta sección está bloqueada, Contacte a su administrador.');
 
 watch(bloqueoActivo, (value) => {
     if (value) {

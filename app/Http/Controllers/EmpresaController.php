@@ -78,7 +78,7 @@ class EmpresaController extends Controller
             $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
             $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
             $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
-                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Esta sección está bloqueada, Contacte a su administrador.')
                 : null;
         } else {
             $empresa->ventas_bloqueadas = false;
@@ -136,7 +136,7 @@ class EmpresaController extends Controller
             $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
             $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
             $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
-                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+                ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Esta sección está bloqueada, Contacte a su administrador.')
                 : null;
         }
         if (Auth::user()->tipo === 'superAdmin') {

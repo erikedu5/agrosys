@@ -126,7 +126,7 @@ const props = defineProps({
                                         class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
                                         v-model="form.ventas_bloqueadas">
                                     <span class="ml-2 text-sm text-gray-700">
-                                        Bloquear ventas por falta de pago
+                                        Esta sección está bloqueada, Contacte a su administrador
                                     </span>
                                 </label>
                                 <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />

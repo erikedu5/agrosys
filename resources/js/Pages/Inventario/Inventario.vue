@@ -44,7 +44,7 @@ const puedeGestionarCostos = computed(() => {
 });
 
 const errors = computed(() => page.props?.errors ?? {});
-const mensajeBloqueo = computed(() => props.motivoBloqueo || errors.value.bloqueo || 'Ventas bloqueadas por falta de pago.');
+const mensajeBloqueo = computed(() => props.motivoBloqueo || errors.value.bloqueo || 'Esta sección está bloqueada, Contacte a su administrador.');
 const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || Boolean(errors.value.bloqueo));
 
 watch(bloqueoActivo, (value) => {

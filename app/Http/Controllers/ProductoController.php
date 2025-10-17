@@ -411,7 +411,7 @@ class ProductoController extends Controller
         $empresa = $sucursal->empresa;
         $ventasBloqueadas = $empresa?->ventas_bloqueadas ?? false;
         $motivoBloqueo = $ventasBloqueadas
-            ? ($empresa->motivo_bloqueo ?? 'Ventas bloqueadas por falta de pago.')
+            ? ($empresa->motivo_bloqueo ?? 'Esta sección está bloqueada, Contacte a su administrador.')
             : null;
 
         return [$sucursalId, $sucursal, $ventasBloqueadas, $motivoBloqueo];
@@ -423,7 +423,7 @@ class ProductoController extends Controller
 
         if ($ventasBloqueadas && $usuario && $usuario->tipo !== 'superAdmin') {
             throw ValidationException::withMessages([
-                'bloqueo' => $motivoBloqueo ?? 'Ventas bloqueadas por falta de pago.',
+                'bloqueo' => $motivoBloqueo ?? 'Esta sección está bloqueada, Contacte a su administrador.',
             ]);
         }
     }
