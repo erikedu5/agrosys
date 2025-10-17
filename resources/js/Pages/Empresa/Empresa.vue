@@ -104,11 +104,19 @@ const restaurar = (id) => {
                             <div class="text-gray-500">Campos de precio visibles</div>
                             <div>{{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}</div>
                         </div>
+                        <div>
+                            <div class="text-gray-500">Ventas bloqueadas</div>
+                            <div>{{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}</div>
+                        </div>
                     </div>
                     <div>
                             <div class="text-gray-500">Aviso</div>
                             <div>{{ empresa.aviso }}</div>
                         </div>
+                    <div v-if="empresa.ventas_bloqueadas">
+                        <div class="text-gray-500">Motivo bloqueo</div>
+                        <div>{{ empresa.motivo_bloqueo || 'Sin motivo registrado' }}</div>
+                    </div>
                     <div class="flex justify-end mt-3">
                         <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">
                             <Link :href="route('empresa.edit', empresa.id)"
@@ -146,6 +154,8 @@ const restaurar = (id) => {
                             <th>Email</th>
                             <th>RFC</th>
                             <th>Campos de precio visibles</th>
+                            <th>Ventas bloqueadas</th>
+                            <th>Motivo de bloqueo</th>
                             <th>Aviso</th>
                             <th>Acciones</th>
                         </tr>
@@ -160,6 +170,12 @@ const restaurar = (id) => {
                             <td class="px-4 py-2"> {{ empresa.rfc }} </td>
                             <td class="px-4 py-2">
                                 {{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ empresa.motivo_bloqueo ?? 'Sin motivo registrado' }}
                             </td>
                             <td class="px-4 py-2"> {{ empresa.aviso }} </td>
                             <td class="px-4 py-2">

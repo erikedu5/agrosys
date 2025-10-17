@@ -24,6 +24,12 @@ const props = defineProps({
         mostrar_campos_precio: props.empresa !== undefined
             ? Boolean(props.empresa.mostrar_campos_precio)
             : true,
+        ventas_bloqueadas: props.empresa !== undefined
+            ? Boolean(props.empresa.ventas_bloqueadas)
+            : false,
+        motivo_bloqueo: props.empresa !== undefined && props.empresa.motivo_bloqueo
+            ? props.empresa.motivo_bloqueo
+            : '',
     });
 
     const submit = () => {
@@ -108,6 +114,32 @@ const props = defineProps({
                                     Mostrar precio de compra y porcentaje de ganancia en productos
                                 </span>
                             </label>
+                            <br>
+                            <br>
+                            <label class="inline-flex items-center">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                    v-model="form.ventas_bloqueadas">
+                                <span class="ml-2 text-sm text-gray-700">
+                                    Bloquear ventas por falta de pago
+                                </span>
+                            </label>
+                            <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />
+                            <br>
+                            <br>
+                            <div>
+                                <label class="block font-medium text-sm text-gray-700">
+                                    Motivo del bloqueo
+                                </label>
+                                <textarea
+                                    class="form-input w-full rounded-md shadow-sm"
+                                    :class="{ 'bg-gray-100 cursor-not-allowed': !form.ventas_bloqueadas }"
+                                    rows="3"
+                                    v-model="form.motivo_bloqueo"
+                                    :disabled="!form.ventas_bloqueadas"
+                                ></textarea>
+                                <InputError class="mt-2" :message="form.errors.motivo_bloqueo" />
+                            </div>
                             <br>
                             <br>
 

@@ -5,10 +5,14 @@ import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
 const props = defineProps({
     usuarios: {
-        type: Array,
-        default: []
+        type: Object,
+        default: () => ({ data: [], links: [] })
     },
     showDeleted: {
+        type: Boolean,
+        default: false
+    },
+    isSuperAdmin: {
         type: Boolean,
         default: false
     }
@@ -86,7 +90,15 @@ const restaurar = (id) => {
                         </div>
                         <div>
                             <div class="text-gray-500">Tipo de usuario</div>
-                            <div>{{ usuario.updated_at }}</div>
+                            <div class="capitalize">{{ usuario.tipo }}</div>
+                        </div>
+                        <div v-if="isSuperAdmin">
+                            <div class="text-gray-500">Empresa</div>
+                            <div>{{ usuario.empresa ? usuario.empresa.nombre : 'Sin empresa asignada' }}</div>
+                        </div>
+                        <div v-else>
+                            <div class="text-gray-500">Sucursal</div>
+                            <div>{{ usuario.sucursal ? usuario.sucursal.nombre : 'Sin sucursal asignada' }}</div>
                         </div>
                     </div>
                     <div class="flex justify-end mt-3">
@@ -122,6 +134,7 @@ const restaurar = (id) => {
                             <th>Nombre del usuario</th>
                             <th>Email</th>
                             <th>Tipo de usuario</th>
+                            <th>{{ isSuperAdmin ? 'Empresa' : 'Sucursal' }}</th>
                             <th>Ultima fecha de actualización</th>
                             <th>Acciones</th>
                         </tr>
@@ -131,7 +144,15 @@ const restaurar = (id) => {
                             <td class="whitespace-nowrap"> {{ usuario.id }}</td>
                             <td class="font-medium text-gray-900"> {{ usuario.name }} </td>
                             <td class="whitespace-nowrap"> {{ usuario.email }} </td>
-                            <td class="whitespace-nowrap"> {{ usuario.tipo }} </td>
+                            <td class="whitespace-nowrap capitalize"> {{ usuario.tipo }} </td>
+                            <td class="whitespace-nowrap">
+                                <template v-if="isSuperAdmin">
+                                    {{ usuario.empresa ? usuario.empresa.nombre : 'Sin empresa asignada' }}
+                                </template>
+                                <template v-else>
+                                    {{ usuario.sucursal ? usuario.sucursal.nombre : 'Sin sucursal asignada' }}
+                                </template>
+                            </td>
                             <td class="whitespace-nowrap"> {{ usuario.updated_at }} </td>
                             <td class="whitespace-nowrap">
                                 <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">

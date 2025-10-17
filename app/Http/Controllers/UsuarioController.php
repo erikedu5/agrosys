@@ -19,7 +19,15 @@ class UsuarioController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::where('name', 'LIKE', "%$request->q%");
+        $query = User::with([
+            'sucursal' => function ($relation) {
+                $relation->withTrashed()->select('id', 'nombre');
+            },
+            'empresa' => function ($relation) {
+                $relation->withTrashed()->select('id', 'nombre');
+            }
+        ])
+            ->where('name', 'LIKE', "%$request->q%");
 
         if (Auth::user()->tipo !== 'superAdmin') {
             $sucursal = SucursalService::getSucursalActiva();
@@ -36,6 +44,7 @@ class UsuarioController extends Controller
         return Inertia::render('Usuario/Usuario', [
             'usuarios' => $usuarios,
             'showDeleted' => $request->boolean('deleted'),
+            'isSuperAdmin' => Auth::user()->tipo === 'superAdmin',
         ]);
     }
 

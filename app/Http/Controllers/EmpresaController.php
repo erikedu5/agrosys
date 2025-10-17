@@ -55,9 +55,12 @@ class EmpresaController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'mostrar_campos_precio' => 'nullable|boolean',
+            'ventas_bloqueadas' => 'nullable|boolean',
+            'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
+            'motivo_bloqueo.max' => 'El motivo de bloqueo debe tener máximo 500 caracteres.',
         ]);
 
         $empresa = new Empresa();
@@ -68,6 +71,11 @@ class EmpresaController extends Controller
         $empresa->rfc = $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
+        $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
+        $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
+        $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
+            ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+            : null;
 
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->numero_sucursales = $request->numero_sucursales ?? 1;
@@ -99,9 +107,12 @@ class EmpresaController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'mostrar_campos_precio' => 'nullable|boolean',
+            'ventas_bloqueadas' => 'nullable|boolean',
+            'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
+            'motivo_bloqueo.max' => 'El motivo de bloqueo debe tener máximo 500 caracteres.',
         ]);
 
         $empresa = Empresa::find($request->id);
@@ -112,6 +123,11 @@ class EmpresaController extends Controller
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
+        $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
+        $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
+        $empresa->motivo_bloqueo = $empresa->ventas_bloqueadas
+            ? ($motivoBloqueo !== '' ? $motivoBloqueo : 'Ventas bloqueadas por falta de pago.')
+            : null;
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->numero_sucursales = $request->numero_sucursales;
         }

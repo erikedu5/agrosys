@@ -17,8 +17,7 @@ use App\Helpers\DatabaseHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class VentaController extends Controller
 {
@@ -33,13 +32,22 @@ class VentaController extends Controller
             return redirect()->route('sucursal.selection');
         }
 
+        $sucursalInfo = Sucursales::with('empresa')->find($sucursal);
+
+        if (!$sucursalInfo) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $empresaActiva = $sucursalInfo->empresa;
+        $ventasBloqueadas = $empresaActiva?->ventas_bloqueadas ?? false;
+        $motivoBloqueo = $ventasBloqueadas
+            ? ($empresaActiva->motivo_bloqueo ?? 'Ventas bloqueadas por falta de pago.')
+            : null;
+
         $productosSucursalFiltrado = [];
         if ($request->b != null) {
-            $sucursales = Sucursales::where('id_empresa', function ($query) use ($sucursal) {
-                $query->select('id_empresa')
-                    ->from('sucursales')
-                    ->where('id', $sucursal);
-            })->where('id', '!=', $sucursal)->get()
+            $sucursales = Sucursales::where('id_empresa', $sucursalInfo->id_empresa)
+                ->where('id', '!=', $sucursal)
                 ->pluck('id')
                 ->toArray();
 
@@ -92,7 +100,6 @@ class VentaController extends Controller
             ->get();
 
         // Obtener la sucursal actual para acceder al cliente público por defecto
-        $sucursalInfo = Sucursales::find($sucursal);
         $clientePublicoId = $sucursalInfo ? $sucursalInfo->id_cliente_publico : null;
 
         return Inertia::render('Venta/Venta', [
@@ -100,7 +107,9 @@ class VentaController extends Controller
             'clientes' => $clientes,
             'productosSucursal' => $productosSucursalFiltrado,
             'clientePublicoDefault' => $clientePublicoId,
-            'tipoVentaDefault' => 'contado'
+            'tipoVentaDefault' => 'contado',
+            'ventasBloqueadas' => $ventasBloqueadas,
+            'motivoBloqueo' => $motivoBloqueo,
         ]);
     }
 
@@ -110,6 +119,21 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $sucursal = SucursalService::getSucursalActiva();
+
+        $sucursalInfo = Sucursales::with('empresa')->find($sucursal);
+
+        if (!$sucursalInfo) {
+            throw ValidationException::withMessages([
+                'bloqueo' => 'No se encontró la sucursal activa. Intente seleccionar nuevamente la sucursal.',
+            ]);
+        }
+
+        $empresaActiva = $sucursalInfo->empresa;
+        if ($empresaActiva && $empresaActiva->ventas_bloqueadas) {
+            throw ValidationException::withMessages([
+                'bloqueo' => $empresaActiva->motivo_bloqueo ?? 'Ventas bloqueadas por falta de pago.',
+            ]);
+        }
 
         $validated = $request->validate(
             [
@@ -160,7 +184,7 @@ class VentaController extends Controller
             $altaInventario->cantidad_nueva = $stockStatus->cantidad_nueva - $producto_venta['cantidad'];
             $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto_venta['producto']['id'];
-            $altaInventario->id_sucursal = $sucursal;
+            $altaInventario->id_sucursal = $sucursalInfo->id;
             $altaInventario->save();
         }
 

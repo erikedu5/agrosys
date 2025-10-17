@@ -35,7 +35,25 @@ const props = defineProps({
         type: String,
         default: 'contado'
     },
+    ventasBloqueadas: {
+        type: Boolean,
+        default: false
+    },
+    motivoBloqueo: {
+        type: String,
+        default: null
+    },
 });
+
+const bloqueoManual = ref(false);
+const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || bloqueoManual.value);
+const mensajeBloqueo = computed(() => props.motivoBloqueo || 'Ventas bloqueadas por falta de pago.');
+
+watch(bloqueoActivo, (value) => {
+    if (value) {
+        notify(mensajeBloqueo.value, 'error');
+    }
+}, { immediate: true });
 
 const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + p.tamano })));
 
@@ -47,6 +65,14 @@ let form = useForm({
     producto: {},
     cliente: {},
     abono: 0
+});
+
+const mensajeBloqueoUI = computed(() => {
+    if (bloqueoActivo.value) {
+        return form.errors.bloqueo || mensajeBloqueo.value;
+    }
+
+    return form.errors.bloqueo || null;
 });
 
 const formVenta = useForm({
@@ -81,6 +107,7 @@ watch(priceSearchQuery, (newQuery) => {
 });
 
 const canAddProducto = computed(() =>
+    !bloqueoActivo.value &&
     form.cliente && form.cliente.id &&
     form.producto && form.producto.id
 );
@@ -104,6 +131,9 @@ const recalculateTotal = () => {
 };
 
 const agregarVenta = () => {
+    if (bloqueoActivo.value) {
+        return false;
+    }
     if (!canAddProducto.value) {
         return false;
     }
@@ -174,6 +204,9 @@ const printTicketSilently = (url, callback = () => { }) => {
 };
 
 const finalizeSale = () => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     if (productoVenta.length !== 0) {
         form.post(route('venta.store',
             {
@@ -192,6 +225,9 @@ const finalizeSale = () => {
                     });
                 },
                 onError: (errors) => {
+                    if (errors?.bloqueo) {
+                        bloqueoManual.value = true;
+                    }
                     console.error(errors);
                 }
             });
@@ -240,6 +276,9 @@ const isModalOpen = ref(false);
 
 // Función para manejar las teclas F2 y F3
 const handleKeydown = (event) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     if (event.key === "F2") {
         event.preventDefault(); // Evita acciones predeterminadas del navegador
         isModalOpen.value = true;
@@ -313,6 +352,9 @@ const closePriceSearchModal = () => {
 // Función para buscar precios de productos con debounce
 let searchTimeout = null;
 const searchProductPrice = async () => {
+    if (bloqueoActivo.value) {
+        return;
+    }
     if (!priceSearchQuery.value.trim()) {
         priceSearchResults.value = [];
         return;
@@ -389,8 +431,14 @@ const searchProductPrice = async () => {
 
         <hr class="my-6">
 
+        <div v-if="mensajeBloqueoUI" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
+                <p class="font-semibold">Ventas bloqueadas</p>
+                <p class="mt-1 text-sm">{{ mensajeBloqueoUI }}</p>
+            </div>
+        </div>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div v-if="!bloqueoActivo" class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grow">
                 <div class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
                     <div style=" text-align: left;">
@@ -516,7 +564,7 @@ const searchProductPrice = async () => {
         </div>
 
         <!-- Modal -->
-        <div v-if="isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0">
+        <div v-if="!bloqueoActivo && isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0">
             <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-lg overflow-y-auto max-h-full">
                 <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
 
@@ -563,7 +611,7 @@ const searchProductPrice = async () => {
         </div>
 
         <!-- Modal de Búsqueda de Precio (F3) -->
-        <div v-if="isPriceSearchModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0 z-50">
+        <div v-if="!bloqueoActivo && isPriceSearchModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0 z-50">
             <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-4xl max-w-4xl overflow-y-auto max-h-full">
                 <h2 class="text-xl font-semibold mb-4 text-gray-800">Buscar Precio y Stock</h2>
 
