@@ -396,6 +396,116 @@ class ReporteController extends Controller
         return $pdf->stream('ganancias_diarias.pdf');
     }
 
+    public function clientesAdeudo(Request $request)
+    {
+        $usuario = Auth::user();
+        $sucursalActiva = Sucursales::find(SucursalService::getSucursalActiva());
+        $sucursales = collect();
+        $sucursalSeleccionada = null;
+        $sucursalSolicitud = $request->filled('id_sucursal') ? (int) $request->id_sucursal : null;
+
+        if ($usuario->tipo === 'admin' && $sucursalActiva && $sucursalActiva->es_matriz) {
+            if ($sucursalSolicitud) {
+                $sucursal = Sucursales::where('id', $sucursalSolicitud)
+                    ->where('id_empresa', $sucursalActiva->id_empresa)
+                    ->first();
+                if (!$sucursal) {
+                    abort(403, 'No tiene permisos para consultar la sucursal solicitada.');
+                }
+                $sucursales = collect([$sucursal]);
+                $sucursalSeleccionada = $sucursal;
+            } else {
+                $sucursales = Sucursales::where('id_empresa', $sucursalActiva->id_empresa)->get();
+            }
+        } elseif ($usuario->tipo === 'adminEmpresa') {
+            $sucursalesEmpresa = $usuario->sucursalesEmpresa();
+            if ($sucursalSolicitud) {
+                $sucursal = $sucursalesEmpresa->firstWhere('id', $sucursalSolicitud);
+                if (!$sucursal) {
+                    abort(403, 'No tiene permisos para consultar la sucursal solicitada.');
+                }
+                $sucursales = collect([$sucursal]);
+                $sucursalSeleccionada = $sucursal;
+            } else {
+                $sucursales = $sucursalesEmpresa;
+            }
+        } elseif ($usuario->tipo === 'superAdmin') {
+            if ($sucursalSolicitud) {
+                $sucursal = Sucursales::find($sucursalSolicitud);
+                if (!$sucursal) {
+                    abort(404, 'La sucursal seleccionada no existe.');
+                }
+                $sucursales = collect([$sucursal]);
+                $sucursalSeleccionada = $sucursal;
+            } else {
+                $sucursales = Sucursales::all();
+            }
+        } else {
+            if (!$sucursalActiva) {
+                abort(404, 'No se encontró la sucursal activa para el usuario.');
+            }
+            $sucursales = collect([$sucursalActiva]);
+            $sucursalSeleccionada = $sucursalActiva;
+        }
+
+        if ($sucursales->isEmpty()) {
+            abort(404, 'No se encontraron sucursales para generar el reporte.');
+        }
+
+        $datos = $sucursales->map(function (Sucursales $sucursal) {
+            $clientes = Clientes::where('id_sucursal', $sucursal->id)
+                ->where('balance', '>', 0)
+                ->where('activo', true)
+                ->orderBy('nombre')
+                ->get();
+
+            return [
+                'sucursal' => $sucursal,
+                'clientes' => $clientes,
+                'totalAdeudo' => (float) $clientes->sum('balance'),
+                'totalAbonos' => (float) $clientes->sum('abono_total'),
+                'totalAdeudoOriginal' => (float) $clientes->sum('adeudo_total'),
+                'totalClientes' => $clientes->count(),
+            ];
+        })->values();
+
+        $hayClientesConAdeudo = $datos->contains(function ($item) {
+            return $item['clientes']->isNotEmpty();
+        });
+
+        $totalGeneralAdeudo = (float) $datos->sum('totalAdeudo');
+        $totalGeneralAdeudoOriginal = (float) $datos->sum('totalAdeudoOriginal');
+        $totalGeneralAbonos = (float) $datos->sum('totalAbonos');
+        $totalGeneralClientes = (int) $datos->sum('totalClientes');
+
+        $empresa = null;
+        $empresasIds = $datos->pluck('sucursal.id_empresa')->filter()->unique();
+        if ($empresasIds->count() === 1) {
+            $empresa = Empresa::find($empresasIds->first());
+        }
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->getDomPDF()->set_option('enable_php', true);
+        $pdf->loadView(
+            'reportes/clientes_adeudo',
+            [
+                'empresa' => $empresa,
+                'datos' => $datos,
+                'totalGeneralAdeudo' => $totalGeneralAdeudo,
+                'totalGeneralAdeudoOriginal' => $totalGeneralAdeudoOriginal,
+                'totalGeneralAbonos' => $totalGeneralAbonos,
+                'totalGeneralClientes' => $totalGeneralClientes,
+                'generadoEn' => now()->format('d/m/Y H:i:s'),
+                'usuario' => $usuario,
+                'sucursalSeleccionada' => $sucursalSeleccionada,
+                'hayClientesConAdeudo' => $hayClientesConAdeudo,
+            ]
+        );
+        $pdf->setOption('javascript-delay', 3000);
+
+        return $pdf->stream('clientes_adeudo.pdf');
+    }
+
     public function ventaPorProductoMarca(Request $request)
     {
         $request->validate([

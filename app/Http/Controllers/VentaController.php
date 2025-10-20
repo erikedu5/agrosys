@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\FacturapiException;
 use App\Models\Producto;
 use App\Models\Clientes;
 use App\Models\Empresa;
@@ -12,10 +13,12 @@ use App\Models\AltaInventario;
 use App\Models\Factura;
 use App\Models\Sucursales;
 use App\Models\User;
+use App\Services\FacturapiService;
 use App\Services\SucursalService;
 use App\Helpers\DatabaseHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
 
@@ -134,6 +137,7 @@ class VentaController extends Controller
                 'bloqueo' => $empresaActiva->motivo_bloqueo ?? 'Esta sección está bloqueada, Contacte a su administrador.',
             ]);
         }
+        $facturacionAutomaticaEmpresa = (bool) ($empresaActiva?->enviar_facturas_automaticas);
 
         $validated = $request->validate(
             [
@@ -220,7 +224,11 @@ class VentaController extends Controller
         $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
         $cliente->save();
 
-        if ($cliente->requiereFactura) {
+        if ($facturacionAutomaticaEmpresa && $cliente->requiereFactura) {
+            Log::info('Iniciando proceso de facturación automática para venta', [
+                'venta_id' => $venta->id,
+                'cliente_id' => $cliente->id,
+            ]);
             $this->agregarFacturacion($venta, $cliente);
         }
 
@@ -406,12 +414,80 @@ class VentaController extends Controller
         $cliente->save();
     }
 
-    private function agregarFacturacion($venta, $cliente)
+    private function agregarFacturacion(Venta $venta, Clientes $cliente): void
     {
-        Factura::Create([
+        $sucursal = Sucursales::with('empresa')->find($venta->id_sucursal);
+        $empresa = $sucursal?->empresa;
+
+        if (!$empresa || !$empresa->enviar_facturas_automaticas) {
+            Log::info('Facturación automática deshabilitada para la empresa', [
+                'venta_id' => $venta->id,
+                'cliente_id' => $cliente->id,
+                'empresa_id' => $empresa?->id,
+            ]);
+            return;
+        }
+
+        $facturaData = [
             'facturaCompleta' => false,
             'id_venta' => $venta->id,
-            'id_cliente' => $cliente->id
+            'id_cliente' => $cliente->id,
+        ];
+
+        $service = FacturapiService::make($empresa);
+
+        Log::info('Verificando servicio de Facturapi para facturación automática', [
+            'venta_id' => $venta->id,
+            'cliente_id' => $cliente->id,
+            'empresa_id' => $empresa?->id,
+            'service_exists' => $service,
+        ]);
+
+        if (!$service) {
+            $facturaData['factura_status'] = 'sin_configuracion';
+            $facturaData['factura_error'] = 'No hay llave de Facturapi configurada para la empresa.';
+            Factura::create($facturaData);
+            return;
+        }
+
+        try {
+            $invoice = $service->createInvoice($venta, $cliente);
+            $status = $invoice['status'] ?? null;
+
+            $facturaData = array_merge($facturaData, [
+                'facturapi_invoice_id' => $invoice['id'] ?? null,
+                'facturapi_uuid' => $invoice['uuid'] ?? null,
+                'facturapi_pdf_url' => $invoice['pdf_url'] ?? null,
+                'facturapi_xml_url' => $invoice['xml_url'] ?? null,
+                'factura_status' => $status,
+                'facturaCompleta' => in_array($status, ['completed', 'issued', 'valid'], true),
+            ]);
+            log::info('Factura creada exitosamente en Facturapi', [
+                'factura_data' => $facturaData,
+                'venta' => $venta->id,
+                'cliente' => $cliente->id,
+                'empresa' => $empresa?->id,
+            ]);
+        } catch (FacturapiException $exception) {
+            $facturaData['factura_status'] = 'error';
+            $facturaData['factura_error'] = $exception->getMessage();
+            Log::error('Error en la facturación automática', [
+                'venta' => $venta->id,
+                'cliente' => $cliente->id,
+                'empresa' => $empresa?->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        $factura = Factura::create($facturaData);
+
+        Log::info('Factura registrada en sistema', [
+            'factura_id' => $factura->id,
+            'venta' => $venta->id,
+            'cliente' => $cliente->id,
+            'status' => $factura->factura_status,
+            'completa' => $factura->facturaCompleta,
+            'facturapi_invoice_id' => $factura->facturapi_invoice_id,
         ]);
     }
 

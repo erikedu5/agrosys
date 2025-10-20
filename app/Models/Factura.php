@@ -13,6 +13,12 @@ class Factura extends Model
         'facturaCompleta',
         'id_venta',
         'id_cliente',
+        'facturapi_invoice_id',
+        'facturapi_uuid',
+        'facturapi_pdf_url',
+        'facturapi_xml_url',
+        'factura_status',
+        'factura_error',
     ];
 
     public function venta()

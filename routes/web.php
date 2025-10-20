@@ -141,6 +141,10 @@ Route::get('/reporte/inventario', [App\Http\Controllers\ReporteController::class
     ->name("reporte.inventario")
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
 
+Route::get('/reporte/clientes-adeudo', [App\Http\Controllers\ReporteController::class, 'clientesAdeudo'])
+    ->name('reporte.clientesAdeudo')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
+
 Route::get('/reporte/ventaPorProductoMarca', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarca'])
     ->name("reporte.ventaPorProductoMarca")
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);

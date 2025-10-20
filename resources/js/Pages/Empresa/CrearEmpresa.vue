@@ -28,6 +28,9 @@ const props = defineProps({
         mostrar_campos_precio: props.empresa !== undefined
             ? Boolean(props.empresa.mostrar_campos_precio)
             : true,
+        enviar_facturas_automaticas: props.empresa !== undefined
+            ? Boolean(props.empresa.enviar_facturas_automaticas)
+            : false,
         ventas_bloqueadas: props.empresa !== undefined
             ? Boolean(props.empresa.ventas_bloqueadas)
             : false,
@@ -120,13 +123,29 @@ const props = defineProps({
                             </label>
                             <br>
                             <br>
+                            <div v-if="isSuperAdmin || all">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+                                        v-model="form.enviar_facturas_automaticas">
+                                    <span class="ml-2 text-sm text-gray-700">
+                                        Enviar facturas automáticamente al generar ventas
+                                    </span>
+                                </label>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Al activar esta opción se intentará timbrar y enviar el CFDI en cada venta con cliente que requiera factura.
+                                </p>
+                                <br>
+                                <br>
+                            </div>
+
                             <div v-if="isSuperAdmin">
                                 <label class="inline-flex items-center">
                                     <input type="checkbox"
                                         class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
                                         v-model="form.ventas_bloqueadas">
                                     <span class="ml-2 text-sm text-gray-700">
-                                        Esta sección está bloqueada, Contacte a su administrador
+                                        Bloqueo de funcionalidades de venta e inventario
                                     </span>
                                 </label>
                                 <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />

@@ -133,6 +133,17 @@
         location.replace('/reporte');
     }
 
+    const generarReporteClientesAdeudo = () => {
+        errors.value = [];
+        let query = '';
+        if (formReporte.id_sucursal) {
+            query = '?id_sucursal=' + formReporte.id_sucursal;
+        }
+        const popup = window.open('_blank');
+        popup.location = '/reporte/clientes-adeudo' + query;
+        location.replace('/reporte');
+    }
+
 </script>
 
 <template>
@@ -251,6 +262,26 @@
                             Reporte de inventario</button>
                     </div>
 
+                    <hr class="my-6">
+
+                    <div class="md-col-span-2 mt-5 md:mt-0"
+                        v-if="$page.props.auth.user.tipo == 'vendedor' ||
+                            $page.props.auth.user.tipo == 'admin' ||
+                            $page.props.auth.user.tipo == 'superAdmin' ||
+                            $page.props.auth.user.tipo == 'adminEmpresa'">
+                        <label><strong>Reporte de clientes con adeudo</strong></label>
+                        <br>
+                        <br>
+                        <p class="text-sm text-gray-600">Obtiene el listado de clientes con saldo pendiente agrupado por sucursal.</p>
+                        <br>
+                        <button @click="generarReporteClientesAdeudo()"
+                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                            Reporte de clientes con adeudo</button>
+                    </div>
+
                     <hr class="my-6" v-if="$page.props.auth.user.tipo == 'adminEmpresa' || $page.props.auth.user.tipo == 'superAdmin'">
 
                     <div class="md-col-span-2 mt-5 md:mt-0"
@@ -276,4 +307,3 @@
         </div>
     </AppLayout>
 </template>
-
