@@ -108,6 +108,10 @@ const restaurar = (id) => {
                             <div class="text-gray-500">Campos de precio visibles</div>
                             <div>{{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}</div>
                         </div>
+                        <div v-if="isSuperAdmin || all">
+                            <div class="text-gray-500">Facturación automática</div>
+                            <div>{{ empresa.enviar_facturas_automaticas ? 'Sí' : 'No' }}</div>
+                        </div>
                         <div v-if="isSuperAdmin">
                             <div class="text-gray-500">Ventas bloqueadas</div>
                             <div>{{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}</div>
@@ -158,6 +162,7 @@ const restaurar = (id) => {
                             <th>Email</th>
                             <th>RFC</th>
                             <th>Campos de precio visibles</th>
+                            <th v-if="isSuperAdmin || all">Facturación automática</th>
                             <th v-if="isSuperAdmin">Ventas bloqueadas</th>
                             <th v-if="isSuperAdmin">Motivo de bloqueo</th>
                             <th>Aviso</th>
@@ -174,6 +179,9 @@ const restaurar = (id) => {
                             <td class="px-4 py-2"> {{ empresa.rfc }} </td>
                             <td class="px-4 py-2">
                                 {{ empresa.mostrar_campos_precio ? 'Sí' : 'No' }}
+                            </td>
+                            <td v-if="isSuperAdmin || all" class="px-4 py-2">
+                                {{ empresa.enviar_facturas_automaticas ? 'Sí' : 'No' }}
                             </td>
                             <td v-if="isSuperAdmin" class="px-4 py-2">
                                 {{ empresa.ventas_bloqueadas ? 'Sí' : 'No' }}

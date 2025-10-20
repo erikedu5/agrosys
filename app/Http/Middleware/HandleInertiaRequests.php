@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
         $sucursalActiva = null;
         $empresaConfig = [
             'mostrar_campos_precio' => true,
+            'enviar_facturas_automaticas' => false,
         ];
 
         if ($user) {
@@ -88,6 +89,7 @@ class HandleInertiaRequests extends Middleware
 
             if ($empresa) {
                 $empresaConfig['mostrar_campos_precio'] = (bool) $empresa->mostrar_campos_precio;
+                $empresaConfig['enviar_facturas_automaticas'] = (bool) $empresa->enviar_facturas_automaticas;
             }
         }
 

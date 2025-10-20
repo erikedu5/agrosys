@@ -58,6 +58,7 @@ class EmpresaController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'mostrar_campos_precio' => 'nullable|boolean',
+            'enviar_facturas_automaticas' => 'nullable|boolean',
             'ventas_bloqueadas' => 'nullable|boolean',
             'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
@@ -74,6 +75,11 @@ class EmpresaController extends Controller
         $empresa->rfc = $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
+        if (in_array(Auth::user()->tipo, ['superAdmin', 'adminEmpresa'])) {
+            $empresa->enviar_facturas_automaticas = $request->boolean('enviar_facturas_automaticas', false);
+        } else {
+            $empresa->enviar_facturas_automaticas = false;
+        }
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
             $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));
@@ -116,6 +122,7 @@ class EmpresaController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'mostrar_campos_precio' => 'nullable|boolean',
+            'enviar_facturas_automaticas' => 'nullable|boolean',
             'ventas_bloqueadas' => 'nullable|boolean',
             'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
@@ -132,6 +139,9 @@ class EmpresaController extends Controller
         $empresa->rfc= $request->rfc;
         $empresa->aviso = $request->aviso;
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
+        if (in_array(Auth::user()->tipo, ['superAdmin', 'adminEmpresa'])) {
+            $empresa->enviar_facturas_automaticas = $request->boolean('enviar_facturas_automaticas', false);
+        }
         if (Auth::user()->tipo === 'superAdmin') {
             $empresa->ventas_bloqueadas = $request->boolean('ventas_bloqueadas', false);
             $motivoBloqueo = trim((string) $request->input('motivo_bloqueo', ''));

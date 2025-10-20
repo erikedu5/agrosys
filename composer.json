@@ -10,6 +10,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "darkaonline/l5-swagger": "^8.6",
         "doctrine/dbal": "^4.2",
+        "facturapi/facturapi-php": "^3.5",
         "inertiajs/inertia-laravel": "^1.0",
         "laravel/framework": "^11.0",
         "laravel/jetstream": "^5.0",

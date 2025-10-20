@@ -21,11 +21,16 @@ class Empresa extends Model
         'numero_sucursales',
         'mostrar_campos_precio',
         'ventas_bloqueadas',
+        'enviar_facturas_automaticas',
         'motivo_bloqueo',
+        'facturapi_api_key',
+        'facturapi_sandbox',
     ];
 
     protected $casts = [
         'mostrar_campos_precio' => 'boolean',
         'ventas_bloqueadas' => 'boolean',
+        'enviar_facturas_automaticas' => 'boolean',
+        'facturapi_sandbox' => 'boolean',
     ];
 }
