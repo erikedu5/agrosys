@@ -71,7 +71,7 @@ const features = [
         title: 'Facturación integrada',
         desc: 'Genera y administra facturas vinculadas a tus ventas.',
         icon: '🧾',
-        image: '/images/landing/facturacion.svg',
+        image: '/images/landing/facturacion.png',
         transition: 'fade-zoom',
     },
 ];
