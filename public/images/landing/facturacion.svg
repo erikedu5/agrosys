@@ -1,0 +1,16 @@
+<svg width="800" height="500" viewBox="0 0 800 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="500" rx="24" fill="#FFF7ED"/>
+  <rect x="40" y="40" width="720" height="420" rx="16" fill="white" stroke="#F97316" stroke-width="2"/>
+  <rect x="60" y="70" width="240" height="30" rx="6" fill="#FFEDD5"/>
+  <rect x="60" y="120" width="300" height="340" rx="10" fill="#FFF7ED" stroke="#FED7AA"/>
+  <rect x="80" y="140" width="260" height="14" rx="6" fill="#FED7AA"/>
+  <rect x="80" y="165" width="220" height="10" rx="6" fill="#FED7AA"/>
+  <rect x="80" y="195" width="260" height="14" rx="6" fill="#FED7AA"/>
+  <rect x="80" y="220" width="220" height="10" rx="6" fill="#FED7AA"/>
+  <rect x="400" y="120" width="340" height="160" rx="10" fill="#FFF1E6" stroke="#FDBA74"/>
+  <text x="420" y="185" font-family="Inter, Arial" font-size="56" fill="#C2410C">🧾</text>
+  <text x="490" y="190" font-family="Inter, Arial" font-size="24" fill="#C2410C">Facturación</text>
+  <rect x="400" y="300" width="340" height="160" rx="10" fill="#FFEDD5" stroke="#FDBA74"/>
+  <text x="430" y="370" font-family="Inter, Arial" font-size="28" fill="#EA580C">Total $ 5,320.40</text>
+</svg>
+
