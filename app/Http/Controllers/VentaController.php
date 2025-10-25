@@ -262,8 +262,8 @@ class VentaController extends Controller
         $cliente = Clientes::where('id', $venta->id_cliente)->first();
         $usuario = User::where('id', $venta->id_usuario)->first();
 
-        $sucursalUser = Sucursales::where('id', $sucursal)->first();
-        $empresa = Empresa::where('id', $sucursalUser->id_empresa)->first();
+        $sucursalActual = Sucursales::find($sucursal);
+        $empresa = $sucursalActual ? Empresa::find($sucursalActual->id_empresa) : null;
 
         $abonos = AbonoCuenta::where('id_cliente', $venta->id_cliente)
             ->where('id_sucursal', $sucursal)
@@ -271,14 +271,17 @@ class VentaController extends Controller
             ->get();
 
         // Elegir ancho por parámetro ?size=80|58 (mm); por sucursal por defecto (80 si no definido)
-        $sucursalPref = optional(Sucursales::find($sucursal))->ticket_width_mm ?? 80;
+        $sucursalPref = optional($sucursalActual)->ticket_width_mm ?? 80;
         $ticketWidthMm = (int) $request->query('size', $sucursalPref);
         $ticketWidthMm = in_array($ticketWidthMm, [58, 80]) ? $ticketWidthMm : 80;
         $widthPoints = $ticketWidthMm * 2.83465; // mm a puntos
 
+        $viewData = compact('venta', 'productos', 'cliente', 'empresa', 'abonos', 'usuario', 'ticketWidthMm');
+        $viewData['sucursal'] = $sucursalActual;
+
         $pdf = app('dompdf.wrapper');
         $pdf->getDomPDF()->set_option('enable_php', true);
-        $pdf->loadView('reportes/venta_ticket_80mm', compact('venta', 'productos', 'cliente', 'empresa', 'abonos', 'usuario', 'ticketWidthMm'));
+        $pdf->loadView('reportes/venta_ticket_80mm', $viewData);
         // Ancho según parámetro, alto largo para contenido
         $customPaper = [0, 0, $widthPoints, 2834.65];
         $pdf->setPaper($customPaper, 'portrait');
@@ -299,8 +302,8 @@ class VentaController extends Controller
         $cliente = Clientes::find($venta->id_cliente);
         $usuario = User::find($venta->id_usuario);
 
-        $sucursalUser = Sucursales::find($sucursal);
-        $empresa = $sucursalUser ? Empresa::find($sucursalUser->id_empresa) : null;
+        $sucursalActual = Sucursales::find($sucursal);
+        $empresa = $sucursalActual ? Empresa::find($sucursalActual->id_empresa) : null;
 
         $abonos = AbonoCuenta::where('id_cliente', $venta->id_cliente)
             ->where('id_sucursal', $sucursal)
@@ -308,11 +311,11 @@ class VentaController extends Controller
             ->get();
 
         // 58 o 80 mm
-        $sucursalPref = optional(Sucursales::find($sucursal))->ticket_width_mm ?? 80;
+        $sucursalPref = optional($sucursalActual)->ticket_width_mm ?? 80;
         $ticketWidthMm = (int) $request->query('size', $sucursalPref);
         $ticketWidthMm = in_array($ticketWidthMm, [58, 80]) ? $ticketWidthMm : 80;
 
-        return view('reportes.venta_ticket_80mm', compact(
+        $viewData = compact(
             'venta',
             'productos',
             'cliente',
@@ -320,7 +323,10 @@ class VentaController extends Controller
             'abonos',
             'usuario',
             'ticketWidthMm'
-        ));
+        );
+        $viewData['sucursal'] = $sucursalActual;
+
+        return view('reportes.venta_ticket_80mm', $viewData);
     }
 
 

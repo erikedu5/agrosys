@@ -70,7 +70,11 @@
 <body>
     <div class="center">
         <div class="bold">{{ $empresa->nombre ?? 'Empresa' }}</div>
-        @if(!empty($empresa->direccion))<div class="small">{{ $empresa->direccion }}</div>@endif
+        @if(isset($sucursal) && !empty($sucursal->direccion))
+        <div class="small">{{ $sucursal->direccion }}</div>
+        @elseif(!empty($empresa->direccion))
+        <div class="small">{{ $empresa->direccion }}</div>
+        @endif
         @if(!empty($empresa->telefono))<div class="small">Tel: {{ $empresa->telefono }}</div>@endif
         @if(!empty($empresa->rfc))<div class="small">RFC: {{ $empresa->rfc }}</div>@endif
         <div class="small">Vendedor: {{ $usuario->name ?? '' }}</div>
