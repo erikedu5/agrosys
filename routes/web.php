@@ -68,6 +68,10 @@ Route::get('/ticket/print/{venta}', [App\Http\Controllers\VentaController::class
     ->name('venta.ticket.html')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
+Route::get('/ticket/print-last', [App\Http\Controllers\VentaController::class, 'ultimoTicketPorSucursal'])
+    ->name('venta.ticket.last')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+
 Route::get('/buscar-precio', [App\Http\Controllers\VentaController::class, 'buscarPrecio'])
     ->name('venta.buscar.precio')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);

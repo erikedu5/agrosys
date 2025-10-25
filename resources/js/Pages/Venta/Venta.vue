@@ -82,6 +82,8 @@ const formVenta = useForm({
     total: 0
 });
 
+const isReprintingTicket = ref(false);
+
 // Estado del modal de búsqueda de precio
 const isPriceSearchModalOpen = ref(false);
 const priceSearchQuery = ref('');
@@ -233,6 +235,42 @@ const finalizeSale = () => {
             });
     }
 }
+
+const reprintLastTicket = async () => {
+    if (bloqueoActivo.value || isReprintingTicket.value) {
+        return;
+    }
+
+    isReprintingTicket.value = true;
+    try {
+        const response = await fetch(route('venta.ticket.last'), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        });
+
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload?.venta_id) {
+            const message = payload?.message || 'No se encontró un ticket para reimprimir.';
+            notify(message, 'error');
+            return;
+        }
+
+        const url = route('venta.ticket.html', { venta: payload.venta_id }) + '?size=80';
+        printTicketSilently(url, () => {
+            notify('Ticket enviado a impresión.', 'success');
+        });
+    } catch (error) {
+        console.error('Error reimprimiendo ticket', error);
+        notify('Ocurrió un error al intentar reimprimir el ticket.', 'error');
+    } finally {
+        isReprintingTicket.value = false;
+    }
+};
 
 
 const handleSelectChange = (event) => {
@@ -549,13 +587,22 @@ const searchProductPrice = async () => {
                         <hr>
                         </hr>
                         <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
-                            <button @click="finalizeSale()" :disabled="clientSelected"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Terminar venta
-                            </button>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <button @click="finalizeSale()" :disabled="clientSelected"
+                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
+                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
+                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
+                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
+                                    Terminar venta
+                                </button>
+                                <button @click="reprintLastTicket" :disabled="isReprintingTicket"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded
+                                            hover:bg-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 disabled:opacity-50
+                                            dark:bg-blue-500 dark:border-blue-500 dark:hover:bg-blue-400">
+                                    <span v-if="isReprintingTicket">Reimprimiendo...</span>
+                                    <span v-else>Reimprimir último ticket</span>
+                                </button>
+                            </div>
                             <label class="font-bold">Total final: $ {{ total }} </label>
                         </div>
                     </div>

@@ -329,6 +329,37 @@ class VentaController extends Controller
         return view('reportes.venta_ticket_80mm', $viewData);
     }
 
+    /**
+     * Obtiene la última venta registrada en la sucursal activa para reimpresión.
+     */
+    public function ultimoTicketPorSucursal(Request $request)
+    {
+        $sucursal = SucursalService::getSucursalActiva();
+
+        if (!$sucursal) {
+            return response()->json([
+                'message' => 'Seleccione una sucursal para reimprimir tickets.',
+            ], 422);
+        }
+
+        $ultimaVenta = Venta::where('id_sucursal', $sucursal)
+            ->latest('created_at')
+            ->first();
+
+        if (!$ultimaVenta) {
+            return response()->json([
+                'message' => 'No existen tickets registrados para esta sucursal.',
+            ], 404);
+        }
+
+        return response()->json([
+            'venta_id' => $ultimaVenta->id,
+            'total' => $ultimaVenta->total,
+            'tipo_venta' => $ultimaVenta->tipo_venta,
+            'fecha' => optional($ultimaVenta->created_at)->toDateTimeString(),
+        ]);
+    }
+
 
     /**
      * Display the specified resource.
