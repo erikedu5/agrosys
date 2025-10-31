@@ -38,6 +38,21 @@ class Producto extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function empresas()
+    {
+        return $this->belongsToMany(Empresa::class, 'empresa_producto', 'id_producto', 'id_empresa')
+                    ->withTimestamps()
+                    ->wherePivotNull('deleted_at');
+    }
+
+    public function scopeForEmpresa($query, $empresaId)
+    {
+        return $query->join('empresa_producto as ep', 'ep.id_producto', '=', 'productos.id')
+                     ->where('ep.id_empresa', $empresaId)
+                     ->whereNull('ep.deleted_at')
+                     ->select('productos.*');
+    }
+
     public function altasInventario()
     {
         return $this->hasMany(AltaInventario::class, 'id_producto');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -98,6 +99,17 @@ class EmpresaController extends Controller
         }
 
         $empresa->save();
+
+        // Vincular automáticamente todos los productos existentes a la nueva empresa (cambio transparente)
+        DB::statement(<<<SQL
+            INSERT INTO empresa_producto (id_empresa, id_producto, created_at, updated_at)
+            SELECT {$empresa->id} AS id_empresa, p.id, NOW(), NOW()
+            FROM productos p
+            LEFT JOIN empresa_producto ep
+              ON ep.id_empresa = {$empresa->id}
+             AND ep.id_producto = p.id
+            WHERE ep.id IS NULL
+        SQL);
 
         return redirect()->route('empresa.index');
     }

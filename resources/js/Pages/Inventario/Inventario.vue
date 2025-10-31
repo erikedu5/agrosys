@@ -4,7 +4,7 @@ import { ref, watch, computed } from 'vue';
 import { router, Link, useForm, usePage } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
-import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore } from '@mdi/js';
+import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiDelete } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -35,6 +35,7 @@ const icons = {
     edit: mdiPencil,
     add: mdiPlusBox,
     reset: mdiBackupRestore,
+    delete: mdiDelete,
 };
 
 const puedeGestionarCostos = computed(() => {
@@ -73,6 +74,19 @@ const resetInventario = (id) => {
     }
     if (confirm('¿Seguro que deseas resetear el inventario a cero?')) {
         useForm({}).post(route('inventario.reset', id));
+    }
+}
+
+const eliminarProducto = (id) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
+    if (confirm('Este producto se eliminará del inventario de la empresa. ¿Deseas continuar?')) {
+        useForm({}).delete(route('inventario.producto.detach', id), {
+            onSuccess: () => notify('Producto eliminado de esta empresa', 'success'),
+            onError: () => notify('No se pudo eliminar el producto', 'error'),
+            preserveScroll: true,
+        });
     }
 }
 
@@ -194,6 +208,16 @@ const handlePriceUpdated = (payload) => {
                                 </svg>
                                 <span class="sr-only">Agregar al inventario</span>
                             </Link>
+                            <Link href=""
+                                v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"
+                                @click.prevent="eliminarProducto(producto.id)"
+                                class="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-600 flex flex-center"
+                                title="Eliminar de esta empresa" aria-label="Eliminar de esta empresa">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.delete"></path>
+                                </svg>
+                                <span class="sr-only">Eliminar de esta empresa</span>
+                            </Link>
                             <Link v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"
                                 href="" @click="resetInventario(producto.id)"
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
@@ -264,6 +288,16 @@ const handlePriceUpdated = (payload) => {
                                             <path :d="icons.add"></path>
                                         </svg>
                                         <span class="sr-only">Agregar al inventario</span>
+                                    </Link>
+                                    <Link href=""
+                                        v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"
+                                        @click.prevent="eliminarProducto(producto.id)"
+                                        class="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-600 flex flex-center"
+                                        title="Eliminar de esta empresa" aria-label="Eliminar de esta empresa">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.delete"></path>
+                                        </svg>
+                                        <span class="sr-only">Eliminar de esta empresa</span>
                                     </Link>
                                     <Link href=""
                                         v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'"

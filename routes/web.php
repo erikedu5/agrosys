@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EmpresaProductoController;
 use Inertia\Inertia;
 
 /*
@@ -91,6 +92,12 @@ Route::post('/inventario/{producto}/reset', [App\Http\Controllers\ProductoContro
 
 Route::put('/inventario/{producto}/precios', [App\Http\Controllers\ProductoController::class, 'updatePrecios'])
     ->name('inventario.updatePrecios')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection'])
+    ->whereNumber('producto');
+
+// Borrado lógico de relación producto-empresa desde inventario
+Route::delete('/inventario/{producto}/empresa', [App\Http\Controllers\ProductoController::class, 'detachFromEmpresa'])
+    ->name('inventario.producto.detach')
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection'])
     ->whereNumber('producto');
 
@@ -189,3 +196,18 @@ Route::get('/pedidos/index', [\App\Http\Controllers\PedidoController::class, 'in
 Route::put('/pedidos/{pedido}/completar', [\App\Http\Controllers\PedidoController::class, 'complete'])
     ->name('pedidos.complete')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
+
+// Productos por empresa (pivot) y utilidades de inventario
+
+Route::post('/empresa/{empresa}/productos', [EmpresaProductoController::class, 'store'])
+    ->name('empresa.productos.store')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+
+Route::delete('/empresa/{empresa}/productos/{producto}', [EmpresaProductoController::class, 'destroy'])
+    ->name('empresa.productos.destroy')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+
+// Sugerencias exactas para creación transparente (nombre + tamaño)
+Route::get('/empresa/{empresa}/productos/sugerencias-exactas', [EmpresaProductoController::class, 'suggestExact'])
+    ->name('empresa.productos.suggestExact')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);

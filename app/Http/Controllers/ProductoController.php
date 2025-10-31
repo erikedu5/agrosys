@@ -28,11 +28,24 @@ class ProductoController extends Controller
             return redirect()->route('sucursal.selection');
         }
 
-        $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
-            ->orWhere('barcode', 'LIKE', "%$request->q%")
-            ->orWhere('ingrediente_activo', 'LIKE', "%$request->q%")
-            ->latest()
-            ->paginate(10);
+        // Mostrar solo productos asociados a la empresa activa (pivot empresa_producto)
+        $empresaId = $sucursal->id_empresa;
+
+        $tienePivot = \App\Models\EmpresaProducto::where('id_empresa', $empresaId)->exists();
+        $productosQuery = $tienePivot
+            ? Producto::query()->forEmpresa($empresaId)
+            : Producto::query();
+
+        if ($request->filled('q')) {
+            $term = $request->q;
+            $productosQuery->where(function ($q) use ($term) {
+                $q->where('productos.nombre', 'LIKE', "%$term%")
+                  ->orWhere('productos.barcode', 'LIKE', "%$term%")
+                  ->orWhere('productos.ingrediente_activo', 'LIKE', "%$term%");
+            });
+        }
+
+        $productos = $productosQuery->latest('productos.created_at')->paginate(10);
 
         foreach ($productos as $producto) {
             $marca = CatMarca::where('id', $producto->id_marca)->first();
@@ -47,6 +60,8 @@ class ProductoController extends Controller
             'productos' => $productos,
             'ventasBloqueadas' => $ventasBloqueadas,
             'motivoBloqueo' => $motivoBloqueo,
+            'sucursalId' => $sucursalId,
+            'empresaId' => $sucursal->id_empresa,
         ]);
     }
 
@@ -56,7 +71,7 @@ class ProductoController extends Controller
      */
     public function create()
     {
-        [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+        [$sucursalId, $sucursal, $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
 
         $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
@@ -65,7 +80,9 @@ class ProductoController extends Controller
 
         return Inertia::render('Inventario/CreateProducto', [
             'clasificaciones' => $clasificaciones,
-            'marcas' => $marca
+            'marcas' => $marca,
+            'sucursalId' => $sucursalId,
+            'empresaId' => $sucursal?->id_empresa,
         ]);
     }
 
@@ -152,6 +169,12 @@ class ProductoController extends Controller
         $altaInventario->id_producto = $producto->id;
         $altaInventario->id_sucursal = $sucursalId;
         $altaInventario->save();
+
+        // Asociar producto a la empresa activa
+        \App\Models\EmpresaProducto::firstOrCreate([
+            'id_empresa' => $sucursal->id_empresa,
+            'id_producto' => $producto->id,
+        ]);
 
         if ($request->expectsJson()) {
             $producto->marca = CatMarca::find($producto->id_marca);
@@ -344,6 +367,35 @@ class ProductoController extends Controller
         $altaInventario->id_producto = $producto->id;
         $altaInventario->id_sucursal = $sucursalId;
         $altaInventario->save();
+
+        return redirect()->route('inventario.index');
+    }
+
+    // Eliminar lógicamente un producto del inventario de la empresa (sin borrar el producto)
+    public function detachFromEmpresa(Producto $producto)
+    {
+        [, $sucursal, $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursal) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
+        $empresaId = $sucursal->id_empresa;
+
+        // Eliminar historial de inventario en TODAS las sucursales de la empresa
+        $sucursalIds = Sucursales::where('id_empresa', $empresaId)->pluck('id');
+        if ($sucursalIds->isNotEmpty()) {
+            AltaInventario::where('id_producto', $producto->id)
+                ->whereIn('id_sucursal', $sucursalIds)
+                ->delete();
+        }
+
+        // Eliminar relación pivote (soft delete)
+        \App\Models\EmpresaProducto::where('id_empresa', $empresaId)
+            ->where('id_producto', $producto->id)
+            ->first()?->delete();
 
         return redirect()->route('inventario.index');
     }

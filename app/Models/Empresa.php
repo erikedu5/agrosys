@@ -33,4 +33,11 @@ class Empresa extends Model
         'enviar_facturas_automaticas' => 'boolean',
         'facturapi_sandbox' => 'boolean',
     ];
+
+    public function productos()
+    {
+        return $this->belongsToMany(Producto::class, 'empresa_producto', 'id_empresa', 'id_producto')
+                    ->withTimestamps()
+                    ->wherePivotNull('deleted_at');
+    }
 }

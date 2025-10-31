@@ -11,6 +11,8 @@ const props = defineProps({
     clasificaciones: Array,
     marcas: Array,
     enfermedadesFlor: Array,
+    sucursalId: [String, Number],
+    empresaId: [String, Number],
 });
 
 const page = usePage();
@@ -34,6 +36,53 @@ const form = useForm({
     barcode: '',
     id_usuario: 0,
 });
+
+// Sugerencias exactas (nombre + tamaño) para reutilizar producto existente
+const suggestions = ref([]);
+const showSuggestions = ref(false);
+let suggestTimer = null;
+
+const fetchExactSuggestions = async () => {
+    suggestions.value = [];
+    showSuggestions.value = false;
+    if (!props.empresaId || !form.nombre || !form.tamano) return;
+    try {
+        const params = new URLSearchParams({
+            nombre: form.nombre.trim(),
+            tamano: form.tamano.trim(),
+        }).toString();
+        const url = `/empresa/${props.empresaId}/productos/sugerencias-exactas?${params}`;
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const json = await resp.json();
+        suggestions.value = json.data || [];
+        showSuggestions.value = suggestions.value.length > 0;
+    } catch (e) {
+        // noop
+    }
+};
+
+watch(() => [form.nombre, form.tamano], () => {
+    if (suggestTimer) clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(fetchExactSuggestions, 250);
+});
+
+const agregarExistente = async (item) => {
+    try {
+        await fetch(`/empresa/${props.empresaId}/productos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({ producto_id: item.id, id_sucursal: props.sucursalId || null }),
+        });
+        notify('Producto existente vinculado a esta empresa. Stock inicial 0.', 'success');
+        window.location = route('inventario.index');
+    } catch (e) {
+        notify('No se pudo vincular el producto existente', 'error');
+    }
+};
 
 const clasificacionSeleccionada = ref(null);
 const marcaSeleccionada = ref(null);
@@ -285,6 +334,24 @@ const recalcularValores = (trigger) => {
                                 :class="{ 'border-red-500': form.errors.tamano }" v-model="form.tamano"
                                 @blur="form.tamano && form.clearErrors('tamano')" required>
                             <InputError class="mt-2" :message="form.errors.tamano" />
+                            <!-- Sugerencias exactas si ya existe un producto con el mismo nombre y tamaño -->
+                            <div v-if="showSuggestions" class="mt-3 border rounded bg-yellow-50 border-yellow-200 p-3">
+                                <p class="text-sm text-yellow-800">
+                                    Ya existe un producto con este nombre y tamaño. ¿Deseas agregarlo a esta empresa?
+                                </p>
+                                <ul class="mt-2 divide-y">
+                                    <li v-for="s in suggestions" :key="s.id" class="py-2 flex justify-between items-center">
+                                        <div>
+                                            <div class="text-gray-900 font-medium">{{ s.nombre }}</div>
+                                            <div class="text-xs text-gray-600">Tamaño: {{ s.tamano }}</div>
+                                        </div>
+                                        <button type="button" @click="agregarExistente(s)"
+                                            class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700">
+                                            Agregar existente
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                             <br>
                             <br>
 
