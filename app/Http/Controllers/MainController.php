@@ -11,6 +11,7 @@ use App\Models\SolucionEnfermedad;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class MainController extends Controller
@@ -21,6 +22,7 @@ class MainController extends Controller
     public function index(Request $request)
     {
         $sucursalActiva = SucursalService::getSucursalActiva();
+        $empresaActiva = SucursalService::getEmpresaIdActiva();
 
         if (!$sucursalActiva) {
             return redirect()->route('sucursal.selection');
@@ -38,6 +40,9 @@ class MainController extends Controller
             ->join('cat_tipo_flors', 'cat_tipo_flors.id', '=', 'enfermedades_tipo_flors.id_tipo_flor')
             ->join('cat_enfermedades', 'cat_enfermedades.id', '=', 'enfermedades_tipo_flors.id_enfermedad')
             ->where('solucion_enfermedads.id_sucursal', $sucursalActiva)
+            ->when($empresaActiva, function ($query) use ($empresaActiva) {
+                $query->where('productos.id_empresa', $empresaActiva);
+            })
             ->when($q !== '', function ($query) use ($pattern, $collation) {
                 $query->where(function ($w) use ($pattern, $collation) {
                     $w->orWhereRaw("productos.nombre COLLATE {$collation} LIKE ?", [$pattern])
@@ -56,6 +61,11 @@ class MainController extends Controller
             $tipoFlor = CatTipoFlor::find($enfermedadTipo->id_tipo_flor);
             $enfermedad = CatEnfermedades::find($enfermedadTipo->id_enfermedad);
             $producto = Producto::find($solucionByProd->id_producto);
+            Log::info('Producto ID: ' . $producto);
+
+            if (!$producto) {
+                continue;
+            }
 
             $actualStock = AltaInventario::where('id_producto', $producto->id)
                 ->where('id_sucursal', $sucursalActiva)
