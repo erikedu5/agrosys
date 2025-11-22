@@ -26,7 +26,8 @@ class ProductoFactory extends Factory
             'ieps' => $this->faker->numberBetween(3, 9),
             'tamano' => $this->faker->numberBetween(3, 1),
             'id_usuario' => $this->faker->numberBetween(1, 10),
-            'ingrediente_activo' => $this->faker->text(20)
+            'ingrediente_activo' => $this->faker->text(20),
+            'id_empresa' => 1,
         ];
     }
 }
