@@ -7,7 +7,6 @@ use App\Models\AltaInventario;
 use App\Models\Producto;
 use App\Models\Sucursales;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use OpenApi\Annotations as OA;
 
 class SucursalProductosController extends Controller
@@ -48,7 +47,8 @@ class SucursalProductosController extends Controller
             ->pluck('id_producto')
             ->unique();
 
-        $query = Producto::whereIn('id', $productoIds);
+        $query = Producto::whereIn('id', $productoIds)
+            ->where('id_empresa', $sucursal->id_empresa);
 
         if ($request->filled('busqueda')) {
             $search = $request->query('busqueda');

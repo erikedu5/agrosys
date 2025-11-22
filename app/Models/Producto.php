@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\SucursalService;
 
 class Producto extends Model
 {
@@ -20,8 +21,30 @@ class Producto extends Model
         'tamano',
         'id_usuario',
         'ingrediente_activo',
-        'barcode'
+        'barcode',
+        'id_empresa',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope('empresa', function ($builder) {
+            if (app()->runningInConsole()) {
+                return;
+            }
+
+            $empresaId = SucursalService::getEmpresaIdActiva();
+
+            if ($empresaId) {
+                $builder->where('productos.id_empresa', $empresaId);
+            }
+        });
+
+        static::creating(function (Producto $producto) {
+            if (!$producto->id_empresa) {
+                $producto->id_empresa = SucursalService::getEmpresaIdActiva();
+            }
+        });
+    }
 
     public function clasificacion()
     {
@@ -31,6 +54,11 @@ class Producto extends Model
     public function marca()
     {
         return $this->belongsTo(CatMarca::class);
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'id_empresa');
     }
 
     public function usuario()

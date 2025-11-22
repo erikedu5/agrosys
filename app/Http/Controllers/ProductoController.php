@@ -28,9 +28,11 @@ class ProductoController extends Controller
             return redirect()->route('sucursal.selection');
         }
 
-        $productos = Producto::orWhere('nombre', 'LIKE', "%$request->q%")
-            ->orWhere('barcode', 'LIKE', "%$request->q%")
-            ->orWhere('ingrediente_activo', 'LIKE', "%$request->q%")
+        $productos = Producto::where(function ($query) use ($request) {
+            $query->where('nombre', 'LIKE', "%$request->q%")
+                ->orWhere('barcode', 'LIKE', "%$request->q%")
+                ->orWhere('ingrediente_activo', 'LIKE', "%$request->q%");
+        })
             ->latest()
             ->paginate(10);
 
@@ -75,10 +77,17 @@ class ProductoController extends Controller
     public function store(Request $request)
     {
         [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+        $empresaId = SucursalService::getEmpresaIdActiva();
 
         if (!$sucursalId) {
             throw ValidationException::withMessages([
                 'bloqueo' => 'No se encontró una sucursal activa. Selecciona una sucursal antes de continuar.',
+            ]);
+        }
+
+        if (!$empresaId) {
+            throw ValidationException::withMessages([
+                'empresa' => 'No se encontró una empresa activa para el usuario.',
             ]);
         }
 
@@ -98,8 +107,10 @@ class ProductoController extends Controller
                     'required',
                     'string',
                     'max:255',
-                    Rule::unique('productos')->where(function ($query) use ($request) {
-                        return $query->where('tamano', $request->tamano);
+                    Rule::unique('productos')->where(function ($query) use ($request, $empresaId) {
+                        return $query
+                            ->where('tamano', $request->tamano)
+                            ->where('id_empresa', $empresaId);
                     }),
                 ],
                 'id_clasificacion' => 'required|integer|min:1',
@@ -137,6 +148,7 @@ class ProductoController extends Controller
 
         $payload = $request->all();
         $payload['id_usuario'] = Auth::user()->id;
+        $payload['id_empresa'] = $empresaId;
         $payload['cantidad'] = 0;
         $payload['precio_unitario'] = $request->precio_unitario ?? 0;
         $payload['ieps'] = $request->ieps ?? 0;
@@ -196,8 +208,15 @@ class ProductoController extends Controller
      */
     public function update(Request $request)
     {
+        $empresaId = SucursalService::getEmpresaIdActiva();
         [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
         $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
+        if (!$empresaId) {
+            throw ValidationException::withMessages([
+                'empresa' => 'No se encontró una empresa activa para el usuario.',
+            ]);
+        }
 
         $request->merge([
             'precio_unitario' => $request->filled('precio_unitario') ? $request->precio_unitario : null,
@@ -212,8 +231,10 @@ class ProductoController extends Controller
                     'required',
                     'string',
                     'max:255',
-                    Rule::unique('productos')->ignore($request->id)->where(function ($query) use ($request) {
-                        return $query->where('tamano', $request->tamano);
+                    Rule::unique('productos')->ignore($request->id)->where(function ($query) use ($request, $empresaId) {
+                        return $query
+                            ->where('tamano', $request->tamano)
+                            ->where('id_empresa', $empresaId);
                     }),
                 ],
                 'id_clasificacion' => 'required|integer|min:1',
@@ -250,6 +271,12 @@ class ProductoController extends Controller
         );
 
         $catProducto = Producto::find($request->id);
+        if (!$catProducto) {
+            throw ValidationException::withMessages([
+                'producto' => 'No se encontró el producto en la empresa activa.',
+            ]);
+        }
+
         $catProducto->nombre = $request->nombre;
         $catProducto->id_clasificacion = $request->id_clasificacion;
         $catProducto->id_marca = $request->id_marca;
@@ -301,6 +328,11 @@ class ProductoController extends Controller
         $request->validate(['cantidad' => 'required|numeric|gt:0']);
 
         $catProducto = Producto::find($request->id);
+        if (!$catProducto) {
+            throw ValidationException::withMessages([
+                'producto' => 'No se encontró el producto en la empresa activa.',
+            ]);
+        }
 
         $actualStock = AltaInventario::where('id_producto', $request->id)
             ->where('id_sucursal', $sucursalId)

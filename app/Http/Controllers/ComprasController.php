@@ -39,9 +39,10 @@ class ComprasController extends Controller
      */
     public function create(Request $request)
     {
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-            ->orWhere('barcode', 'LIKE', "%$request->q%")
-            ->get();
+        $productos = Producto::where(function ($query) use ($request) {
+            $query->where('nombre', 'LIKE', "%$request->q%")
+                ->orWhere('barcode', 'LIKE', "%$request->q%");
+        })->get();
 
         foreach ($productos as $product) {
             $product->marca = CatMarca::where('id', $product->id_marca)->first();
@@ -135,9 +136,10 @@ class ComprasController extends Controller
         }
         $compra->productos = $productos_array;
         $compra->abonos = ComprasAbonos::where('id_compra', '=', $id)->get();
-        $productos = Producto::where('nombre', 'LIKE', "%$request->q%")
-            ->orWhere('barcode', 'LIKE', "%$request->q%")
-            ->get();
+        $productos = Producto::where(function ($query) use ($request) {
+            $query->where('nombre', 'LIKE', "%$request->q%")
+                ->orWhere('barcode', 'LIKE', "%$request->q%");
+        })->get();
 
         foreach ($productos as $product) {
             $product->marca = CatMarca::where('id', $product->id_marca)->first();

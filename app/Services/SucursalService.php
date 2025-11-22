@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Empresa;
 use App\Models\Sucursales;
 use Illuminate\Support\Facades\Auth;
 
@@ -70,6 +71,40 @@ class SucursalService
 
         // Usuarios normales solo ven su sucursal
         return Sucursales::where('id', $user->id_sucursal)->get();
+    }
+
+    /**
+     * Obtener el id de la empresa activa para el usuario en sesión.
+     */
+    public static function getEmpresaIdActiva(): ?int
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return null;
+        }
+
+        if ($user->id_empresa) {
+            return $user->id_empresa;
+        }
+
+        $sucursal = self::getSucursalActivaCompleta();
+
+        return $sucursal?->id_empresa;
+    }
+
+    /**
+     * Obtener la empresa activa para el usuario en sesión.
+     */
+    public static function getEmpresaActiva(): ?Empresa
+    {
+        $empresaId = self::getEmpresaIdActiva();
+
+        if (!$empresaId) {
+            return null;
+        }
+
+        return Empresa::withTrashed()->find($empresaId);
     }
 
     /**
