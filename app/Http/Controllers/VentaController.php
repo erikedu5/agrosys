@@ -139,12 +139,16 @@ class VentaController extends Controller
         }
         $facturacionAutomaticaEmpresa = (bool) ($empresaActiva?->enviar_facturas_automaticas);
 
-        $validated = $request->validate(
+        $request->validate(
             [
-                'id_cliente' => ['required'],
-                'total' => ['required'],
-                'tipo_venta' => ['required'],
-                'producto_venta' => ['required']
+                'id_cliente' => ['required', 'integer', 'exists:clientes,id'],
+                'total' => ['required', 'numeric', 'min:0'],
+                'abono' => ['nullable', 'numeric', 'min:0'],
+                'tipo_venta' => ['required', 'string'],
+                'producto_venta' => ['required', 'array', 'min:1'],
+                'producto_venta.*.producto.id' => ['required', 'integer', 'exists:productos,id'],
+                'producto_venta.*.cantidad' => ['required', 'numeric', 'min:0.01'],
+                'producto_venta.*.importe' => ['required', 'numeric', 'min:0'],
             ],
             [
                 'id_cliente.required' => 'El cliente es requerido',
@@ -153,6 +157,35 @@ class VentaController extends Controller
                 'producto_venta.required' => 'Agregar al menos un producto para la venta.'
             ]
         );
+
+        $total = (float) $request->total;
+        if (!is_finite($total)) {
+            throw ValidationException::withMessages([
+                'total' => 'El total debe ser un valor numerico valido.',
+            ]);
+        }
+
+        $abonoInput = $request->abono !== null ? (float) $request->abono : 0;
+        if (!is_finite($abonoInput) || $abonoInput < 0) {
+            throw ValidationException::withMessages([
+                'abono' => 'El abono debe ser un monto numerico valido.',
+            ]);
+        }
+
+        $productosSanitizados = collect($request->producto_venta)->map(function ($producto) {
+            $cantidad = (float) ($producto['cantidad'] ?? 0);
+            $importe = (float) ($producto['importe'] ?? 0);
+
+            if (!is_finite($cantidad) || !is_finite($importe)) {
+                throw ValidationException::withMessages([
+                    'producto_venta' => 'Uno de los productos tiene valores no numericos. Verifique cantidades e importes.',
+                ]);
+            }
+
+            $producto['cantidad'] = $cantidad;
+            $producto['importe'] = $importe;
+            return $producto;
+        })->all();
         $id_usuario = Auth::user()->id;
         $venta_pagada = false;
         $fecha_pago = null;
@@ -163,7 +196,7 @@ class VentaController extends Controller
 
         $venta = Venta::create([
             'id_cliente' => $request->id_cliente,
-            'total' => $request->total,
+            'total' => $total,
             'id_usuario' => $id_usuario,
             'tipo_venta' => $request->tipo_venta,
             'venta_pagada' => $venta_pagada,
@@ -171,12 +204,12 @@ class VentaController extends Controller
             'id_sucursal' => $sucursal,
         ]);
 
-        foreach ($request->producto_venta as $producto_venta) {
+        foreach ($productosSanitizados as $producto_venta) {
             ProductoVenta::create([
                 'id_producto' => $producto_venta['producto']['id'],
                 'id_venta' => $venta->id,
                 'cantidad' => $producto_venta['cantidad'],
-                'total_productos' => $producto_venta['importe'],
+                'total_productos' => round($producto_venta['importe'], 2),
             ]);
 
             //Reduccion de stock;
@@ -195,9 +228,9 @@ class VentaController extends Controller
         $abonoVenta = [];
         $abonado = 0;
         if ($request->tipo_venta == 'Contado') {
-            $abonado = $request->total;
+            $abonado = $total;
             $abonoVenta = [
-                'cantidad_abonada' => $request->total,
+                'cantidad_abonada' => $total,
                 'cuenta_pagada' => true,
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
@@ -205,9 +238,9 @@ class VentaController extends Controller
                 'id_sucursal' => $sucursal,
             ];
         } else if ($request->tipo_venta == 'Credito') {
-            $abonado = $request->abono;
+            $abonado = $abonoInput;
             $abonoVenta = [
-                'cantidad_abonada' => $request->abono,
+                'cantidad_abonada' => $abonado,
                 'cuenta_pagada' => false,
                 'id_cliente' => $request->id_cliente,
                 'id_usuario' => Auth::user()->id,
@@ -219,7 +252,7 @@ class VentaController extends Controller
         AbonoCuenta::create($abonoVenta);
 
         $cliente = Clientes::find($request->id_cliente);
-        $cliente->adeudo_total += $request->total;
+        $cliente->adeudo_total += $total;
         $cliente->abono_total += $abonado;
         $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
         $cliente->save();
@@ -408,8 +441,20 @@ class VentaController extends Controller
     {
         $sucursal = SucursalService::getSucursalActiva();
 
+        $request->validate([
+            'id' => ['required', 'integer', 'exists:clientes,id'],
+            'abono' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $abono = (float) $request->abono;
+        if (!is_finite($abono)) {
+            throw ValidationException::withMessages([
+                'abono' => 'El abono debe ser un monto numerico valido.',
+            ]);
+        }
+
         AbonoCuenta::Create([
-            'cantidad_abonada' => $request->abono,
+            'cantidad_abonada' => $abono,
             'cuenta_pagada' => true,
             'id_usuario' => Auth::user()->id,
             'id_sucursal' => $sucursal,
@@ -418,7 +463,7 @@ class VentaController extends Controller
         ]);
 
         $cliente = Clientes::find($request->id);
-        $cliente->abono_total += $request->abono;
+        $cliente->abono_total += $abono;
         $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
         $cliente->save();
 

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class ClientesController extends Controller
 {
@@ -46,7 +47,7 @@ class ClientesController extends Controller
 
         $request->validate([
             'nombre' => ['required'],
-            'porcentaje_descuento' => ['required'],
+            'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'requiereFactura' => ['required', 'boolean'],
             'rfc' => [
                 $request->boolean('requiereFactura') ? 'required' : 'nullable',
@@ -76,18 +77,32 @@ class ClientesController extends Controller
         ], [
             'nombre.required' => 'Por favor ingresa el nombre del cliente.',
             'porcentaje_descuento.required' => 'Agregar un porcentage para el cliente.',
-            'requiereFactura.required' => 'Favor de validar si require factura.',
+            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
+            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
+            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
+            'requiereFactura.required' => 'Favor de validar si requiere factura.',
             'requiereFactura.boolean' => 'El campo requiere factura debe ser verdadero o falso.',
+            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
+            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
+            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
             'rfc.required' => 'El RFC es obligatorio para clientes que requieren factura.',
-            'regimen_fiscal.required' => 'El régimen fiscal es obligatorio para clientes que requieren factura.',
-            'codigo_postal.required' => 'El código postal es obligatorio para clientes que requieren factura.',
+            'regimen_fiscal.required' => 'El regimen fiscal es obligatorio para clientes que requieren factura.',
+            'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
             'uso_cfdi.required' => 'El uso de CFDI es obligatorio para clientes que requieren factura.',
-            'email_facturacion.email' => 'El correo de facturación debe tener un formato válido.',
+            'email_facturacion.email' => 'El correo de facturacion debe tener un formato valido.',
         ]);
+
+
+        $porcentaje = (float) $request->porcentaje_descuento;
+        if (!is_finite($porcentaje) || $porcentaje < 0 || $porcentaje > 100) {
+            throw ValidationException::withMessages([
+                'porcentaje_descuento' => 'El porcentaje de descuento debe ser un numero valido entre 0 y 100.',
+            ]);
+        }
 
         $clienteData = [
             'nombre' => $request->nombre,
-            'porcentaje_descuento' => $request->porcentaje_descuento,
+            'porcentaje_descuento' => $porcentaje,
             'adeudo_total' => 0,
             'abono_total' => 0,
             'balance' => 0,
@@ -126,7 +141,7 @@ class ClientesController extends Controller
     {
         $request->validate([
             'nombre' => ['required'],
-            'porcentaje_descuento' => ['required'],
+            'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'requiereFactura' => ['required', 'boolean'],
             'rfc' => [
                 $request->boolean('requiereFactura') ? 'required' : 'nullable',
@@ -154,18 +169,29 @@ class ClientesController extends Controller
                 'max:255',
             ],
         ], [
+            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
+            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
+            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
             'rfc.required' => 'El RFC es obligatorio para clientes que requieren factura.',
-            'regimen_fiscal.required' => 'El régimen fiscal es obligatorio para clientes que requieren factura.',
-            'codigo_postal.required' => 'El código postal es obligatorio para clientes que requieren factura.',
+            'regimen_fiscal.required' => 'El regimen fiscal es obligatorio para clientes que requieren factura.',
+            'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
             'uso_cfdi.required' => 'El uso de CFDI es obligatorio para clientes que requieren factura.',
-            'email_facturacion.email' => 'El correo de facturación debe tener un formato válido.',
+            'email_facturacion.email' => 'El correo de facturacion debe tener un formato valido.',
         ]);
+
+
+        $porcentaje = (float) $request->porcentaje_descuento;
+        if (!is_finite($porcentaje) || $porcentaje < 0 || $porcentaje > 100) {
+            throw ValidationException::withMessages([
+                'porcentaje_descuento' => 'El porcentaje de descuento debe ser un numero valido entre 0 y 100.',
+            ]);
+        }
 
         $cliente = Clientes::where('id', $request->id)
             ->where('activo', true)->first();
 
         $cliente->nombre = $request->nombre;
-        $cliente->porcentaje_descuento = $request->porcentaje_descuento;
+        $cliente->porcentaje_descuento = $porcentaje;
         $cliente->requiereFactura = $request->boolean('requiereFactura');
         if ($request->requiereFactura) {
             $cliente->rfc = strtoupper($request->rfc);

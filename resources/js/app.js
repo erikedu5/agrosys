@@ -4,11 +4,12 @@ import 'v-calendar/style.css';
 
 import { createApp, h } from 'vue';
 import { createPinia } from 'pinia';
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import VCalendar from 'v-calendar';
 import 'v-calendar/style.css';
+import { notify } from './utils/notify';
 
 const appName = window.document.getElementsByTagName('title')[0]?.innerText || 'Laravel';
 
@@ -29,6 +30,10 @@ createInertiaApp({
     },
 });
 
+router.on('error', () => {
+    notify('Ocurrio un error al procesar la solicitud. Intenta nuevamente.', 'error');
+});
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {
@@ -43,5 +48,4 @@ if ('serviceWorker' in navigator) {
     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
     y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 })(window, document, "clarity", "script", "t7l15w34pm");
-
 
