@@ -6,6 +6,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use BadMethodCallException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -36,6 +37,10 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $e)
     {
+        if ($e instanceof BadMethodCallException) {
+            return $this->renderSafeError($request, 404);
+        }
+
         if ($e instanceof QueryException) {
             return $this->renderSafeError($request, 500);
         }
@@ -91,6 +96,7 @@ class Handler extends ExceptionHandler
 
         return Inertia::render('Error', [
             'status' => $normalized,
+            'url' => $request->fullUrl(),
         ])->toResponse($request)->setStatusCode($normalized);
     }
 }

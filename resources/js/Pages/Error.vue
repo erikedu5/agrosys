@@ -1,11 +1,15 @@
 <script setup>
-import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, onMounted } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     status: {
         type: Number,
         default: 500,
+    },
+    url: {
+        type: String,
+        default: '',
     },
 });
 
@@ -28,6 +32,29 @@ const messages = {
 const code = computed(() => titles[props.status] ? props.status : 500);
 const title = computed(() => titles[props.status] ?? titles[500]);
 const message = computed(() => messages[props.status] ?? messages[500]);
+const currentUrl = computed(() => props.url || (typeof window !== 'undefined' ? window.location.href : '/'));
+
+onMounted(() => {
+    if (typeof window !== 'undefined' && props.url && window.location.href !== props.url) {
+        window.history.replaceState({}, '', props.url);
+    }
+});
+
+const goHome = () => router.visit('/dashboard');
+
+const reloadPage = () => {
+    if (typeof window !== 'undefined') {
+        window.location.href = currentUrl.value;
+    }
+};
+
+const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+        window.history.back();
+    } else {
+        router.visit(currentUrl.value, { replace: true });
+    }
+};
 </script>
 
 <template>
@@ -48,22 +75,23 @@ const message = computed(() => messages[props.status] ?? messages[500]);
             </div>
             <div class="flex flex-wrap gap-3">
                 <a
-                    href="/"
+                    href="/dashboard"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:-translate-y-0.5 transition"
+                    @click.prevent="goHome"
                 >
                     Ir al inicio
                 </a>
                 <button
                     type="button"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold border border-slate-700 bg-slate-900 hover:border-slate-600 hover:-translate-y-0.5 transition"
-                    @click="() => window.location.reload()"
+                    @click="reloadPage"
                 >
                     Reintentar
                 </button>
                 <button
                     type="button"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold border border-slate-800 text-slate-300 hover:border-slate-600 hover:-translate-y-0.5 transition"
-                    @click="() => window.history.length ? window.history.back() : null"
+                    @click="goBack"
                 >
                     Volver
                 </button>
