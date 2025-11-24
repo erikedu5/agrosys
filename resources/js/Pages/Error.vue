@@ -83,13 +83,6 @@ const goBack = () => {
                 </a>
                 <button
                     type="button"
-                    class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold border border-slate-700 bg-slate-900 hover:border-slate-600 hover:-translate-y-0.5 transition"
-                    @click="reloadPage"
-                >
-                    Reintentar
-                </button>
-                <button
-                    type="button"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold border border-slate-800 text-slate-300 hover:border-slate-600 hover:-translate-y-0.5 transition"
                     @click="goBack"
                 >
