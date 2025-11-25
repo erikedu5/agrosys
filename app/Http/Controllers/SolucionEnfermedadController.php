@@ -78,10 +78,17 @@ class SolucionEnfermedadController extends Controller
         $sucursal = SucursalService::getSucursalActiva();
 
         $request->validate([
-            'dosis_tambo_ml' => 'required|numeric|not_in:0',
-            'dosis_bomba_ml' => 'required|numeric|not_in:0',
+            'dosis_tambo_ml' => 'nullable|numeric|min:0',
+            'dosis_bomba_ml' => 'nullable|numeric|min:0',
             'id_producto' => 'required|numeric|not_in:0',
         ]);
+
+        // Si los campos vienen vacíos se guardan como 0
+        $dosisTambo = $request->input('dosis_tambo_ml');
+        $dosisTambo = ($dosisTambo === null || $dosisTambo === '') ? 0 : $dosisTambo;
+
+        $dosisBomba = $request->input('dosis_bomba_ml');
+        $dosisBomba = ($dosisBomba === null || $dosisBomba === '') ? 0 : $dosisBomba;
 
         $solu = SolucionEnfermedad::where('id_producto', $request->id_producto)
             ->where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor['id'])
@@ -90,16 +97,16 @@ class SolucionEnfermedadController extends Controller
 
         if ($solu === null) {
             $solu = SolucionEnfermedad::create([
-                'dosis_tambo_ml' => $request->dosis_tambo_ml,
-                'dosis_bomba_ml' => $request->dosis_bomba_ml,
+                'dosis_tambo_ml' => $dosisTambo,
+                'dosis_bomba_ml' => $dosisBomba,
                 'id_producto' => $request->id_producto,
                 'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor['id'],
                 'id_sucursal' => $sucursal,
                 'condiciones' => $request->condiciones,
             ]);
         } else {
-            $solu->dosis_tambo_ml = $request->dosis_tambo_ml;
-            $solu->dosis_bomba_ml = $request->dosis_bomba_ml;
+            $solu->dosis_tambo_ml = $dosisTambo;
+            $solu->dosis_bomba_ml = $dosisBomba;
             $solu->condiciones = $request->condiciones;
             $solu->save();
         }
@@ -119,17 +126,23 @@ class SolucionEnfermedadController extends Controller
     {
 
         $request->validate([
-            'dosis_tambo_ml' => 'required|numeric|not_in:0',
-            'dosis_bomba_ml' => 'required|numeric|not_in:0',
+            'dosis_tambo_ml' => 'nullable|numeric|min:0',
+            'dosis_bomba_ml' => 'nullable|numeric|min:0',
             'id_enfermedad_tipo_flor' => 'required|numeric|not_in:0',
             'id_producto' => 'required|numeric|not_in:0',
         ]);
 
+        $dosisTambo = $request->input('dosis_tambo_ml');
+        $dosisTambo = ($dosisTambo === null || $dosisTambo === '') ? 0 : $dosisTambo;
+
+        $dosisBomba = $request->input('dosis_bomba_ml');
+        $dosisBomba = ($dosisBomba === null || $dosisBomba === '') ? 0 : $dosisBomba;
+
         $solucion = SolucionEnfermedad::find($request->id);
         $solucion->id_producto = $request->id_producto;
         $solucion->id_enfermedad_tipo_flor = $request->id_enfermedad_tipo_flor;
-        $solucion->dosis_bomba_ml = $request->dosis_bomba_ml;
-        $solucion->dosis_tambo_ml = $request->dosis_tambo_ml;
+        $solucion->dosis_bomba_ml = $dosisBomba;
+        $solucion->dosis_tambo_ml = $dosisTambo;
         $solucion->condiciones = $request->condiciones;
         $solucion->save();
 
