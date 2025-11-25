@@ -77,21 +77,25 @@ class SolucionEnfermedadController extends Controller
     {
         $sucursal = SucursalService::getSucursalActiva();
 
+        // Normalizar si llega como objeto desde el select de Vue
+        $enfermedadTipoFlorId = is_array($request->id_enfermedad_tipo_flor)
+            ? ($request->id_enfermedad_tipo_flor['id'] ?? null)
+            : $request->id_enfermedad_tipo_flor;
+        $request->merge(['id_enfermedad_tipo_flor' => $enfermedadTipoFlorId]);
+
         $request->validate([
-            'dosis_tambo_ml' => 'nullable|numeric|min:0',
-            'dosis_bomba_ml' => 'nullable|numeric|min:0',
+            'dosis_tambo_ml' => 'required|numeric|gt:0',
+            'dosis_bomba_ml' => 'required|numeric|gt:0',
             'id_producto' => 'required|numeric|not_in:0',
+            'id_enfermedad_tipo_flor' => 'required|numeric|not_in:0',
         ]);
 
-        // Si los campos vienen vacíos se guardan como 0
         $dosisTambo = $request->input('dosis_tambo_ml');
-        $dosisTambo = ($dosisTambo === null || $dosisTambo === '') ? 0 : $dosisTambo;
 
         $dosisBomba = $request->input('dosis_bomba_ml');
-        $dosisBomba = ($dosisBomba === null || $dosisBomba === '') ? 0 : $dosisBomba;
 
         $solu = SolucionEnfermedad::where('id_producto', $request->id_producto)
-            ->where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor['id'])
+            ->where('id_enfermedad_tipo_flor', $request->id_enfermedad_tipo_flor)
             ->where('id_sucursal', $sucursal)
             ->first();
 
@@ -100,7 +104,7 @@ class SolucionEnfermedadController extends Controller
                 'dosis_tambo_ml' => $dosisTambo,
                 'dosis_bomba_ml' => $dosisBomba,
                 'id_producto' => $request->id_producto,
-                'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor['id'],
+                'id_enfermedad_tipo_flor' => $request->id_enfermedad_tipo_flor,
                 'id_sucursal' => $sucursal,
                 'condiciones' => $request->condiciones,
             ]);
@@ -124,19 +128,21 @@ class SolucionEnfermedadController extends Controller
      */
     public function update(Request $request)
     {
+        $enfermedadTipoFlorId = is_array($request->id_enfermedad_tipo_flor)
+            ? ($request->id_enfermedad_tipo_flor['id'] ?? null)
+            : $request->id_enfermedad_tipo_flor;
+        $request->merge(['id_enfermedad_tipo_flor' => $enfermedadTipoFlorId]);
 
         $request->validate([
-            'dosis_tambo_ml' => 'nullable|numeric|min:0',
-            'dosis_bomba_ml' => 'nullable|numeric|min:0',
+            'dosis_tambo_ml' => 'required|numeric|gt:0',
+            'dosis_bomba_ml' => 'required|numeric|gt:0',
             'id_enfermedad_tipo_flor' => 'required|numeric|not_in:0',
             'id_producto' => 'required|numeric|not_in:0',
         ]);
 
         $dosisTambo = $request->input('dosis_tambo_ml');
-        $dosisTambo = ($dosisTambo === null || $dosisTambo === '') ? 0 : $dosisTambo;
 
         $dosisBomba = $request->input('dosis_bomba_ml');
-        $dosisBomba = ($dosisBomba === null || $dosisBomba === '') ? 0 : $dosisBomba;
 
         $solucion = SolucionEnfermedad::find($request->id);
         $solucion->id_producto = $request->id_producto;
@@ -153,3 +159,6 @@ class SolucionEnfermedadController extends Controller
         ]);
     }
 }
+
+
+

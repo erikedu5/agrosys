@@ -26,6 +26,30 @@ const { form, reset } = usePersistedForm('agregarSolucionForm', {
     id: props.solucion != null ? props.solucion.id : null,
 });
 
+const clientErrors = ref({
+    id_enfermedad_tipo_flor: '',
+    dosis_bomba_ml: '',
+    dosis_tambo_ml: '',
+});
+
+const validateRequired = () => {
+    clientErrors.value = {
+        id_enfermedad_tipo_flor: form.id_enfermedad_tipo_flor ? '' : 'Campo obligatorio',
+        dosis_bomba_ml:
+            form.dosis_bomba_ml !== null && form.dosis_bomba_ml !== '' && Number(form.dosis_bomba_ml) > 0
+                ? ''
+                : 'Campo obligatorio (mayor a 0)',
+        dosis_tambo_ml:
+            form.dosis_tambo_ml !== null && form.dosis_tambo_ml !== '' && Number(form.dosis_tambo_ml) > 0
+                ? ''
+                : 'Campo obligatorio (mayor a 0)',
+    };
+
+    return !clientErrors.value.id_enfermedad_tipo_flor
+        && !clientErrors.value.dosis_bomba_ml
+        && !clientErrors.value.dosis_tambo_ml;
+};
+
 // Detectar si viene de la creación de un producto
 onMounted(() => {
     // Verificar si hay un parámetro que indique que viene de producto recién creado
@@ -40,6 +64,10 @@ onMounted(() => {
 });
 
 const submit = async () => {
+    if (!validateRequired()) {
+        return;
+    }
+
     if (props.solucion == undefined) {
         form.post(route('solucion.store'), {
             onSuccess: reset,
@@ -107,12 +135,19 @@ const onInventarioSuccess = () => {
                 <div class="md-col-span-2 mt-5 md:mt-0">
 
                     <div class="shadow bg-white md:rounded-md p-4">
-                        <label class="block font-medium text-sm text-gray-700">Enfermedad y flor que afecta</label>
+                        <p class="text-xs text-red-600 mb-3">Los campos marcados con * son obligatorios.</p>
+                        <label class="block font-medium text-sm text-gray-700">
+                            Enfermedad y flor que afecta
+                            <span class="text-red-500" title="Campo obligatorio"> *</span>
+                        </label>
                         <vue-single-select id="solucion" placeholder="Seleccione enfermedad"
                             v-model="form.id_enfermedad_tipo_flor" option-key="id" option-label="nombre"
                             :options="enfermedadesFlor">
                         </vue-single-select>
                         <InputError class="mt-2" :message="form.errors.id_enfermedad_tipo_flor" />
+                        <p v-if="clientErrors.id_enfermedad_tipo_flor" class="text-xs text-red-600 mt-1">
+                            {{ clientErrors.id_enfermedad_tipo_flor }}
+                        </p>
                         <br>
 
                         <form @submit.prevent="submit">
@@ -126,21 +161,31 @@ const onInventarioSuccess = () => {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block font-medium text-sm text-gray-700">Dosis por bomba en
-                                        Ml/Gr.</label>
+                                        Ml/Gr. <span class="text-red-500" title="Campo obligatorio"> *</span></label>
                                     <input type="number" step="0.01" min="0"
-                                        class="form-input w-full rounded-md shadow-sm" v-model="form.dosis_bomba_ml"
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="clientErrors.dosis_bomba_ml ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                        v-model="form.dosis_bomba_ml"
                                         placeholder="Ej: 25.5">
                                     <InputError class="mt-2" :message="form.errors.dosis_bomba_ml" />
+                                    <p v-if="clientErrors.dosis_bomba_ml" class="text-xs text-red-600 mt-1">
+                                        {{ clientErrors.dosis_bomba_ml }}
+                                    </p>
                                     <p class="text-xs text-gray-500 mt-1">Dosis recomendada por bomba de 20 litros</p>
                                 </div>
 
                                 <div>
                                     <label class="block font-medium text-sm text-gray-700">Dosis por tambo en
-                                        Ml/Gr.</label>
+                                        Ml/Gr. <span class="text-red-500" title="Campo obligatorio"> *</span></label>
                                     <input type="number" step="0.01" min="0"
-                                        class="form-input w-full rounded-md shadow-sm" v-model="form.dosis_tambo_ml"
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="clientErrors.dosis_tambo_ml ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
+                                        v-model="form.dosis_tambo_ml"
                                         placeholder="Ej: 375">
                                     <InputError class="mt-2" :message="form.errors.dosis_tambo_ml" />
+                                    <p v-if="clientErrors.dosis_tambo_ml" class="text-xs text-red-600 mt-1">
+                                        {{ clientErrors.dosis_tambo_ml }}
+                                    </p>
                                     <p class="text-xs text-gray-500 mt-1">Dosis recomendada por tambo de 300 litros</p>
                                 </div>
                             </div>
@@ -152,8 +197,7 @@ const onInventarioSuccess = () => {
                                             d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
                                             clip-rule="evenodd"></path>
                                     </svg>
-                                    Los campos de dosis son independientes. Ingrese cada valor según las recomendaciones
-                                    específicas del producto.
+                                    Los campos de dosis son obligatorios para guardar la solucion. Ingrese cada valor segun las recomendaciones especificas del producto.
                                 </p>
                             </div>
                             <br>
@@ -214,3 +258,4 @@ const onInventarioSuccess = () => {
             @success="onInventarioSuccess" />
     </AppLayout>
 </template>
+
