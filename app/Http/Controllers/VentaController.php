@@ -214,11 +214,14 @@ class VentaController extends Controller
 
             //Reduccion de stock;
             $stockStatus = AltaInventario::where('id_producto', $producto_venta['producto']['id'])
-                ->orderBy('created_at', 'desc')->first();
+                ->where('id_sucursal', $sucursalInfo->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
 
             $altaInventario = new AltaInventario();
-            $altaInventario->cantidad_actual = $stockStatus->cantidad_nueva;
-            $altaInventario->cantidad_nueva = $stockStatus->cantidad_nueva - $producto_venta['cantidad'];
+            $cantidadBase = $stockStatus?->cantidad_nueva ?? 0;
+            $altaInventario->cantidad_actual = $cantidadBase;
+            $altaInventario->cantidad_nueva = $cantidadBase - $producto_venta['cantidad'];
             $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto_venta['producto']['id'];
             $altaInventario->id_sucursal = $sucursalInfo->id;
