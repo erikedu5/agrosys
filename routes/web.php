@@ -94,6 +94,11 @@ Route::put('/inventario/{producto}/precios', [App\Http\Controllers\ProductoContr
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection'])
     ->whereNumber('producto');
 
+Route::get('/inventario/{producto}/cardex', [App\Http\Controllers\ProductoController::class, 'cardex'])
+    ->name('inventario.cardex')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection'])
+    ->whereNumber('producto');
+
 Route::resource('/solucion', App\Http\Controllers\SolucionEnfermedadController::class)
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 

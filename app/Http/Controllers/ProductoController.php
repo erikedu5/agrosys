@@ -9,6 +9,7 @@ use App\Models\Empresa;
 use App\Models\Producto;
 use App\Models\Sucursales;
 use App\Services\SucursalService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -422,6 +423,85 @@ class ProductoController extends Controller
         $producto->save();
 
         return redirect()->route('inventario.index');
+    }
+
+    public function cardex(Request $request, Producto $producto)
+    {
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            return response()->json([
+                'message' => 'No se encontró una sucursal activa. Selecciona una sucursal antes de continuar.',
+            ], 422);
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
+        $movimientos = AltaInventario::with('usuario:id,name')
+            ->where('id_producto', $producto->id)
+            ->where('id_sucursal', $sucursalId)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $primeraId = $movimientos->last()?->id;
+
+        $data = $movimientos->map(function (AltaInventario $movimiento) use ($primeraId) {
+            $actual = (float) $movimiento->cantidad_actual;
+            $nueva = (float) $movimiento->cantidad_nueva;
+            $diferencia = round($nueva - $actual, 2);
+
+            $tipo = $this->resolverTipoMovimiento($movimiento, $primeraId, $diferencia);
+
+            return [
+                'id' => $movimiento->id,
+                'tipo' => $tipo,
+                'cantidad_actual' => $actual,
+                'cantidad_movida' => $diferencia,
+                'cantidad_resultante' => $nueva,
+                'usuario' => $movimiento->usuario?->name ?? 'Desconocido',
+                'fecha' => $this->formatearFechaMovimiento($movimiento),
+            ];
+        });
+
+        return response()->json([
+            'producto' => [
+                'id' => $producto->id,
+                'nombre' => $producto->nombre,
+            ],
+            'movimientos' => $data,
+        ]);
+    }
+
+    private function resolverTipoMovimiento(AltaInventario $movimiento, ?int $primeraId, float $diferencia): string
+    {
+        if ($primeraId && $movimiento->id === $primeraId) {
+            return 'Creación';
+        }
+
+        if ($diferencia > 0) {
+            return 'Entrada';
+        }
+
+        if ($diferencia < 0) {
+            return 'Salida';
+        }
+
+        return 'Ajuste';
+    }
+
+    private function formatearFechaMovimiento(AltaInventario $movimiento): ?string
+    {
+        $raw = $movimiento->getRawOriginal('created_at') ?? $movimiento->created_at;
+
+        if (!$raw) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($raw)->toDateTimeString();
+        } catch (\Throwable) {
+            return (string) $raw;
+        }
     }
 
     private function obtenerSucursalYEstado(): array

@@ -4,7 +4,8 @@ import { ref, watch, computed } from 'vue';
 import { router, Link, useForm, usePage } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
-import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore } from '@mdi/js';
+import CardexModal from '@/Components/CardexModal.vue';
+import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -30,11 +31,14 @@ const q = ref('');
 const page = usePage();
 const showPriceModal = ref(false);
 const selectedProduct = ref(null);
+const showCardexModal = ref(false);
+const cardexProducto = ref(null);
 const icons = {
     price: mdiCashMultiple,
     edit: mdiPencil,
     add: mdiPlusBox,
     reset: mdiBackupRestore,
+    cardex: mdiClipboardListOutline,
 };
 
 const puedeGestionarCostos = computed(() => {
@@ -105,6 +109,19 @@ const handlePriceUpdated = (payload) => {
         preserveScroll: true,
         only: ['productos'],
     });
+};
+
+const openCardex = (producto) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
+    cardexProducto.value = producto;
+    showCardexModal.value = true;
+};
+
+const closeCardexModal = () => {
+    showCardexModal.value = false;
+    cardexProducto.value = null;
 };
 </script>
 
@@ -186,6 +203,14 @@ const handlePriceUpdated = (payload) => {
                                 </svg>
                                 <span class="sr-only">Actualizar</span>
                             </Link>
+                            <button type="button"
+                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                @click="openCardex(producto)" title="Ver cardex" aria-label="Ver cardex">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.cardex"></path>
+                                </svg>
+                                <span class="sr-only">Ver cardex</span>
+                            </button>
                             <Link href="" @click.prevent="agregarInventario(producto.id)"
                                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
                                 title="Agregar al inventario" aria-label="Agregar al inventario">
@@ -257,6 +282,14 @@ const handlePriceUpdated = (payload) => {
                                         </svg>
                                         <span class="sr-only">Actualizar</span>
                                     </Link>
+                                    <button type="button"
+                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
+                                        @click="openCardex(producto)" title="Ver cardex" aria-label="Ver cardex">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.cardex"></path>
+                                        </svg>
+                                        <span class="sr-only">Ver cardex</span>
+                                    </button>
                                     <Link href="" @click.prevent="agregarInventario(producto.id)"
                                         class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded shadow-sm hover:bg-gray-100 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white flex flex-center"
                                         title="Agregar al inventario" aria-label="Agregar al inventario">
@@ -289,5 +322,6 @@ const handlePriceUpdated = (payload) => {
         </div>
         <UpdateProductPricesModal :show="showPriceModal" :producto="selectedProduct"
             :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
+        <CardexModal :show="showCardexModal" :producto="cardexProducto" @close="closeCardexModal" />
     </AppLayout>
 </template>
