@@ -17,7 +17,7 @@ use Inertia\Inertia;
 
 
 Route::get('/', function () {
-    return Inertia::render('Auth/Login');
+    return Inertia::render('Welcome');
 });
 
 

@@ -169,6 +169,7 @@ class DevolucionesController extends Controller
                 $alta->id_usuario = Auth::id();
                 $alta->id_producto = $det['id_producto'];
                 $alta->id_sucursal = SucursalService::getSucursalActiva();
+                $alta->tipo_evento = AltaInventario::EVENTO_ALTA;
                 $alta->save();
             }
 

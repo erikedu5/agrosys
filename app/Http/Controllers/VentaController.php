@@ -225,6 +225,7 @@ class VentaController extends Controller
             $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto_venta['producto']['id'];
             $altaInventario->id_sucursal = $sucursalInfo->id;
+            $altaInventario->tipo_evento = AltaInventario::EVENTO_VENTA;
             $altaInventario->save();
         }
 

@@ -164,6 +164,7 @@ class ProductoController extends Controller
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $producto->id;
         $altaInventario->id_sucursal = $sucursalId;
+        $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
         $altaInventario->save();
 
         if ($request->expectsJson()) {
@@ -346,6 +347,7 @@ class ProductoController extends Controller
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $catProducto->id;
         $altaInventario->id_sucursal = $sucursalId;
+        $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
         $altaInventario->save();
 
         return redirect()->route('inventario.index', [
@@ -376,6 +378,7 @@ class ProductoController extends Controller
         $altaInventario->id_usuario = Auth::user()->id;
         $altaInventario->id_producto = $producto->id;
         $altaInventario->id_sucursal = $sucursalId;
+        $altaInventario->tipo_evento = AltaInventario::EVENTO_RESETEO;
         $altaInventario->save();
 
         return redirect()->route('inventario.index');
@@ -474,6 +477,17 @@ class ProductoController extends Controller
 
     private function resolverTipoMovimiento(AltaInventario $movimiento, ?int $primeraId, float $diferencia): string
     {
+        $tiposPorEvento = [
+            AltaInventario::EVENTO_ALTA => 'Alta de inventario',
+            AltaInventario::EVENTO_RESETEO => 'Reseteo a cero',
+            AltaInventario::EVENTO_VENTA => 'Venta',
+        ];
+
+        $tipoEvento = $movimiento->tipo_evento ?? null;
+        if ($tipoEvento && isset($tiposPorEvento[$tipoEvento])) {
+            return $tiposPorEvento[$tipoEvento];
+        }
+
         if ($primeraId && $movimiento->id === $primeraId) {
             return 'Creación';
         }

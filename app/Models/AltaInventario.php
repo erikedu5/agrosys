@@ -10,9 +10,27 @@ class AltaInventario extends Model
 {
     use HasFactory;
 
+    public const EVENTO_ALTA = 'alta_inventario';
+    public const EVENTO_RESETEO = 'reseteo_cero';
+    public const EVENTO_VENTA = 'venta';
+
+    protected $fillable = [
+        'cantidad_actual',
+        'cantidad_nueva',
+        'id_usuario',
+        'id_producto',
+        'id_sucursal',
+        'tipo_evento',
+    ];
+
     protected $casts = [
         'cantidad_actual' => 'float',
         'cantidad_nueva' => 'float',
+        'tipo_evento' => 'string',
+    ];
+
+    protected $attributes = [
+        'tipo_evento' => self::EVENTO_ALTA,
     ];
 
     public function producto()

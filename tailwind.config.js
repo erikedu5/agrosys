@@ -14,9 +14,7 @@ export default {
 
     theme: {
         extend: {
-            fontFamily: {
-                sans: ['Inter', ...defaultTheme.fontFamily.sans],
-            },
+            sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             colors: {
                 brand: {
                     DEFAULT: '#1E40AF',
