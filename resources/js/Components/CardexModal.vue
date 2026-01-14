@@ -180,6 +180,9 @@ const formatSigned = (value) => {
 
 const tipoBadge = (tipo) => {
     const variants = {
+        'Alta de inventario': 'bg-green-100 text-green-700',
+        'Reseteo a cero': 'bg-amber-100 text-amber-700',
+        Venta: 'bg-red-100 text-red-700',
         Entrada: 'bg-green-100 text-green-700',
         Salida: 'bg-red-100 text-red-700',
         Creación: 'bg-blue-100 text-blue-700',

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\AltaInventario;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,6 +23,7 @@ class AltaInventarioFactory extends Factory
             'id_usuario' => $this->faker->numberBetween(1, 10),
             'id_producto' => $this->faker->numberBetween(1, 10),
             'id_sucursal' => 1,
+            'tipo_evento' => AltaInventario::EVENTO_ALTA,
         ];
     }
 }

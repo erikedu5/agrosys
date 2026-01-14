@@ -100,6 +100,7 @@ class ComprasController extends Controller
             $altaInventario->id_usuario = Auth::user()->id;
             $altaInventario->id_producto = $producto['id'];
             $altaInventario->id_sucursal = SucursalService::getSucursalActiva();
+            $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
             Log::info($altaInventario);
             $altaInventario->save();
         }
