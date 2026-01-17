@@ -185,6 +185,8 @@ const tipoBadge = (tipo) => {
         Venta: 'bg-red-100 text-red-700',
         Entrada: 'bg-green-100 text-green-700',
         Salida: 'bg-red-100 text-red-700',
+        'Entrada por transferencia': 'bg-blue-100 text-blue-700',
+        'Salida por transferencia': 'bg-purple-100 text-purple-700',
         Creación: 'bg-blue-100 text-blue-700',
         Ajuste: 'bg-amber-100 text-amber-700',
     };

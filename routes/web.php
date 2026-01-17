@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\TransferenciaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -177,6 +178,21 @@ Route::get('/reporte/ventaPorProductoMarca-ticket', [App\Http\Controllers\Report
 
 Route::resource('/compra', \App\Http\Controllers\ComprasController::class)
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
+
+Route::get('/transferencias/buscar-productos', [TransferenciaController::class, 'buscarProductos'])
+    ->name('transferencias.buscarProductos')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
+
+Route::get('/transferencias/{id}/recibo', [TransferenciaController::class, 'generarRecibo'])
+    ->name('transferencias.recibo')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
+
+Route::resource('/transferencias', TransferenciaController::class)
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
+
+Route::post('/transferencias/{id}/recibir', [TransferenciaController::class, 'recibir'])
+    ->name('transferencias.recibir')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
 
 Route::get('/facturas/index', [\App\Http\Controllers\FacturaController::class, 'index'])
     ->name("facturas.index")

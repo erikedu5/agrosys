@@ -87,7 +87,8 @@ class MainController extends Controller
                 'id' => $sucursalInfo->id ?? null,
                 'nombre' => SucursalService::getNombreSucursalActiva(),
                 'esAdminEmpresa' => Auth::user()->tipo === 'adminEmpresa',
-                'sucursalesDisponibles' => Auth::user()->tipo === 'adminEmpresa' ? SucursalService::getSucursalesDisponibles() : []
+                'sucursalesDisponibles' => Auth::user()->tipo === 'adminEmpresa' ? SucursalService::getSucursalesDisponibles() : [],
+                'es_bodega' => (bool) ($sucursalInfo->es_bodega ?? false),
             ]
         ]);
     }

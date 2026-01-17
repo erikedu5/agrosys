@@ -481,6 +481,8 @@ class ProductoController extends Controller
             AltaInventario::EVENTO_ALTA => 'Alta de inventario',
             AltaInventario::EVENTO_RESETEO => 'Reseteo a cero',
             AltaInventario::EVENTO_VENTA => 'Venta',
+            AltaInventario::EVENTO_TRANSFERENCIA_ENTRADA => 'Entrada por transferencia',
+            AltaInventario::EVENTO_TRANSFERENCIA_SALIDA => 'Salida por transferencia',
         ];
 
         $tipoEvento = $movimiento->tipo_evento ?? null;
@@ -526,9 +528,11 @@ class ProductoController extends Controller
             return [null, null, false, null];
         }
 
-        $sucursal = Sucursales::withTrashed()->with(['empresa' => function ($query) {
-            $query->withTrashed();
-        }])->find($sucursalId);
+        $sucursal = Sucursales::withTrashed()->with([
+            'empresa' => function ($query) {
+                $query->withTrashed();
+            }
+        ])->find($sucursalId);
 
         if (!$sucursal) {
             return [$sucursalId, null, false, null];

@@ -95,6 +95,10 @@ const restaurar = (id) => {
                         <div class="text-gray-500">Es Matriz</div>
                         <div>{{ sucursal.es_matriz == 1 ? 'Si' : 'No' }}</div>
                     </div>
+                     <div>
+                        <div class="text-gray-500">Es Bodega</div>
+                        <div>{{ sucursal.es_bodega == 1 ? 'Si' : 'No' }}</div>
+                    </div>
                     <div class="flex justify-end mt-3">
                         <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">
                             <Link :href="route('sucursal.edit', sucursal.id)"
@@ -130,6 +134,7 @@ const restaurar = (id) => {
                             <th class="text-center">Telefono</th>
                             <th class="text-center">Email</th>
                             <th class="text-center">Es Matriz</th>
+                            <th class="text-center">Es Bodega</th>
                             <th class=" text-center">Accioness</th>
                         </tr>
                     </thead>
@@ -141,6 +146,7 @@ const restaurar = (id) => {
                             <td class="whitespace-nowrap"> {{ sucursal.telefono }} </td>
                             <td class="whitespace-nowrap"> {{ sucursal.email }} </td>
                             <td class="whitespace-nowrap text-center"> {{ sucursal.es_matriz == 1 ? 'Si' : 'No' }} </td>
+                            <td class="whitespace-nowrap text-center"> {{ sucursal.es_bodega == 1 ? 'Si' : 'No' }} </td>
                             <td class="whitespace-nowrap">
                                 <div v-if="!showDeleted" class="inline-flex rounded-md shadow-sm" role="group">
                                     <Link :href="route('sucursal.edit', sucursal.id)"

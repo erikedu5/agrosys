@@ -82,6 +82,7 @@ class SucursalController extends Controller
             'email' => $request->email,
             'id_empresa' => $request->id_empresa,
             'es_matriz' => $request->es_matriz,
+            'es_bodega' => $request->es_bodega,
             'ticket_width_mm' => $request->ticket_width_mm ?? 80,
         ]);
 
@@ -141,6 +142,7 @@ class SucursalController extends Controller
         $sucursal->telefono = $request->telefono;
         $sucursal->email = $request->email;
         $sucursal->es_matriz = $request->es_matriz;
+        $sucursal->es_bodega = $request->es_bodega;
         $sucursal->id_empresa = $request->id_empresa;
         if ($request->filled('ticket_width_mm')) {
             $sucursal->ticket_width_mm = (int) $request->ticket_width_mm;
