@@ -21,7 +21,7 @@ class SucursalController extends Controller
         $empresa = Empresa::find(1);
         $query = Sucursales::where('nombre', 'LIKE', "%$request->q%");
         if (Auth::user()->tipo != 'superAdmin') {
-            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
+            $sucursalUser = Sucursales::where('id', SucursalService::getSucursalActiva())->first();
             $query = $query->where('id_empresa', $sucursalUser->id_empresa);
             $empresa = Empresa::find($sucursalUser->id_empresa);
         }
@@ -52,7 +52,7 @@ class SucursalController extends Controller
         if (Auth::user()->tipo == 'superAdmin') {
             $empresas = Empresa::get();
         } else {
-            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
+            $sucursalUser = Sucursales::where('id', SucursalService::getSucursalActiva())->first();
             $empresas = Empresa::where('id', $sucursalUser->id_empresa)->get();
         }
         return Inertia::render('Sucursal/CreateSucursal', [
@@ -75,33 +75,62 @@ class SucursalController extends Controller
             'ticket_width_mm' => 'Agregar un formato de ticket valido.'
         ]);
 
-        $sucursal = Sucursales::create([
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('CREAR_SUCURSAL', [
             'nombre' => $request->nombre,
-            'direccion' => $request->direccion,
-            'telefono' => $request->telefono,
-            'email' => $request->email,
-            'id_empresa' => $request->id_empresa,
+            'empresa_id' => $request->id_empresa,
             'es_matriz' => $request->es_matriz,
-            'ticket_width_mm' => $request->ticket_width_mm ?? 80,
         ]);
 
-        // Crear cliente "Público en general" para la nueva sucursal
-        $clientePublico = Clientes::create([
-            'nombre' => 'Público en general',
-            'porcentaje_descuento' => 0,
-            'adeudo_total' => 0,
-            'abono_total' => 0,
-            'balance' => 0,
-            'requiereFactura' => false,
-            'activo' => true,
-            'rfc' => null,
-            'id_sucursal' => $sucursal->id,
-        ]);
+        try {
+            $sucursal = Sucursales::create([
+                'nombre' => $request->nombre,
+                'direccion' => $request->direccion,
+                'telefono' => $request->telefono,
+                'email' => $request->email,
+                'id_empresa' => $request->id_empresa,
+                'es_matriz' => $request->es_matriz,
+                'ticket_width_mm' => $request->ticket_width_mm ?? 80,
+            ]);
 
-        // Actualizar la sucursal con el ID del cliente público
-        $sucursal->update(['id_cliente_publico' => $clientePublico->id]);
+            $logger->step('Sucursal creada', [
+                'sucursal_id' => $sucursal->id,
+                'nombre' => $sucursal->nombre,
+            ]);
 
-        return redirect()->route('sucursal.index');
+            // Crear cliente "Público en general" para la nueva sucursal
+            $clientePublico = Clientes::create([
+                'nombre' => 'Público en general',
+                'porcentaje_descuento' => 0,
+                'adeudo_total' => 0,
+                'abono_total' => 0,
+                'balance' => 0,
+                'requiereFactura' => false,
+                'activo' => true,
+                'rfc' => null,
+                'id_sucursal' => $sucursal->id,
+            ]);
+
+            $logger->step('Cliente público creado', [
+                'cliente_id' => $clientePublico->id,
+            ]);
+
+            // Actualizar la sucursal con el ID del cliente público
+            $sucursal->update(['id_cliente_publico' => $clientePublico->id]);
+
+            $logger->success([
+                'sucursal_id' => $sucursal->id,
+                'cliente_publico_id' => $clientePublico->id,
+            ]);
+
+            return redirect()->route('sucursal.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'nombre' => $request->nombre,
+            ]);
+
+            return back()->with('error', 'Error al crear sucursal: ' . $e->getMessage());
+        }
     }
 
 
@@ -114,7 +143,7 @@ class SucursalController extends Controller
         if (Auth::user()->tipo == 'superAdmin') {
             $empresas = Empresa::get();
         } else {
-            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
+            $sucursalUser = Sucursales::where('id', SucursalService::getSucursalActiva())->first();
             $empresas = Empresa::where('id', $sucursalUser->id_empresa)->get();
         }
         $sucursal = Sucursales::find($id);
@@ -135,18 +164,53 @@ class SucursalController extends Controller
             'direccion.required' => 'Agregar una dirección.',
             'ticket_width_mm.required' => 'Agregar un formato de ticket valido.'
         ]);
-        $sucursal = Sucursales::find($request->id);
-        $sucursal->nombre = $request->nombre;
-        $sucursal->direccion = $request->direccion;
-        $sucursal->telefono = $request->telefono;
-        $sucursal->email = $request->email;
-        $sucursal->es_matriz = $request->es_matriz;
-        $sucursal->id_empresa = $request->id_empresa;
-        if ($request->filled('ticket_width_mm')) {
-            $sucursal->ticket_width_mm = (int) $request->ticket_width_mm;
+
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('ACTUALIZAR_SUCURSAL', [
+            'sucursal_id' => $request->id,
+            'nombre' => $request->nombre,
+        ]);
+
+        try {
+            $sucursal = Sucursales::find($request->id);
+
+            if (!$sucursal) {
+                $logger->warning('Sucursal no encontrada', [
+                    'sucursal_id' => $request->id,
+                ]);
+                return redirect()->route('sucursal.index')->with('error', 'Sucursal no encontrada.');
+            }
+
+            $logger->step('Valores anteriores', [
+                'nombre' => $sucursal->nombre,
+                'direccion' => $sucursal->direccion,
+                'es_matriz' => $sucursal->es_matriz,
+            ]);
+
+            $sucursal->nombre = $request->nombre;
+            $sucursal->direccion = $request->direccion;
+            $sucursal->telefono = $request->telefono;
+            $sucursal->email = $request->email;
+            $sucursal->es_matriz = $request->es_matriz;
+            $sucursal->id_empresa = $request->id_empresa;
+            if ($request->filled('ticket_width_mm')) {
+                $sucursal->ticket_width_mm = (int) $request->ticket_width_mm;
+            }
+            $sucursal->save();
+
+            $logger->success([
+                'sucursal_id' => $sucursal->id,
+                'nombre' => $sucursal->nombre,
+            ]);
+
+            return redirect()->route('sucursal.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'sucursal_id' => $request->id,
+            ]);
+
+            return back()->with('error', 'Error al actualizar sucursal: ' . $e->getMessage());
         }
-        $sucursal->save();
-        return redirect()->route('sucursal.index');
     }
 
     /**
@@ -154,14 +218,58 @@ class SucursalController extends Controller
      */
     public function destroy(Sucursales $sucursal)
     {
-        $sucursal->delete(); // Soft delete
-        return redirect()->route('sucursal.index');
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('ELIMINAR_SUCURSAL', [
+            'sucursal_id' => $sucursal->id,
+            'nombre' => $sucursal->nombre,
+        ]);
+
+        try {
+            $sucursal->delete(); // Soft delete
+
+            $logger->success([
+                'sucursal_id' => $sucursal->id,
+                'operacion' => 'soft_delete',
+            ]);
+
+            return redirect()->route('sucursal.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'sucursal_id' => $sucursal->id,
+            ]);
+
+            return back()->with('error', 'Error al eliminar sucursal: ' . $e->getMessage());
+        }
     }
 
     public function restore($id)
     {
-        $sucursal = Sucursales::onlyTrashed()->findOrFail($id);
-        $sucursal->restore();
-        return redirect()->route('sucursal.index');
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('RESTAURAR_SUCURSAL', [
+            'sucursal_id' => $id,
+        ]);
+
+        try {
+            $sucursal = Sucursales::onlyTrashed()->findOrFail($id);
+
+            $logger->step('Sucursal encontrada', [
+                'nombre' => $sucursal->nombre,
+            ]);
+
+            $sucursal->restore();
+
+            $logger->success([
+                'sucursal_id' => $sucursal->id,
+                'nombre' => $sucursal->nombre,
+            ]);
+
+            return redirect()->route('sucursal.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'sucursal_id' => $id,
+            ]);
+
+            return back()->with('error', 'Error al restaurar sucursal: ' . $e->getMessage());
+        }
     }
 }

@@ -61,14 +61,14 @@ class UsuarioController extends Controller
             // Para superAdmin: todas las sucursales y todas las empresas
             $sucursales = Sucursales::get();
             foreach ($sucursales as $sucursal) {
-                $empresa = Empresa::where('id',  $sucursal->id_empresa)->first();
+                $empresa = Empresa::where('id', $sucursal->id_empresa)->first();
                 $sucursal->nombre = $empresa->nombre . ' - ' . $sucursal->nombre;
             }
 
             $empresas = Empresa::get();
         } else {
             // Para admin empresa: solo sucursales de su empresa
-            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
+            $sucursalUser = Sucursales::where('id', SucursalService::getSucursalActiva())->first();
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
@@ -95,7 +95,7 @@ class UsuarioController extends Controller
             'name.required' => 'Agregar un nombre de usuario.',
             'email.required' => 'Agregar un correo electrónico.',
             'tipo.required' => 'Agregar un Rol.',
-            'password.required'  => 'Agregar una contraseña.',
+            'password.required' => 'Agregar una contraseña.',
         ];
 
         // Para adminEmpresa validar empresa, para otros validar sucursal
@@ -109,22 +109,57 @@ class UsuarioController extends Controller
 
         $request->validate($validation, $messages);
 
-        $data = [];
-        if ($request->password !== null) {
-            $data['password'] = Hash::make($request->password);
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('CREAR_USUARIO', [
+            'name' => $request->name,
+            'email' => $request->email,
+            'tipo' => $request->tipo,
+        ]);
+
+        try {
+            $data = [];
+            if ($request->password !== null) {
+                $data['password'] = Hash::make($request->password);
+            }
+
+            if ($request->tipo === 'adminEmpresa') {
+                $primeraSucursal = Sucursales::where('id_empresa', $request->id_empresa)->first();
+                $data['id_sucursal'] = $primeraSucursal ? $primeraSucursal->id : null;
+                $data['id_empresa'] = $request->id_empresa;
+
+                $logger->step('AdminEmpresa - sucursal asignada', [
+                    'empresa_id' => $request->id_empresa,
+                    'sucursal_id' => $data['id_sucursal'],
+                ]);
+            } else {
+                $data['id_empresa'] = Sucursales::where('id', $request->id_sucursal)->first()->id_empresa;
+                $data['id_sucursal'] = $request->id_sucursal;
+
+                $logger->step('Usuario regular - empresa obtenida', [
+                    'sucursal_id' => $request->id_sucursal,
+                    'empresa_id' => $data['id_empresa'],
+                ]);
+            }
+
+            $request->merge($data);
+
+            $usuario = User::create($request->all());
+
+            $logger->success([
+                'usuario_id' => $usuario->id,
+                'name' => $usuario->name,
+                'tipo' => $usuario->tipo,
+            ]);
+
+            return redirect()->route('usuario.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'name' => $request->name,
+                'email' => $request->email,
+            ]);
+
+            return back()->with('error', 'Error al crear usuario: ' . $e->getMessage());
         }
-
-        if ($request->tipo === 'adminEmpresa') {
-            $primeraSucursal = Sucursales::where('id_empresa', $request->id_empresa)->first();
-            $data['id_sucursal'] = $primeraSucursal ? $primeraSucursal->id : null;
-        } else {
-            $data['id_empresa'] = Sucursales::where('id', $request->id_sucursal)->first()->id_empresa;
-        }
-
-        $request->merge($data);
-
-        User::create($request->all());
-        return redirect()->route('usuario.index');
     }
 
 
@@ -141,14 +176,14 @@ class UsuarioController extends Controller
             // Para superAdmin: todas las sucursales y todas las empresas
             $sucursales = Sucursales::get();
             foreach ($sucursales as $sucursal) {
-                $empresa = Empresa::where('id',  $sucursal->id_empresa)->first();
+                $empresa = Empresa::where('id', $sucursal->id_empresa)->first();
                 $sucursal->nombre = $empresa->nombre . ' - ' . $sucursal->nombre;
             }
 
             $empresas = Empresa::get();
         } else {
             // Para admin empresa: solo sucursales de su empresa
-            $sucursalUser = Sucursales::where('id',  SucursalService::getSucursalActiva())->first();
+            $sucursalUser = Sucursales::where('id', SucursalService::getSucursalActiva())->first();
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
@@ -176,16 +211,54 @@ class UsuarioController extends Controller
             'tipo.required' => 'Agregar un Rol.',
         ]);
 
-        $usuario = User::find($request->id);
-        $usuario->name = $request->name;
-        if ($request->password !== null) {
-            $usuario->password = Hash::make($request->password);
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('ACTUALIZAR_USUARIO', [
+            'usuario_id' => $request->id,
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        try {
+            $usuario = User::find($request->id);
+
+            if (!$usuario) {
+                $logger->warning('Usuario no encontrado', [
+                    'usuario_id' => $request->id,
+                ]);
+                return redirect()->route('usuario.index')->with('error', 'Usuario no encontrado.');
+            }
+
+            $logger->step('Valores anteriores', [
+                'name' => $usuario->name,
+                'email' => $usuario->email,
+                'tipo' => $usuario->tipo,
+                'sucursal_id' => $usuario->id_sucursal,
+            ]);
+
+            $usuario->name = $request->name;
+            if ($request->password !== null) {
+                $usuario->password = Hash::make($request->password);
+                $logger->step('Contraseña actualizada');
+            }
+            $usuario->email = $request->email;
+            $usuario->tipo = $request->tipo;
+            $usuario->id_sucursal = $request->id_sucursal;
+            $usuario->save();
+
+            $logger->success([
+                'usuario_id' => $usuario->id,
+                'name' => $usuario->name,
+                'tipo' => $usuario->tipo,
+            ]);
+
+            return redirect()->route('usuario.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'usuario_id' => $request->id,
+            ]);
+
+            return back()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
         }
-        $usuario->email = $request->email;
-        $usuario->tipo = $request->tipo;
-        $usuario->id_sucursal = $request->id_sucursal;
-        $usuario->save();
-        return redirect()->route('usuario.index');
     }
 
     /**
@@ -193,14 +266,60 @@ class UsuarioController extends Controller
      */
     public function destroy(User $usuario)
     {
-        $usuario->delete(); // Soft delete
-        return redirect()->route('usuario.index');
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('ELIMINAR_USUARIO', [
+            'usuario_id' => $usuario->id,
+            'name' => $usuario->name,
+            'email' => $usuario->email,
+        ]);
+
+        try {
+            $usuario->delete(); // Soft delete
+
+            $logger->success([
+                'usuario_id' => $usuario->id,
+                'operacion' => 'soft_delete',
+            ]);
+
+            return redirect()->route('usuario.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'usuario_id' => $usuario->id,
+            ]);
+
+            return back()->with('error', 'Error al eliminar usuario: ' . $e->getMessage());
+        }
     }
 
     public function restore($id)
     {
-        $usuario = User::onlyTrashed()->findOrFail($id);
-        $usuario->restore();
-        return redirect()->route('usuario.index');
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('RESTAURAR_USUARIO', [
+            'usuario_id' => $id,
+        ]);
+
+        try {
+            $usuario = User::onlyTrashed()->findOrFail($id);
+
+            $logger->step('Usuario encontrado', [
+                'name' => $usuario->name,
+                'email' => $usuario->email,
+            ]);
+
+            $usuario->restore();
+
+            $logger->success([
+                'usuario_id' => $usuario->id,
+                'name' => $usuario->name,
+            ]);
+
+            return redirect()->route('usuario.index');
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'usuario_id' => $id,
+            ]);
+
+            return back()->with('error', 'Error al restaurar usuario: ' . $e->getMessage());
+        }
     }
 }

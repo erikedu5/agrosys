@@ -60,21 +60,61 @@ class FacturaController extends Controller
             'fechaFin' => 'required',
         ]);
 
-        $fechaInicio = new DateTime($request->fechaInicio);
-        $fechaInicio->setTime(0, 0, 0);
-        $fechaInicio->format('Y-m-d h:i:s a');
-
-        $fechaFin = new DateTime($request->fechaFin);
-        $fechaFin->setTime(23, 59, 59);
-        $fechaFin->format('Y-m-d h:i:s a');
-
-        $factura = Factura::find($request->id);
-        $factura->facturaCompleta = true;
-        $factura->save();
-
-        return redirect()->route('facturas.index', [
-            'fechaInicio' => $request->fechaInicio,
-            'fechaFin' => $request->fechaFin,
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('ACTUALIZAR_FACTURA', [
+            'factura_id' => $request->id,
+            'fecha_inicio' => $request->fechaInicio,
+            'fecha_fin' => $request->fechaFin,
         ]);
+
+        try {
+            $fechaInicio = new DateTime($request->fechaInicio);
+            $fechaInicio->setTime(0, 0, 0);
+            $fechaInicio->format('Y-m-d h:i:s a');
+
+            $fechaFin = new DateTime($request->fechaFin);
+            $fechaFin->setTime(23, 59, 59);
+            $fechaFin->format('Y-m-d h:i:s a');
+
+            $factura = Factura::find($request->id);
+
+            if (!$factura) {
+                $logger->warning('Factura no encontrada', [
+                    'factura_id' => $request->id,
+                ]);
+                return redirect()->route('facturas.index', [
+                    'fechaInicio' => $request->fechaInicio,
+                    'fechaFin' => $request->fechaFin,
+                ])->with('error', 'Factura no encontrada.');
+            }
+
+            $logger->step('Factura cargada', [
+                'venta_id' => $factura->id_venta,
+                'cliente_id' => $factura->id_cliente,
+                'estado_anterior' => $factura->facturaCompleta,
+            ]);
+
+            $factura->facturaCompleta = true;
+            $factura->save();
+
+            $logger->success([
+                'factura_id' => $factura->id,
+                'factura_completa' => true,
+            ]);
+
+            return redirect()->route('facturas.index', [
+                'fechaInicio' => $request->fechaInicio,
+                'fechaFin' => $request->fechaFin,
+            ]);
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'factura_id' => $request->id,
+            ]);
+
+            return redirect()->route('facturas.index', [
+                'fechaInicio' => $request->fechaInicio,
+                'fechaFin' => $request->fechaFin,
+            ])->with('error', 'Error al actualizar factura: ' . $e->getMessage());
+        }
     }
 }

@@ -336,23 +336,50 @@ class ProductoController extends Controller
             ]);
         }
 
-        $actualStock = AltaInventario::where('id_producto', $request->id)
-            ->where('id_sucursal', $sucursalId)
-            ->orderBy('created_at', 'desc')->first();
-
-        $altaInventario = new AltaInventario();
-        $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
-        $altaInventario->cantidad_actual = $cantidad;
-        $altaInventario->cantidad_nueva = $cantidad + $request->cantidad;
-        $altaInventario->id_usuario = Auth::user()->id;
-        $altaInventario->id_producto = $catProducto->id;
-        $altaInventario->id_sucursal = $sucursalId;
-        $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
-        $altaInventario->save();
-
-        return redirect()->route('inventario.index', [
-            'id_producto' => $request->id
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('AGREGAR_INVENTARIO', [
+            'producto_id' => $catProducto->id,
+            'producto_nombre' => $catProducto->nombre,
+            'cantidad_agregar' => $request->cantidad,
+            'sucursal_id' => $sucursalId,
         ]);
+
+        try {
+            $actualStock = AltaInventario::where('id_producto', $request->id)
+                ->where('id_sucursal', $sucursalId)
+                ->orderBy('created_at', 'desc')->first();
+
+            $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
+
+            $logger->step('Stock actual obtenido', [
+                'stock_actual' => $cantidad,
+            ]);
+
+            $altaInventario = new AltaInventario();
+            $altaInventario->cantidad_actual = $cantidad;
+            $altaInventario->cantidad_nueva = $cantidad + $request->cantidad;
+            $altaInventario->id_usuario = Auth::user()->id;
+            $altaInventario->id_producto = $catProducto->id;
+            $altaInventario->id_sucursal = $sucursalId;
+            $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
+            $altaInventario->save();
+
+            $logger->success([
+                'stock_anterior' => $cantidad,
+                'stock_nuevo' => $altaInventario->cantidad_nueva,
+                'incremento' => $request->cantidad,
+            ]);
+
+            return redirect()->route('inventario.index', [
+                'id_producto' => $request->id
+            ]);
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'producto_id' => $request->id,
+            ]);
+
+            throw $e;
+        }
     }
 
     public function resetInventario(Producto $producto)
@@ -365,23 +392,48 @@ class ProductoController extends Controller
 
         $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
 
-        $actualStock = AltaInventario::where('id_producto', $producto->id)
-            ->where('id_sucursal', $sucursalId)
-            ->orderBy('created_at', 'desc')
-            ->first();
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('RESET_INVENTARIO', [
+            'producto_id' => $producto->id,
+            'producto_nombre' => $producto->nombre,
+            'sucursal_id' => $sucursalId,
+        ]);
 
-        $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
+        try {
+            $actualStock = AltaInventario::where('id_producto', $producto->id)
+                ->where('id_sucursal', $sucursalId)
+                ->orderBy('created_at', 'desc')
+                ->first();
 
-        $altaInventario = new AltaInventario();
-        $altaInventario->cantidad_actual = $cantidad;
-        $altaInventario->cantidad_nueva = 0;
-        $altaInventario->id_usuario = Auth::user()->id;
-        $altaInventario->id_producto = $producto->id;
-        $altaInventario->id_sucursal = $sucursalId;
-        $altaInventario->tipo_evento = AltaInventario::EVENTO_RESETEO;
-        $altaInventario->save();
+            $cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
 
-        return redirect()->route('inventario.index');
+            $logger->step('Stock actual obtenido', [
+                'stock_actual' => $cantidad,
+            ]);
+
+            $altaInventario = new AltaInventario();
+            $altaInventario->cantidad_actual = $cantidad;
+            $altaInventario->cantidad_nueva = 0;
+            $altaInventario->id_usuario = Auth::user()->id;
+            $altaInventario->id_producto = $producto->id;
+            $altaInventario->id_sucursal = $sucursalId;
+            $altaInventario->tipo_evento = AltaInventario::EVENTO_RESETEO;
+            $altaInventario->save();
+
+            $logger->success([
+                'stock_anterior' => $cantidad,
+                'stock_nuevo' => 0,
+            ]);
+
+            return redirect()->route('inventario.index');
+
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'producto_id' => $producto->id,
+            ]);
+
+            throw $e;
+        }
     }
 
     public function updatePrecios(Request $request, Producto $producto)
