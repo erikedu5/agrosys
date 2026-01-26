@@ -70,56 +70,104 @@ class ComprasController extends Controller
             'status' => 'required',
             'productos' => 'required',
         ]);
-        $fecha_compra = Carbon::parse($request->fecha_compra)->format('Y-m-d H:i:s');
-        $fecha_credito = Carbon::parse($fecha_compra)->addDays(30);
-        $compra = Compras::create([
+
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('PROCESAR_COMPRA', [
             'proveedor' => $request->proveedor,
-            'fecha_compra' => $fecha_compra,
             'total_compra' => $request->total_compra,
+            'num_productos' => count($request->productos),
             'status' => $request->status,
-            'fecha_credito' => $fecha_credito,
-            'total_credito' => $request->total_credito,
-            'id_sucursal' => SucursalService::getSucursalActiva()
+            'sucursal_id' => SucursalService::getSucursalActiva(),
         ]);
 
-        foreach ($request->productos as $producto) {
-            ComprasProductos::create([
-                'id_compra' => $compra->id,
-                'id_producto' => $producto['id'],
-                'cantidad' => $producto['cantidad'],
-                'precio' => $producto['precio_compra']
+        try {
+            $fecha_compra = Carbon::parse($request->fecha_compra)->format('Y-m-d H:i:s');
+            $fecha_credito = Carbon::parse($fecha_compra)->addDays(30);
+            $compra = Compras::create([
+                'proveedor' => $request->proveedor,
+                'fecha_compra' => $fecha_compra,
+                'total_compra' => $request->total_compra,
+                'status' => $request->status,
+                'fecha_credito' => $fecha_credito,
+                'total_credito' => $request->total_credito,
+                'id_sucursal' => SucursalService::getSucursalActiva()
             ]);
 
-            $altaInventarioSaved = AltaInventario::where('id_producto', $producto['id'])
-                ->where('id_sucursal',  SucursalService::getSucursalActiva())
-                ->orderBy('created_at', 'desc')->first();
-
-            $altaInventario = new AltaInventario();
-            $altaInventario->cantidad_actual = $altaInventarioSaved->cantidad_nueva;
-            $altaInventario->cantidad_nueva = $altaInventarioSaved->cantidad_nueva + $producto['cantidad'];
-            $altaInventario->id_usuario = Auth::user()->id;
-            $altaInventario->id_producto = $producto['id'];
-            $altaInventario->id_sucursal = SucursalService::getSucursalActiva();
-            $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
-            Log::info($altaInventario);
-            $altaInventario->save();
-        }
-
-        foreach ($request->abonos as $abono) {
-            $abono = ComprasAbonos::create([
-                'id_compra' => $compra->id,
-                'cantidad_abonada' => $abono['cantidad_abonada']
+            $logger->step('Compra creada', [
+                'compra_id' => $compra->id,
+                'fecha' => $fecha_compra,
+                'total' => $request->total_compra,
             ]);
+
+            foreach ($request->productos as $index => $producto) {
+                ComprasProductos::create([
+                    'id_compra' => $compra->id,
+                    'id_producto' => $producto['id'],
+                    'cantidad' => $producto['cantidad'],
+                    'cantidad_disponible' => $producto['cantidad'],
+                    'precio' => $producto['precio_compra']
+                ]);
+
+                $altaInventarioSaved = AltaInventario::where('id_producto', $producto['id'])
+                    ->where('id_sucursal', SucursalService::getSucursalActiva())
+                    ->orderBy('created_at', 'desc')->first();
+
+                $cantidadActual = $altaInventarioSaved->cantidad_nueva;
+                $altaInventario = new AltaInventario();
+                $altaInventario->cantidad_actual = $cantidadActual;
+                $altaInventario->cantidad_nueva = $cantidadActual + $producto['cantidad'];
+                $altaInventario->id_usuario = Auth::user()->id;
+                $altaInventario->id_producto = $producto['id'];
+                $altaInventario->id_sucursal = SucursalService::getSucursalActiva();
+                $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
+                Log::info($altaInventario);
+                $altaInventario->save();
+
+                $logger->step("Producto {$index} procesado", [
+                    'producto_id' => $producto['id'],
+                    'cantidad' => $producto['cantidad'],
+                    'precio' => $producto['precio_compra'],
+                    'stock_anterior' => $cantidadActual,
+                    'stock_nuevo' => $altaInventario->cantidad_nueva,
+                ]);
+            }
+
+            foreach ($request->abonos as $abono) {
+                $abono = ComprasAbonos::create([
+                    'id_compra' => $compra->id,
+                    'cantidad_abonada' => $abono['cantidad_abonada']
+                ]);
+            }
+
+            $logger->step('Abonos registrados', [
+                'num_abonos' => count($request->abonos),
+            ]);
+
+            $logger->success([
+                'compra_id' => $compra->id,
+                'total' => $compra->total_compra,
+            ]);
+
+            $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
+                ->where('id_sucursal', SucursalService::getSucursalActiva())
+                ->latest()
+                ->paginate(10);
+
+            return Inertia::render('Inventario/Compra/Compras', [
+                'compras' => $compras,
+            ]);
+
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'proveedor' => $request->proveedor,
+                'productos' => array_map(fn($p) => [
+                    'id' => $p['id'],
+                    'cantidad' => $p['cantidad']
+                ], $request->productos),
+            ]);
+
+            throw $e;
         }
-
-        $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
-            ->where('id_sucursal', SucursalService::getSucursalActiva())
-            ->latest()
-            ->paginate(10);
-
-        return Inertia::render('Inventario/Compra/Compras', [
-            'compras' => $compras,
-        ]);
     }
 
 
@@ -151,7 +199,7 @@ class ComprasController extends Controller
 
         return Inertia::render('Inventario/Compra/AddProductoCompra', [
             'productos' => $productos,
-            'compra'  => $compra,
+            'compra' => $compra,
             'clasificaciones' => $clasificaciones,
             'marcas' => $marcas,
         ]);
@@ -176,7 +224,7 @@ class ComprasController extends Controller
         $compra->save();
 
         if (!$compra) {
-            return  redirect()->route('compras.index')->with(['error' => 'No existe compra que intenta actualizar']);
+            return redirect()->route('compras.index')->with(['error' => 'No existe compra que intenta actualizar']);
         }
 
         foreach ($request->abonos as $abono) {
