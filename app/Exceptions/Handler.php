@@ -7,6 +7,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use BadMethodCallException;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -42,7 +43,22 @@ class Handler extends ExceptionHandler
         }
 
         if ($e instanceof QueryException) {
-            return $this->renderSafeError($request, 500);
+            Log::error('Database error.', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+            ]);
+
+            $message = $this->isDatabaseConnectionError($e)
+                ? 'No se pudo conectar con la base de datos. Verifica que el servicio este arriba.'
+                : 'Ocurrio un error al consultar la base de datos.';
+
+            return $this->renderSafeError($request, 500, $message);
+        }
+
+        if ($e instanceof ValidationException) {
+            return $this->convertValidationExceptionToResponse($e, $request);
         }
 
         if ($request->expectsJson() && !($e instanceof ValidationException)) {
@@ -57,7 +73,8 @@ class Handler extends ExceptionHandler
 
         if ($request->header('X-Inertia')) {
             $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
-            return $this->renderInertiaError($request, $status);
+            $message = config('app.debug') ? $this->debugMessage($e, $status) : null;
+            return $this->renderInertiaError($request, $status, $message);
         }
 
         if (!config('app.debug')) {
@@ -73,15 +90,15 @@ class Handler extends ExceptionHandler
         return parent::render($request, $e);
     }
 
-    private function renderSafeError($request, int $status)
+    private function renderSafeError($request, int $status, ?string $message = null)
     {
         if ($request->header('X-Inertia')) {
-            return $this->renderInertiaError($request, $status);
+            return $this->renderInertiaError($request, $status, $message);
         }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'No pudimos procesar la operacion. Intenta nuevamente o contacta al administrador.',
+                'message' => $message ?: 'No pudimos procesar la operacion. Intenta nuevamente o contacta al administrador.',
             ], $status);
         }
 
@@ -90,13 +107,38 @@ class Handler extends ExceptionHandler
         return response()->view("errors.{$viewStatus}", [], $viewStatus);
     }
 
-    private function renderInertiaError($request, int $status)
+    private function renderInertiaError($request, int $status, ?string $message = null)
     {
         $normalized = in_array($status, [404, 419, 429, 500, 503]) ? $status : 500;
 
         return Inertia::render('Error', [
             'status' => $normalized,
             'url' => $request->fullUrl(),
+            'message' => $message,
         ])->toResponse($request)->setStatusCode($normalized);
+    }
+
+    private function isDatabaseConnectionError(QueryException $e): bool
+    {
+        $message = $e->getMessage();
+        $code = (string) $e->getCode();
+
+        return in_array($code, ['2002', '2006', '1045', '1049'], true)
+            || str_contains($message, 'Connection refused')
+            || str_contains($message, 'SQLSTATE[HY000] [2002]')
+            || str_contains($message, 'SQLSTATE[HY000] [2006]')
+            || str_contains($message, 'SQLSTATE[HY000] [1045]')
+            || str_contains($message, 'SQLSTATE[HY000] [1049]');
+    }
+
+    private function debugMessage(Throwable $e, int $status): ?string
+    {
+        if ($status < 500) {
+            return null;
+        }
+
+        $location = $e->getFile() . ':' . $e->getLine();
+
+        return get_class($e) . ' - ' . $e->getMessage() . ' (' . $location . ')';
     }
 }

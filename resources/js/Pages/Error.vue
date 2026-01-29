@@ -7,6 +7,10 @@ const props = defineProps({
         type: Number,
         default: 500,
     },
+    message: {
+        type: String,
+        default: '',
+    },
     url: {
         type: String,
         default: '',
@@ -31,7 +35,7 @@ const messages = {
 
 const code = computed(() => titles[props.status] ? props.status : 500);
 const title = computed(() => titles[props.status] ?? titles[500]);
-const message = computed(() => messages[props.status] ?? messages[500]);
+const displayMessage = computed(() => props.message || messages[props.status] || messages[500]);
 const currentUrl = computed(() => props.url || (typeof window !== 'undefined' ? window.location.href : '/'));
 
 onMounted(() => {
@@ -70,7 +74,7 @@ const goBack = () => {
                     {{ title }}
                 </h1>
                 <p class="text-slate-300 leading-relaxed">
-                    {{ message }}
+                    {{ displayMessage }}
                 </p>
             </div>
             <div class="flex flex-wrap gap-3">
