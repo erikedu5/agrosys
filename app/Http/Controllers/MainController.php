@@ -40,6 +40,7 @@ class MainController extends Controller
             ->join('cat_tipo_flors', 'cat_tipo_flors.id', '=', 'enfermedades_tipo_flors.id_tipo_flor')
             ->join('cat_enfermedades', 'cat_enfermedades.id', '=', 'enfermedades_tipo_flors.id_enfermedad')
             ->where('solucion_enfermedads.id_sucursal', $sucursalActiva)
+            ->whereNull('productos.deleted_at')
             ->when($empresaActiva, function ($query) use ($empresaActiva) {
                 $query->where('productos.id_empresa', $empresaActiva);
             })
@@ -87,7 +88,8 @@ class MainController extends Controller
                 'id' => $sucursalInfo->id ?? null,
                 'nombre' => SucursalService::getNombreSucursalActiva(),
                 'esAdminEmpresa' => Auth::user()->tipo === 'adminEmpresa',
-                'sucursalesDisponibles' => Auth::user()->tipo === 'adminEmpresa' ? SucursalService::getSucursalesDisponibles() : []
+                'sucursalesDisponibles' => Auth::user()->tipo === 'adminEmpresa' ? SucursalService::getSucursalesDisponibles() : [],
+                'es_bodega' => (bool) ($sucursalInfo->es_bodega ?? false),
             ]
         ]);
     }

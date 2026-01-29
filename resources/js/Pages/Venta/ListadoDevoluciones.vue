@@ -5,6 +5,13 @@ import { Link } from '@inertiajs/vue3';
 const props = defineProps({
     devoluciones: { type: Array, default: [] }
 });
+
+const nombreProducto = (producto) => {
+    if (producto?.nombre) {
+        return producto.deleted_at ? `${producto.nombre} (BORRADO)` : producto.nombre;
+    }
+    return 'Producto (BORRADO)';
+};
 </script>
 <template>
     <AppLayout title="Devoluciones">
@@ -41,10 +48,10 @@ const props = defineProps({
                         </div>
                     </div>
                     <div class="flex justify-end mt-3">
-                        <div class="text-gray-500">Productos</div>
+                            <div class="text-gray-500">Productos</div>
                         <ul>
                             <li v-for="detalle in d.detalles" :key="detalle.id">
-                                {{ detalle.producto.nombre }} - {{ detalle.cantidad }} unidades
+                                {{ nombreProducto(detalle.producto) }} - {{ detalle.cantidad }} unidades
                             </li>
                         </ul>
                     </div>
@@ -71,7 +78,7 @@ const props = defineProps({
                             <td class="px-2 py-1">
                                 <ul>
                                     <li v-for="detalle in d.detalles" :key="detalle.id">
-                                        {{ detalle.producto.nombre }} - {{ detalle.cantidad }} unidades
+                                        {{ nombreProducto(detalle.producto) }} - {{ detalle.cantidad }} unidades
                                     </li>
                                 </ul>
                             </td>

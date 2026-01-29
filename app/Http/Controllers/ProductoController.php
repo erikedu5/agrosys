@@ -436,6 +436,59 @@ class ProductoController extends Controller
         }
     }
 
+    public function destroy(Producto $inventario)
+    {
+        [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
+
+        if (!$sucursalId) {
+            return redirect()->route('sucursal.selection');
+        }
+
+        $this->asegurarAccesoInventario($ventasBloqueadas, $motivoBloqueo);
+
+        $user = Auth::user();
+        if (!$user || !in_array($user->tipo, ['adminEmpresa', 'superAdmin'], true)) {
+            abort(403, 'No tiene permisos para borrar productos.');
+        }
+
+        $empresaId = SucursalService::getEmpresaIdActiva();
+        if (!$empresaId || (int) $inventario->id_empresa !== (int) $empresaId) {
+            abort(404);
+        }
+
+        $stockSucursales = AltaInventario::query()
+            ->select('alta_inventarios.id_sucursal', 'sucursales.nombre', 'alta_inventarios.cantidad_nueva')
+            ->join('sucursales', 'sucursales.id', '=', 'alta_inventarios.id_sucursal')
+            ->where('alta_inventarios.id_producto', $inventario->id)
+            ->where('sucursales.id_empresa', $empresaId)
+            ->whereIn('alta_inventarios.id', function ($sub) use ($inventario, $empresaId) {
+                $sub->selectRaw('MAX(ai2.id)')
+                    ->from('alta_inventarios as ai2')
+                    ->join('sucursales as s2', 's2.id', '=', 'ai2.id_sucursal')
+                    ->where('ai2.id_producto', $inventario->id)
+                    ->where('s2.id_empresa', $empresaId)
+                    ->groupBy('ai2.id_sucursal');
+            })
+            ->where('alta_inventarios.cantidad_nueva', '>', 0)
+            ->get();
+
+        if ($stockSucursales->isNotEmpty()) {
+            $sucursales = $stockSucursales->pluck('nombre')->filter()->unique()->values();
+            $detalle = $sucursales->isNotEmpty()
+                ? ' Sucursales con stock: ' . $sucursales->join(', ')
+                : '';
+
+            throw ValidationException::withMessages([
+                'producto' => 'No se puede borrar el producto porque tiene inventario en al menos una sucursal.' . $detalle,
+            ]);
+        }
+
+        $inventario->delete();
+
+        return redirect()->route('inventario.index')
+            ->with('success', 'Producto eliminado correctamente.');
+    }
+
     public function updatePrecios(Request $request, Producto $producto)
     {
         [, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
@@ -533,6 +586,8 @@ class ProductoController extends Controller
             AltaInventario::EVENTO_ALTA => 'Alta de inventario',
             AltaInventario::EVENTO_RESETEO => 'Reseteo a cero',
             AltaInventario::EVENTO_VENTA => 'Venta',
+            AltaInventario::EVENTO_TRANSFERENCIA_ENTRADA => 'Entrada por transferencia',
+            AltaInventario::EVENTO_TRANSFERENCIA_SALIDA => 'Salida por transferencia',
         ];
 
         $tipoEvento = $movimiento->tipo_evento ?? null;
@@ -578,9 +633,11 @@ class ProductoController extends Controller
             return [null, null, false, null];
         }
 
-        $sucursal = Sucursales::withTrashed()->with(['empresa' => function ($query) {
-            $query->withTrashed();
-        }])->find($sucursalId);
+        $sucursal = Sucursales::withTrashed()->with([
+            'empresa' => function ($query) {
+                $query->withTrashed();
+            }
+        ])->find($sucursalId);
 
         if (!$sucursal) {
             return [$sucursalId, null, false, null];

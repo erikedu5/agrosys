@@ -5,7 +5,9 @@ import { router, Link, useForm, usePage } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
 import CardexModal from '@/Components/CardexModal.vue';
-import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline } from '@mdi/js';
+import ConfirmationModal from '@/Components/ConfirmationModal.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -33,12 +35,16 @@ const showPriceModal = ref(false);
 const selectedProduct = ref(null);
 const showCardexModal = ref(false);
 const cardexProducto = ref(null);
+const showDeleteModal = ref(false);
+const productoEliminar = ref(null);
+const deletingProduct = ref(false);
 const icons = {
     price: mdiCashMultiple,
     edit: mdiPencil,
     add: mdiPlusBox,
     reset: mdiBackupRestore,
     cardex: mdiClipboardListOutline,
+    delete: mdiTrashCanOutline,
 };
 
 const puedeGestionarCostos = computed(() => {
@@ -50,6 +56,7 @@ const puedeGestionarCostos = computed(() => {
 const errors = computed(() => page.props?.errors ?? {});
 const mensajeBloqueo = computed(() => props.motivoBloqueo || errors.value.bloqueo || 'Esta sección está bloqueada, Contacte a su administrador.');
 const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || Boolean(errors.value.bloqueo));
+const puedeEliminar = computed(() => ['adminEmpresa', 'superAdmin'].includes(page.props?.auth?.user?.tipo));
 
 watch(bloqueoActivo, (value) => {
     if (value) {
@@ -122,6 +129,52 @@ const openCardex = (producto) => {
 const closeCardexModal = () => {
     showCardexModal.value = false;
     cardexProducto.value = null;
+};
+
+const eliminarProducto = (producto) => {
+    if (bloqueoActivo.value || !producto) {
+        return;
+    }
+    productoEliminar.value = producto;
+    showDeleteModal.value = true;
+};
+
+const cerrarEliminar = () => {
+    showDeleteModal.value = false;
+    productoEliminar.value = null;
+};
+
+const confirmarEliminar = () => {
+    if (!productoEliminar.value || deletingProduct.value) {
+        return;
+    }
+    deletingProduct.value = true;
+    router.delete(route('inventario.destroy', productoEliminar.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            notify('Producto eliminado correctamente.', 'success');
+            cerrarEliminar();
+        },
+        onError: (errors) => {
+            Object.values(errors || {}).forEach((message) => {
+                if (Array.isArray(message)) {
+                    message.forEach((item) => {
+                        if (typeof item === 'string' && item.length) {
+                            notify(item, 'error');
+                        }
+                    });
+                    return;
+                }
+                if (typeof message === 'string' && message.length) {
+                    notify(message, 'error');
+                }
+            });
+            cerrarEliminar();
+        },
+        onFinish: () => {
+            deletingProduct.value = false;
+        },
+    });
 };
 </script>
 
@@ -228,6 +281,14 @@ const closeCardexModal = () => {
                                 </svg>
                                 <span class="sr-only">Resetear inventario a cero</span>
                             </Link>
+                            <button v-if="puedeEliminar" type="button"
+                                class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:border-red-400 dark:text-red-300 dark:hover:text-red-200 dark:hover:bg-gray-600 dark:focus:ring-red-400 flex flex-center"
+                                @click="eliminarProducto(producto)" title="Eliminar producto" aria-label="Eliminar producto">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path :d="icons.delete"></path>
+                                </svg>
+                                <span class="sr-only">Eliminar producto</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -308,6 +369,14 @@ const closeCardexModal = () => {
                                         </svg>
                                         <span class="sr-only">Resetear inventario a cero</span>
                                     </Link>
+                                    <button v-if="puedeEliminar" type="button"
+                                        class="px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded shadow-sm hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:border-red-400 dark:text-red-300 dark:hover:text-red-200 dark:hover:bg-gray-600 dark:focus:ring-red-400 flex flex-center"
+                                        @click="eliminarProducto(producto)" title="Eliminar producto" aria-label="Eliminar producto">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path :d="icons.delete"></path>
+                                        </svg>
+                                        <span class="sr-only">Eliminar producto</span>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -323,5 +392,31 @@ const closeCardexModal = () => {
         <UpdateProductPricesModal :show="showPriceModal" :producto="selectedProduct"
             :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
         <CardexModal :show="showCardexModal" :producto="cardexProducto" @close="closeCardexModal" />
+        <ConfirmationModal :show="showDeleteModal" @close="cerrarEliminar">
+            <template #title>
+                Eliminar producto
+            </template>
+            <template #content>
+                <p>
+                    ¿Deseas eliminar <span class="font-semibold">{{ productoEliminar?.nombre }}</span>?
+                </p>
+                <p class="mt-2 text-xs text-gray-500">
+                    Solo se permite si el stock está en cero en todas las sucursales de la empresa.
+                </p>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="cerrarEliminar">
+                    Cancelar
+                </SecondaryButton>
+                <button
+                    class="ml-3 inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 transition ease-in-out duration-150"
+                    type="button"
+                    :disabled="deletingProduct"
+                    @click="confirmarEliminar"
+                >
+                    {{ deletingProduct ? 'Eliminando...' : 'Eliminar' }}
+                </button>
+            </template>
+        </ConfirmationModal>
     </AppLayout>
 </template>

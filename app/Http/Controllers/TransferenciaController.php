@@ -23,8 +23,6 @@ class TransferenciaController extends Controller
     {
         $sucursalActiva = SucursalService::getSucursalActiva();
 
-        $sucursalActivaCompleta = Sucursales::find($sucursalActiva);
-
         // Transferencias donde la sucursal activa es Origen o Destino
         $transferencias = Transferencia::with([
             'sucursalOrigen',
@@ -41,8 +39,7 @@ class TransferenciaController extends Controller
             ->paginate(15);
 
         return Inertia::render('Inventario/Transferencias/Index', [
-            'transferencias' => $transferencias,
-            'sucursalActiva' => $sucursalActivaCompleta
+            'transferencias' => $transferencias
         ]);
     }
 
@@ -266,11 +263,11 @@ class TransferenciaController extends Controller
                         'producto_id' => $productoId,
                     ]);
 
-                    $prodModelo = Producto::find($productoId);
+                    $prodModelo = Producto::withTrashed()->find($productoId);
                     $detallesDestino[] = [
                         'id_producto' => $productoId,
                         'cantidad' => $cantidadRestante,
-                        'precio_costo' => $prodModelo->precio_unitario
+                        'precio_costo' => $prodModelo ? $prodModelo->precio_unitario : 0
                     ];
                 }
 
@@ -399,13 +396,8 @@ class TransferenciaController extends Controller
             'detalles.producto'
         ])->findOrFail($id);
 
-        $sucursalActiva = SucursalService::getSucursalActiva();
-
-        $sucursalActivaCompleta = Sucursales::find($sucursalActiva);
-
         return Inertia::render('Inventario/Transferencias/Show', [
-            'transferencia' => $transferencia,
-            'sucursalActiva' => $sucursalActivaCompleta
+            'transferencia' => $transferencia
         ]);
     }
     public function buscarProductos(Request $request)

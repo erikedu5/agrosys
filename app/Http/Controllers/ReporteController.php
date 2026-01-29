@@ -88,7 +88,18 @@ class ReporteController extends Controller
             $productos = ProductoVenta::where('id_venta', $venta->id)->get();
             $productosArray = [];
             foreach ($productos as $producto) {
-                $producto->detail = Producto::find($producto->id_producto);
+                $detalle = Producto::withTrashed()->find($producto->id_producto);
+                if ($detalle) {
+                    if ($detalle->trashed()) {
+                        $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                    }
+                } else {
+                    $detalle = (object) [
+                        'id' => $producto->id_producto,
+                        'nombre' => 'Producto (BORRADO)',
+                    ];
+                }
+                $producto->detail = $detalle;
                 array_push($productosArray, $producto);
             }
             $venta->productos = $productosArray;
@@ -344,6 +355,7 @@ class ReporteController extends Controller
             )
                 ->join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
                 ->join('productos', 'producto_ventas.id_producto', '=', 'productos.id')
+                ->whereNull('productos.deleted_at')
                 ->whereBetween('ventas.created_at', [$fechaInicioFiltro, $fechaFinFiltro])
                 ->whereIn('ventas.id_sucursal', $sucursalIds->all())
                 ->groupBy(DB::raw('DATE(ventas.created_at)'))
@@ -363,6 +375,7 @@ class ReporteController extends Controller
                 ->join('productos', 'producto_ventas.id_producto', '=', 'productos.id')
                 ->join('sucursales', 'ventas.id_sucursal', '=', 'sucursales.id')
                 ->leftJoin('clientes', 'ventas.id_cliente', '=', 'clientes.id')
+                ->whereNull('productos.deleted_at')
                 ->whereBetween('ventas.created_at', [$fechaInicioFiltro, $fechaFinFiltro])
                 ->whereIn('ventas.id_sucursal', $sucursalIds->all())
                 ->orderBy('fecha')
@@ -541,11 +554,16 @@ class ReporteController extends Controller
                 ->where('ventas.created_at', '<=', $fechaFin)
                 ->where('ventas.id_sucursal', $idSucursal)
                 ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
+                ->join('productos', 'productos.id', 'producto_ventas.id_producto')
+                ->whereNull('productos.deleted_at')
                 ->get();
 
-            $nameFilter = Producto::select('nombre')
-                ->where('id', $request->id_producto)
-                ->first()->nombre;
+            $productoFiltro = Producto::withTrashed()->find($request->id_producto);
+            if ($productoFiltro) {
+                $nameFilter = $productoFiltro->nombre . ($productoFiltro->trashed() ? ' (BORRADO)' : '');
+            } else {
+                $nameFilter = 'Producto (BORRADO)';
+            }
         }
 
         if ($porMarca) {
@@ -556,6 +574,7 @@ class ReporteController extends Controller
                 ->where('ventas.id_sucursal', $idSucursal)
                 ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
                 ->join('productos', 'productos.id', 'producto_ventas.id_producto')
+                ->whereNull('productos.deleted_at')
                 ->get();
 
             $nameFilter = CatMarca::select('nombre')
@@ -569,13 +588,26 @@ class ReporteController extends Controller
             $productos = ProductoVenta::where('id_venta', $venta->id)->get();
             $productosArray = [];
             foreach ($productos as $producto) {
-                $producto->detail = Producto::find($producto->id_producto);
+                $detalle = Producto::withTrashed()->find($producto->id_producto);
+                if ($detalle) {
+                    if ($detalle->trashed()) {
+                        $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                    }
+                    $detalle->marca = CatMarca::find($detalle->id_marca);
+                } else {
+                    $detalle = (object) [
+                        'id' => $producto->id_producto,
+                        'nombre' => 'Producto (BORRADO)',
+                        'id_marca' => null,
+                        'marca' => (object) ['nombre' => ''],
+                    ];
+                }
+                $producto->detail = $detalle;
                 if ($porProducto && $producto->id_producto == $request->id_producto) {
                     $productosVendidos += $producto->cantidad;
-                } else if ($porMarca && $producto->detail->id_marca == $request->id_marca) {
+                } else if ($porMarca && $producto->detail && $producto->detail->id_marca == $request->id_marca) {
                     $productosVendidos += $producto->cantidad;
                 }
-                $producto->detail->marca = CatMarca::find($producto->detail->id_marca);
                 array_push($productosArray, $producto);
             }
             $venta->productos = $productosArray;
@@ -634,8 +666,15 @@ class ReporteController extends Controller
                 ->where('ventas.created_at', '<=', $fechaFin)
                 ->where('ventas.id_sucursal', $idSucursal)
                 ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
+                ->join('productos', 'productos.id', 'producto_ventas.id_producto')
+                ->whereNull('productos.deleted_at')
                 ->get();
-            $nameFilter = Producto::select('nombre')->where('id', $request->id_producto)->first()->nombre;
+            $productoFiltro = Producto::withTrashed()->find($request->id_producto);
+            if ($productoFiltro) {
+                $nameFilter = $productoFiltro->nombre . ($productoFiltro->trashed() ? ' (BORRADO)' : '');
+            } else {
+                $nameFilter = 'Producto (BORRADO)';
+            }
         }
 
         if ($porMarca) {
@@ -646,6 +685,7 @@ class ReporteController extends Controller
                 ->where('ventas.id_sucursal', $idSucursal)
                 ->join('producto_ventas', 'producto_ventas.id_venta', 'ventas.id')
                 ->join('productos', 'productos.id', 'producto_ventas.id_producto')
+                ->whereNull('productos.deleted_at')
                 ->get();
             $nameFilter = CatMarca::select('nombre')->where('id', $request->id_marca)->first()->nombre;
         }
@@ -654,10 +694,22 @@ class ReporteController extends Controller
         foreach ($ventas as $venta) {
             $productos = ProductoVenta::where('id_venta', $venta->id)->get();
             foreach ($productos as $producto) {
-                $producto->detail = Producto::find($producto->id_producto);
+                $detalle = Producto::withTrashed()->find($producto->id_producto);
+                if ($detalle) {
+                    if ($detalle->trashed()) {
+                        $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                    }
+                } else {
+                    $detalle = (object) [
+                        'id' => $producto->id_producto,
+                        'nombre' => 'Producto (BORRADO)',
+                        'id_marca' => null,
+                    ];
+                }
+                $producto->detail = $detalle;
                 if ($porProducto && $producto->id_producto == $request->id_producto) {
                     $productosVendidos += $producto->cantidad;
-                } else if ($porMarca && $producto->detail->id_marca == $request->id_marca) {
+                } else if ($porMarca && $producto->detail && $producto->detail->id_marca == $request->id_marca) {
                     $productosVendidos += $producto->cantidad;
                 }
             }

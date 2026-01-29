@@ -71,11 +71,15 @@ class DevolucionesController extends Controller
 
         $items = [];
         foreach ($productosVenta as $pv) {
-            $prod = Producto::find($pv->id_producto);
+            $prod = Producto::withTrashed()->find($pv->id_producto);
             $yaDevuelto = (float) ($devueltos[$pv->id_producto] ?? 0);
+            $nombreProducto = $prod ? $prod->nombre : ('ID ' . $pv->id_producto);
+            if ($prod && $prod->trashed()) {
+                $nombreProducto .= ' (BORRADO)';
+            }
             $items[] = [
                 'producto_id' => $pv->id_producto,
-                'producto_nombre' => $prod ? $prod->nombre : ('ID ' . $pv->id_producto),
+                'producto_nombre' => $nombreProducto,
                 'vendido' => (float) $pv->cantidad,
                 'devuelto' => $yaDevuelto,
                 'max_devolver' => max(0, (float) $pv->cantidad - $yaDevuelto),

@@ -177,10 +177,22 @@ class ComprasController extends Controller
         $compra_productos = ComprasProductos::where('id_compra', '=', $id)->get();
         $productos_array = [];
         foreach ($compra_productos as $product) {
-            $producto_db = Producto::find($product->id_producto);
+            $producto_db = Producto::withTrashed()->find($product->id_producto);
+            if ($producto_db) {
+                if ($producto_db->trashed()) {
+                    $producto_db->nombre = $producto_db->nombre . ' (BORRADO)';
+                }
+                $producto_db->marca = CatMarca::where('id', $producto_db->id_marca)->first();
+            } else {
+                $producto_db = (object) [
+                    'id' => $product->id_producto,
+                    'nombre' => 'Producto (BORRADO)',
+                    'id_marca' => null,
+                    'marca' => (object) ['nombre' => ''],
+                ];
+            }
             $producto_db->cantidad = $product->cantidad;
             $producto_db->precio_compra = $product->precio;
-            $producto_db->marca = CatMarca::where('id', $producto_db->id_marca)->first();
             array_push($productos_array, $producto_db);
         }
         $compra->productos = $productos_array;

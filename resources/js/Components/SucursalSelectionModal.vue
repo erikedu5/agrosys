@@ -111,13 +111,16 @@ const seleccionarSucursal = async (sucursalId) => {
     console.log('Cambiando a sucursal:', sucursalId);
     
     try {
+        // Guardar en localStorage
+        localStorage.setItem('selected_sucursal_id', sucursalId);
+
         router.post('/sucursal/change', {
             sucursal_id: sucursalId
         }, {
             onSuccess: () => {
                 console.log('Cambio de sucursal exitoso');
                 emit('close');
-                window.location.reload();
+                loading.value = false;
             },
             onError: (errors) => {
                 console.error('Error al cambiar sucursal:', errors);

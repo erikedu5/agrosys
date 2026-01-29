@@ -21,6 +21,7 @@
         telefono: props.sucursal !== undefined ? props.sucursal.telefono: '',
         email: props.sucursal !== undefined ? props.sucursal.email: '',
         es_matriz: props.sucursal !== undefined ? props.sucursal.es_matriz? true: false : false,
+        es_bodega: props.sucursal !== undefined ? props.sucursal.es_bodega? true: false : false,
         id_empresa: props.sucursal !== undefined ? props.sucursal.id_empresa : props.empresas[0].id,
         ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? props.sucursal.ticket_width_mm : 80,
 });
@@ -109,6 +110,13 @@
                             <label class="block font-medium text-sm text-gray-700">Es Matriz</label>
                             <input type="checkbox" class="form-input rounded-md shadow-sm"
                                 v-model="form.es_matriz">
+                            <br>
+                            <br>
+
+                            <label class="block font-medium text-sm text-gray-700">Es Bodega</label>
+                            <input type="checkbox" class="form-input rounded-md shadow-sm"
+                                v-model="form.es_bodega">
+                                <span class="text-xs text-gray-500 ml-2">(Permite realizar transferencias desde esta ubicación)</span>
                             <br>
                             <br>
 

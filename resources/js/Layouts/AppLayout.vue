@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
@@ -41,6 +41,51 @@ const isLoading = ref(false);
 router.on('start', () => (isLoading.value = true));
 router.on('finish', () => (isLoading.value = false));
 
+onMounted(() => {
+    // Lógica para autoselección de sucursal
+    const sucursalActiva = page.props.sucursalActiva;
+    if (sucursalActiva && sucursalActiva.esAdminEmpresa) {
+        const storedSucursalId = localStorage.getItem('selected_sucursal_id');
+        const availableSucursales = sucursalActiva.sucursalesDisponibles || [];
+        
+        if (availableSucursales.length > 0) {
+            let targetId = null;
+
+            if (storedSucursalId) {
+                // Verificar si el ID guardado sigue siendo válido
+                const exists = availableSucursales.find(s => s.id == storedSucursalId);
+                if (exists && exists.id !== sucursalActiva.id) {
+                    targetId = exists.id;
+                }
+            } else {
+                // Si no hay nada guardado y hay opciones, seleccionar el primero por defecto
+                const firstId = availableSucursales[0].id;
+                
+                // Si la actual no es la primera, forzamos el cambio
+                if (firstId !== sucursalActiva.id) {
+                    targetId = firstId;
+                } else {
+                    // Si YA estamos en la primera, pero no estaba en localStorage, lo guardamos para el futuro
+                    localStorage.setItem('selected_sucursal_id', firstId);
+                }
+            }
+
+            if (targetId) {
+                console.log('Auto-switching sucursal to:', targetId);
+                router.post('/sucursal/change', {
+                    sucursal_id: targetId
+                }, {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        // Asegurar storage
+                        localStorage.setItem('selected_sucursal_id', targetId);
+                    }
+                });
+            }
+        }
+    }
+});
+
 const logout = () => {
     router.post(route('logout'));
 };
@@ -57,8 +102,38 @@ const cerrarModalSucursal = () => {
     showingSucursalModal.value = false;
 };
 
+// Computed para determinar la sucursal "activa" para efectos de UI (menús)
+// Priorizando lo que está en localStorage si somos administradores de empresa
+const currentSucursalData = computed(() => {
+    const fromProps = page.props.sucursalActiva;
+
+    // Si no es adminEmpresa, confiamos plenamente en el backend
+    if (!fromProps || !fromProps.esAdminEmpresa) return fromProps;
+
+
+    // Si es adminEmpresa, intentamos validar con localStorage para respuesta inmediata
+    if (typeof window !== 'undefined' && window.localStorage) {
+        const storedId = localStorage.getItem('selected_sucursal_id');
+        if (storedId && fromProps.sucursalesDisponibles) {
+            const match = fromProps.sucursalesDisponibles.find(s => s.id == storedId);
+            if (match) {
+                return match; 
+                // Devuelve el objeto de la lista, que DEBE tener 'es_bodega' (agregado en Middleware)
+            }
+        }
+    }
+    
+    return fromProps;
+});
+
 const navItems = computed(() => {
     const tipo = page.props.auth.user.tipo;
+    // Usamos el computed basado en localStorage para la validación de es_bodega
+    const esBodega = currentSucursalData.value?.es_bodega === true;
+
+    console.log('esBodega', esBodega);
+    console.log('tipo', tipo);
+
     return [
         { type: 'link', label: 'Inicio', route: 'dashboard' },
         {
@@ -78,6 +153,12 @@ const navItems = computed(() => {
                 { label: 'Inventario', route: 'inventario.index' },
                 { label: 'Compra a proveedores', route: 'compra.index' },
             ],
+        },
+        {
+            type: 'link',
+            label: 'Transferencias',
+            route: 'transferencias.index',
+            condition: ['inventario', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo)
         },
         {
             type: 'dropdown',
@@ -121,7 +202,8 @@ const navItems = computed(() => {
 const searchItems = computed(() => {
     const items = [];
     navItems.value.forEach((i) => {
-        if (i.type === 'link') {
+        console.log('i', i);
+        if (i.type === 'link' && i.condition) {
             items.push({ label: i.label, route: i.route, params: i.params });
         } else if (i.type === 'dropdown' && i.condition) {
             i.children.forEach((c) => items.push(c));
@@ -243,6 +325,11 @@ const searchItems = computed(() => {
                                         <!-- Icono de Inventario -->
                                         <svg v-else-if="item.label.includes('Inventario')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                        </svg>
+
+                                        <!-- Icono de Transferencias -->
+                                        <svg v-else-if="item.label.includes('Transferencias')" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                                         </svg>
                                         
                                         <!-- Icono de Compras -->

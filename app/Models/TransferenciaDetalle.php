@@ -5,30 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Pedido extends Model
+class TransferenciaDetalle extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'id_sucursal',
+        'id_transferencia',
         'id_producto',
         'cantidad',
-        'nombre_solicitante',
-        'numero_solicitante',
-        'completado',
+        'lote_origen_id'
     ];
 
-    protected $casts = [
-        'completado' => 'boolean',
-    ];
-
-    public function sucursal()
+    public function transferencia()
     {
-        return $this->belongsTo(Sucursales::class, 'id_sucursal');
+        return $this->belongsTo(Transferencia::class, 'id_transferencia');
     }
 
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'id_producto')->withTrashed();
+    }
+
+    public function loteOrigen()
+    {
+        return $this->belongsTo(ComprasProductos::class, 'lote_origen_id');
     }
 }

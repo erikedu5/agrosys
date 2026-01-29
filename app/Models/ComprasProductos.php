@@ -13,14 +13,17 @@ class ComprasProductos extends Model
         'id_compra',
         'id_producto',
         'cantidad',
-        'precio'
+        'precio',
+        'cantidad_disponible'
     ];
 
-    protected function getCreatedAtAttribute() {
+    protected function getCreatedAtAttribute()
+    {
         return $this->attributes['created_at'];
     }
 
-    protected function getUpdatedAtAttribute() {
+    protected function getUpdatedAtAttribute()
+    {
         return $this->attributes['updated_at'];
     }
 }

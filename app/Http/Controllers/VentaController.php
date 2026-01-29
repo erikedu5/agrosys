@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class VentaController extends Controller
 {
@@ -146,7 +147,11 @@ class VentaController extends Controller
                 'abono' => ['nullable', 'numeric', 'min:0'],
                 'tipo_venta' => ['required', 'string'],
                 'producto_venta' => ['required', 'array', 'min:1'],
-                'producto_venta.*.producto.id' => ['required', 'integer', 'exists:productos,id'],
+                'producto_venta.*.producto.id' => [
+                    'required',
+                    'integer',
+                    Rule::exists('productos', 'id')->whereNull('deleted_at'),
+                ],
                 'producto_venta.*.cantidad' => ['required', 'numeric', 'min:0.01'],
                 'producto_venta.*.importe' => ['required', 'numeric', 'min:0'],
             ],
@@ -359,7 +364,18 @@ class VentaController extends Controller
 
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
-            $producto->detail = Producto::find($producto->id_producto);
+            $detalle = Producto::withTrashed()->find($producto->id_producto);
+            if ($detalle) {
+                if ($detalle->trashed()) {
+                    $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                }
+            } else {
+                $detalle = (object) [
+                    'id' => $producto->id_producto,
+                    'nombre' => 'Producto (BORRADO)',
+                ];
+            }
+            $producto->detail = $detalle;
         }
 
         $cliente = Clientes::where('id', $venta->id_cliente)->first();
@@ -399,7 +415,18 @@ class VentaController extends Controller
 
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
-            $producto->detail = Producto::find($producto->id_producto);
+            $detalle = Producto::withTrashed()->find($producto->id_producto);
+            if ($detalle) {
+                if ($detalle->trashed()) {
+                    $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                }
+            } else {
+                $detalle = (object) [
+                    'id' => $producto->id_producto,
+                    'nombre' => 'Producto (BORRADO)',
+                ];
+            }
+            $producto->detail = $detalle;
         }
 
         $cliente = Clientes::find($venta->id_cliente);
