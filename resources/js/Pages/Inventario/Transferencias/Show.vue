@@ -34,6 +34,13 @@ const statusColor = (status) => {
         default: return 'bg-gray-100 text-gray-800';
     }
 };
+
+const nombreProducto = (producto) => {
+    if (producto?.nombre) {
+        return producto.deleted_at ? `${producto.nombre} (BORRADO)` : producto.nombre;
+    }
+    return 'Producto (BORRADO)';
+};
 </script>
 
 <template>
@@ -134,7 +141,24 @@ const statusColor = (status) => {
                     <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
                         <h3 class="text-lg font-medium text-gray-900">Detalles de Productos</h3>
                     </div>
-                    <div class="p-0 overflow-x-auto">
+                    <!-- Vista móvil en tarjetas -->
+                    <div class="md:hidden p-4 grid grid-cols-1 gap-4">
+                        <div v-for="detalle in transferencia.detalles" :key="detalle.id" class="rounded-lg border p-4 bg-white shadow-sm">
+                            <div class="text-sm text-gray-500">Producto</div>
+                            <div class="font-semibold text-gray-900">{{ nombreProducto(detalle.producto) }}</div>
+                            <div class="mt-2 text-sm text-gray-500" v-if="detalle.lote_origen_id">Lote ID: {{ detalle.lote_origen_id }}</div>
+                            <div class="mt-3">
+                                <div class="text-sm text-gray-500">Cantidad Transferida</div>
+                                <div class="text-lg font-bold text-gray-900">{{ detalle.cantidad }}</div>
+                            </div>
+                        </div>
+                        <div v-if="!transferencia.detalles || transferencia.detalles.length === 0" class="text-center text-gray-500">
+                            No hay productos en esta transferencia.
+                        </div>
+                    </div>
+
+                    <!-- Tabla desktop -->
+                    <div class="hidden md:block p-0 overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
@@ -145,12 +169,15 @@ const statusColor = (status) => {
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="detalle in transferencia.detalles" :key="detalle.id">
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ detalle.producto?.nombre }}</div>
+                                        <div class="text-sm font-medium text-gray-900">{{ nombreProducto(detalle.producto) }}</div>
                                         <div class="text-xs text-gray-500" v-if="detalle.lote_origen_id">Lote ID: {{ detalle.lote_origen_id }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">
                                         {{ detalle.cantidad }}
                                     </td>
+                                </tr>
+                                <tr v-if="!transferencia.detalles || transferencia.detalles.length === 0">
+                                    <td colspan="2" class="px-6 py-4 text-center text-gray-500">No hay productos en esta transferencia.</td>
                                 </tr>
                             </tbody>
                         </table>

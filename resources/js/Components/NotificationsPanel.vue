@@ -10,6 +10,12 @@ const props = defineProps({
 
 const show = ref(false);
 const notificaciones = ref([]);
+const nombreProducto = (producto) => {
+    if (!producto?.nombre) {
+        return 'Producto (BORRADO)';
+    }
+    return producto.deleted_at ? `${producto.nombre} (BORRADO)` : producto.nombre;
+};
 
 onMounted(() => {
     if (window.Echo) {
@@ -44,7 +50,7 @@ onMounted(() => {
             </div>
             <ul class="max-h-60 overflow-y-auto">
                 <li v-for="n in notificaciones" :key="n.id" class="border-b py-1">
-                    <span class="font-semibold">{{ n.producto.nombre }}</span> - Cantidad: {{ n.cantidad }}
+                    <span class="font-semibold">{{ nombreProducto(n.producto) }}</span> - Cantidad: {{ n.cantidad }}
                 </li>
             </ul>
         </div>

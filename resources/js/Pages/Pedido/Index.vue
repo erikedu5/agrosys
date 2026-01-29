@@ -47,6 +47,13 @@ const groupedPedidos = computed(() => {
     return groups;
 });
 
+const nombreProducto = (producto) => {
+    if (!producto?.nombre) {
+        return 'Producto (BORRADO)';
+    }
+    return producto.deleted_at ? `${producto.nombre} (BORRADO)` : producto.nombre;
+};
+
 const completar = (id) => {
     if (confirm('¿Marcar como completado?')) {
         useForm({}).put(route('pedidos.complete', id));
@@ -81,7 +88,7 @@ const completar = (id) => {
                     </div>
                     <div v-for="p in g.items" :key="p.id">
                         <div class="text-sm text-gray-500">Producto</div>
-                        <div class="font-semibold text-gray-900">{{ p.producto.nombre }}</div>
+                        <div class="font-semibold text-gray-900">{{ nombreProducto(p.producto) }}</div>
                         <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                             <div>
                                 <div class="text-gray-500">Cantidad</div>
@@ -126,7 +133,7 @@ const completar = (id) => {
                                 </td>
                             </tr>
                             <tr v-for="p in g.items" :key="p.id" class="border-b">
-                                <td class="px-4 py-2">{{ p.producto.nombre }}</td>
+                                <td class="px-4 py-2">{{ nombreProducto(p.producto) }}</td>
                                 <td class="px-4 py-2">{{ p.cantidad }}</td>
                                 <td class="px-4 py-2">
                                     <span v-if="p.completado" class="text-green-600">Completado</span>

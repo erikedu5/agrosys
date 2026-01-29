@@ -40,6 +40,7 @@ class MainController extends Controller
             ->join('cat_tipo_flors', 'cat_tipo_flors.id', '=', 'enfermedades_tipo_flors.id_tipo_flor')
             ->join('cat_enfermedades', 'cat_enfermedades.id', '=', 'enfermedades_tipo_flors.id_enfermedad')
             ->where('solucion_enfermedads.id_sucursal', $sucursalActiva)
+            ->whereNull('productos.deleted_at')
             ->when($empresaActiva, function ($query) use ($empresaActiva) {
                 $query->where('productos.id_empresa', $empresaActiva);
             })

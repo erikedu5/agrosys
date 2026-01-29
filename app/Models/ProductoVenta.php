@@ -18,7 +18,7 @@ class ProductoVenta extends Model
 
     public function producto() 
     {
-        return $this->belongsTo(Producto::class);
+        return $this->belongsTo(Producto::class, 'id_producto')->withTrashed();
     }
 
     public function venta() 

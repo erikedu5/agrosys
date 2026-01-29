@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class VentaController extends Controller
 {
@@ -146,7 +147,11 @@ class VentaController extends Controller
                 'abono' => ['nullable', 'numeric', 'min:0'],
                 'tipo_venta' => ['required', 'string'],
                 'producto_venta' => ['required', 'array', 'min:1'],
-                'producto_venta.*.producto.id' => ['required', 'integer', 'exists:productos,id'],
+                'producto_venta.*.producto.id' => [
+                    'required',
+                    'integer',
+                    Rule::exists('productos', 'id')->whereNull('deleted_at'),
+                ],
                 'producto_venta.*.cantidad' => ['required', 'numeric', 'min:0.01'],
                 'producto_venta.*.importe' => ['required', 'numeric', 'min:0'],
             ],
@@ -186,105 +191,171 @@ class VentaController extends Controller
             $producto['importe'] = $importe;
             return $producto;
         })->all();
-        $id_usuario = Auth::user()->id;
-        $venta_pagada = false;
-        $fecha_pago = null;
-        if ($request->tipo_venta === 'Contado') {
-            $venta_pagada = true;
-            $fecha_pago = date("Y-m-d H:i:s");
-        }
 
-        $venta = Venta::create([
-            'id_cliente' => $request->id_cliente,
-            'total' => $total,
-            'id_usuario' => $id_usuario,
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('PROCESAR_VENTA', [
+            'cliente_id' => $request->id_cliente,
             'tipo_venta' => $request->tipo_venta,
-            'venta_pagada' => $venta_pagada,
-            'fecha_pago' => $fecha_pago,
-            'id_sucursal' => $sucursal,
+            'total' => $total,
+            'abono' => $abonoInput,
+            'num_productos' => count($productosSanitizados),
+            'sucursal_id' => $sucursal,
         ]);
 
-        foreach ($productosSanitizados as $producto_venta) {
-            ProductoVenta::create([
-                'id_producto' => $producto_venta['producto']['id'],
-                'id_venta' => $venta->id,
-                'cantidad' => $producto_venta['cantidad'],
-                'total_productos' => round($producto_venta['importe'], 2),
+        try {
+            $id_usuario = Auth::user()->id;
+            $venta_pagada = false;
+            $fecha_pago = null;
+            if ($request->tipo_venta === 'Contado') {
+                $venta_pagada = true;
+                $fecha_pago = date("Y-m-d H:i:s");
+            }
+
+            $venta = Venta::create([
+                'id_cliente' => $request->id_cliente,
+                'total' => $total,
+                'id_usuario' => $id_usuario,
+                'tipo_venta' => $request->tipo_venta,
+                'venta_pagada' => $venta_pagada,
+                'fecha_pago' => $fecha_pago,
+                'id_sucursal' => $sucursal,
             ]);
 
-            //Reduccion de stock;
-            $stockStatus = AltaInventario::where('id_producto', $producto_venta['producto']['id'])
-                ->where('id_sucursal', $sucursalInfo->id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            $altaInventario = new AltaInventario();
-            $cantidadBase = $stockStatus?->cantidad_nueva ?? 0;
-            $altaInventario->cantidad_actual = $cantidadBase;
-            $altaInventario->cantidad_nueva = $cantidadBase - $producto_venta['cantidad'];
-            $altaInventario->id_usuario = Auth::user()->id;
-            $altaInventario->id_producto = $producto_venta['producto']['id'];
-            $altaInventario->id_sucursal = $sucursalInfo->id;
-            $altaInventario->tipo_evento = AltaInventario::EVENTO_VENTA;
-            $altaInventario->save();
-        }
-
-        $abonoVenta = [];
-        $abonado = 0;
-        if ($request->tipo_venta == 'Contado') {
-            $abonado = $total;
-            $abonoVenta = [
-                'cantidad_abonada' => $total,
-                'cuenta_pagada' => true,
-                'id_cliente' => $request->id_cliente,
-                'id_usuario' => Auth::user()->id,
-                'is_active' => false,
-                'id_sucursal' => $sucursal,
-            ];
-        } else if ($request->tipo_venta == 'Credito') {
-            $abonado = $abonoInput;
-            $abonoVenta = [
-                'cantidad_abonada' => $abonado,
-                'cuenta_pagada' => false,
-                'id_cliente' => $request->id_cliente,
-                'id_usuario' => Auth::user()->id,
-                'is_active' => true,
-                'id_sucursal' => $sucursal,
-            ];
-        }
-
-        AbonoCuenta::create($abonoVenta);
-
-        $cliente = Clientes::find($request->id_cliente);
-        $cliente->adeudo_total += $total;
-        $cliente->abono_total += $abonado;
-        $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
-        $cliente->save();
-
-        if ($facturacionAutomaticaEmpresa && $cliente->requiereFactura) {
-            Log::info('Iniciando proceso de facturación automática para venta', [
+            $logger->step('Venta creada', [
                 'venta_id' => $venta->id,
+                'tipo' => $request->tipo_venta,
+                'pagada' => $venta_pagada,
+            ]);
+
+            foreach ($productosSanitizados as $index => $producto_venta) {
+                ProductoVenta::create([
+                    'id_producto' => $producto_venta['producto']['id'],
+                    'id_venta' => $venta->id,
+                    'cantidad' => $producto_venta['cantidad'],
+                    'total_productos' => round($producto_venta['importe'], 2),
+                ]);
+
+                //Reduccion de stock;
+                $stockStatus = AltaInventario::where('id_producto', $producto_venta['producto']['id'])
+                    ->where('id_sucursal', $sucursalInfo->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                $cantidadBase = $stockStatus?->cantidad_nueva ?? 0;
+
+                if ($cantidadBase < $producto_venta['cantidad']) {
+                    $logger->warning('Stock insuficiente, venta con stock negativo', [
+                        'producto_id' => $producto_venta['producto']['id'],
+                        'stock_actual' => $cantidadBase,
+                        'cantidad_vendida' => $producto_venta['cantidad'],
+                    ]);
+                }
+
+                $altaInventario = new AltaInventario();
+                $altaInventario->cantidad_actual = $cantidadBase;
+                $altaInventario->cantidad_nueva = $cantidadBase - $producto_venta['cantidad'];
+                $altaInventario->id_usuario = Auth::user()->id;
+                $altaInventario->id_producto = $producto_venta['producto']['id'];
+                $altaInventario->id_sucursal = $sucursalInfo->id;
+                $altaInventario->tipo_evento = AltaInventario::EVENTO_VENTA;
+                $altaInventario->save();
+
+                $logger->step("Producto {$index} procesado", [
+                    'producto_id' => $producto_venta['producto']['id'],
+                    'cantidad' => $producto_venta['cantidad'],
+                    'stock_anterior' => $cantidadBase,
+                    'stock_nuevo' => $altaInventario->cantidad_nueva,
+                ]);
+            }
+
+            $abonoVenta = [];
+            $abonado = 0;
+            if ($request->tipo_venta == 'Contado') {
+                $abonado = $total;
+                $abonoVenta = [
+                    'cantidad_abonada' => $total,
+                    'cuenta_pagada' => true,
+                    'id_cliente' => $request->id_cliente,
+                    'id_usuario' => Auth::user()->id,
+                    'is_active' => false,
+                    'id_sucursal' => $sucursal,
+                ];
+            } else if ($request->tipo_venta == 'Credito') {
+                $abonado = $abonoInput;
+                $abonoVenta = [
+                    'cantidad_abonada' => $abonado,
+                    'cuenta_pagada' => false,
+                    'id_cliente' => $request->id_cliente,
+                    'id_usuario' => Auth::user()->id,
+                    'is_active' => true,
+                    'id_sucursal' => $sucursal,
+                ];
+            }
+
+            AbonoCuenta::create($abonoVenta);
+
+            $logger->step('Abono registrado', [
+                'tipo' => $request->tipo_venta,
+                'abonado' => $abonado,
+            ]);
+
+            $cliente = Clientes::find($request->id_cliente);
+            $balanceAnterior = $cliente->balance;
+            $cliente->adeudo_total += $total;
+            $cliente->abono_total += $abonado;
+            $cliente->balance = $cliente->adeudo_total - $cliente->abono_total;
+            $cliente->save();
+
+            $logger->step('Cliente actualizado', [
+                'cliente_id' => $cliente->id,
+                'balance_anterior' => $balanceAnterior,
+                'balance_nuevo' => $cliente->balance,
+            ]);
+
+            if ($facturacionAutomaticaEmpresa && $cliente->requiereFactura) {
+                $logger->step('Iniciando facturación automática');
+                Log::info('Iniciando proceso de facturación automática para venta', [
+                    'venta_id' => $venta->id,
+                    'cliente_id' => $cliente->id,
+                ]);
+                $this->agregarFacturacion($venta, $cliente);
+            }
+
+            if ($cliente->balance <= 0) {
+                $this->limpiarCredito($cliente);
+                $logger->step('Crédito limpiado (balance en cero)');
+            }
+
+            $logger->success([
+                'venta_id' => $venta->id,
+                'total' => $venta->total,
                 'cliente_id' => $cliente->id,
             ]);
-            $this->agregarFacturacion($venta, $cliente);
+
+            [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('nombre', "%$request->q%");
+            $productos = Producto::whereRaw($nombreSql, [$nombreValue])
+                ->where('cantidad', '!=', 0)
+                ->get();
+
+            $clientes = Clientes::get();
+
+            return Inertia::render('Venta/Venta', [
+                'productos' => $productos,
+                'clientes' => $clientes,
+                'venta' => $venta,
+            ]);
+
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'cliente_id' => $request->id_cliente,
+                'productos' => array_map(fn($p) => [
+                    'id' => $p['producto']['id'],
+                    'cantidad' => $p['cantidad']
+                ], $productosSanitizados),
+            ]);
+
+            throw $e;
         }
-
-        if ($cliente->balance <= 0) {
-            $this->limpiarCredito($cliente);
-        }
-
-        [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('nombre', "%$request->q%");
-        $productos = Producto::whereRaw($nombreSql, [$nombreValue])
-            ->where('cantidad', '!=', 0)
-            ->get();
-
-        $clientes = Clientes::get();
-
-        return Inertia::render('Venta/Venta', [
-            'productos' => $productos,
-            'clientes' => $clientes,
-            'venta' => $venta,
-        ]);
     }
 
     public function ticket(\Illuminate\Http\Request $request, Venta $venta)
@@ -293,7 +364,18 @@ class VentaController extends Controller
 
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
-            $producto->detail = Producto::find($producto->id_producto);
+            $detalle = Producto::withTrashed()->find($producto->id_producto);
+            if ($detalle) {
+                if ($detalle->trashed()) {
+                    $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                }
+            } else {
+                $detalle = (object) [
+                    'id' => $producto->id_producto,
+                    'nombre' => 'Producto (BORRADO)',
+                ];
+            }
+            $producto->detail = $detalle;
         }
 
         $cliente = Clientes::where('id', $venta->id_cliente)->first();
@@ -333,7 +415,18 @@ class VentaController extends Controller
 
         $productos = ProductoVenta::where('id_venta', $venta->id)->get();
         foreach ($productos as $producto) {
-            $producto->detail = Producto::find($producto->id_producto);
+            $detalle = Producto::withTrashed()->find($producto->id_producto);
+            if ($detalle) {
+                if ($detalle->trashed()) {
+                    $detalle->nombre = $detalle->nombre . ' (BORRADO)';
+                }
+            } else {
+                $detalle = (object) [
+                    'id' => $producto->id_producto,
+                    'nombre' => 'Producto (BORRADO)',
+                ];
+            }
+            $producto->detail = $detalle;
         }
 
         $cliente = Clientes::find($venta->id_cliente);

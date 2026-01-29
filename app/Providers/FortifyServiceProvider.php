@@ -12,9 +12,12 @@ use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Fortify;
+use Throwable;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -37,27 +40,48 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         Fortify::authenticateUsing(function (Request $request) {
-            $user = User::where('email', $request->email)->first();
+            try {
+                $user = User::where('email', $request->email)->first();
 
-            if ($user && Hash::check($request->password, $user->password)) {
+                if (!$user || !Hash::check($request->password, $user->password)) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => ['El correo o la contrasena no son correctos.'],
+                    ]);
+                }
+
                 if ($user->trashed()) {
-                    return null;
+                    throw ValidationException::withMessages([
+                        Fortify::username() => ['Este usuario esta desactivado.'],
+                    ]);
                 }
 
                 $sucursal = Sucursales::withTrashed()->find($user->id_sucursal);
                 if (!$sucursal || $sucursal->trashed()) {
-                    return null;
+                    throw ValidationException::withMessages([
+                        Fortify::username() => ['La sucursal asociada a esta cuenta esta desactivada.'],
+                    ]);
                 }
 
                 $empresa = Empresa::withTrashed()->find($sucursal->id_empresa);
                 if (!$empresa || $empresa->trashed()) {
-                    return null;
+                    throw ValidationException::withMessages([
+                        Fortify::username() => ['La empresa asociada a esta cuenta esta desactivada.'],
+                    ]);
                 }
 
                 return $user;
-            }
+            } catch (ValidationException $e) {
+                throw $e;
+            } catch (Throwable $e) {
+                Log::error('Error during login authentication.', [
+                    'email' => $request->email,
+                    'exception' => $e,
+                ]);
 
-            return null;
+                throw ValidationException::withMessages([
+                    Fortify::username() => ['No se pudo iniciar sesion. Intenta de nuevo o contacta al administrador.'],
+                ]);
+            }
         });
 
         RateLimiter::for('login', function (Request $request) {

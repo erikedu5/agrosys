@@ -41,73 +41,132 @@ const statusClass = (status) => {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Folio
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Origen → Destino
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Enviado por
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Recibido por
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Fecha Creación
-                                </th>
-                                <th scope="col" class="relative px-6 py-3">
-                                    <span class="sr-only">Acciones</span>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="transferencia in transferencias.data" :key="transferencia.id">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {{ transferencia.folio || '#' + transferencia.id }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ transferencia.sucursal_origen?.nombre }}</div>
-                                    <div class="text-xs text-gray-500">→ {{ transferencia.sucursal_destino?.nombre }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ transferencia.usuario_envia?.name || 'N/A' }}</div>
+                        <!-- Vista en tarjetas (móvil) -->
+                        <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            <div v-for="transferencia in transferencias.data" :key="transferencia.id" class="rounded-lg border p-4 bg-white shadow-lg w-full">
+                                <div class="text-sm text-gray-500">Folio</div>
+                                <div class="font-semibold text-gray-900">{{ transferencia.folio || '#' + transferencia.id }}</div>
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <div class="text-gray-500">Origen</div>
+                                        <div>{{ transferencia.sucursal_origen?.nombre }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-gray-500">Destino</div>
+                                        <div>{{ transferencia.sucursal_destino?.nombre }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-gray-500">Estado</div>
+                                        <span :class="statusClass(transferencia.status)" class="px-2 py-1 rounded-full text-xs font-semibold inline-flex">
+                                            {{ transferencia.status.toUpperCase() }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div class="text-gray-500">Fecha</div>
+                                        <div>{{ new Date(transferencia.created_at).toLocaleString() }}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-sm">
+                                    <div class="text-gray-500">Enviado por</div>
+                                    <div>{{ transferencia.usuario_envia?.name || 'N/A' }}</div>
                                     <div class="text-xs text-gray-500" v-if="transferencia.fecha_envio">
                                         {{ new Date(transferencia.fecha_envio).toLocaleDateString() }}
                                     </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ transferencia.usuario_recibe?.name || '-' }}</div>
+                                </div>
+                                <div class="mt-3 text-sm">
+                                    <div class="text-gray-500">Recibido por</div>
+                                    <div>{{ transferencia.usuario_recibe?.name || '-' }}</div>
                                     <div class="text-xs text-gray-500" v-if="transferencia.fecha_recepcion">
                                         {{ new Date(transferencia.fecha_recepcion).toLocaleDateString() }}
                                     </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span :class="statusClass(transferencia.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
-                                        {{ transferencia.status.toUpperCase() }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ new Date(transferencia.created_at).toLocaleString() }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link :href="route('transferencias.show', transferencia.id)" class="text-indigo-600 hover:text-indigo-900">Ver Detalles</Link>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="transferencias.data.length === 0">
-                                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay transferencias registradas.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                </div>
+                                <div class="mt-3 flex justify-end">
+                                    <Link :href="route('transferencias.show', transferencia.id)" class="text-indigo-600 hover:text-indigo-900 text-sm">
+                                        Ver Detalles
+                                    </Link>
+                                </div>
+                            </div>
+                            <div v-if="transferencias.data.length === 0" class="px-6 py-4 text-center text-gray-500">
+                                No hay transferencias registradas.
+                            </div>
+                            <div name="Pagination">
+                                <Pagination class="mt-6" :links="transferencias.links" />
+                            </div>
                         </div>
-                         <div class="mt-4">
-                            <Pagination :links="transferencias.links" />
+
+                        <!-- Tabla (desktop) -->
+                        <div class="hidden md:block">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Folio
+                                            </th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Origen → Destino
+                                            </th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Enviado por
+                                            </th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Recibido por
+                                            </th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Estado
+                                            </th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Fecha Creación
+                                            </th>
+                                            <th scope="col" class="relative px-6 py-3">
+                                                <span class="sr-only">Acciones</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="transferencia in transferencias.data" :key="transferencia.id">
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {{ transferencia.folio || '#' + transferencia.id }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">{{ transferencia.sucursal_origen?.nombre }}</div>
+                                                <div class="text-xs text-gray-500">→ {{ transferencia.sucursal_destino?.nombre }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">{{ transferencia.usuario_envia?.name || 'N/A' }}</div>
+                                                <div class="text-xs text-gray-500" v-if="transferencia.fecha_envio">
+                                                    {{ new Date(transferencia.fecha_envio).toLocaleDateString() }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900">{{ transferencia.usuario_recibe?.name || '-' }}</div>
+                                                <div class="text-xs text-gray-500" v-if="transferencia.fecha_recepcion">
+                                                    {{ new Date(transferencia.fecha_recepcion).toLocaleDateString() }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span :class="statusClass(transferencia.status)" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full">
+                                                    {{ transferencia.status.toUpperCase() }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {{ new Date(transferencia.created_at).toLocaleString() }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <Link :href="route('transferencias.show', transferencia.id)" class="text-indigo-600 hover:text-indigo-900">
+                                                    Ver Detalles
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="transferencias.data.length === 0">
+                                            <td colspan="7" class="px-6 py-4 text-center text-gray-500">No hay transferencias registradas.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4">
+                                <Pagination :links="transferencias.links" />
+                            </div>
                         </div>
                     </div>
                 </div>

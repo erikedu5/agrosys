@@ -71,14 +71,18 @@ class DevolucionesController extends Controller
 
         $items = [];
         foreach ($productosVenta as $pv) {
-            $prod = Producto::find($pv->id_producto);
+            $prod = Producto::withTrashed()->find($pv->id_producto);
             $yaDevuelto = (float) ($devueltos[$pv->id_producto] ?? 0);
+            $nombreProducto = $prod ? $prod->nombre : ('ID ' . $pv->id_producto);
+            if ($prod && $prod->trashed()) {
+                $nombreProducto .= ' (BORRADO)';
+            }
             $items[] = [
                 'producto_id' => $pv->id_producto,
-                'producto_nombre' => $prod ? $prod->nombre : ('ID ' . $pv->id_producto),
+                'producto_nombre' => $nombreProducto,
                 'vendido' => (float) $pv->cantidad,
                 'devuelto' => $yaDevuelto,
-                'max_devolver' => max(0, (float)$pv->cantidad - $yaDevuelto),
+                'max_devolver' => max(0, (float) $pv->cantidad - $yaDevuelto),
                 'precio_unitario' => $pv->cantidad > 0 ? ($pv->total_productos / $pv->cantidad) : 0,
             ];
         }
@@ -98,99 +102,160 @@ class DevolucionesController extends Controller
             'items.*.cantidad' => 'required|numeric|min:0.01',
         ]);
 
-        $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get()->keyBy('id_producto');
-        $devueltos = Devoluciones::where('id_venta', $venta->id)
-            ->with('detalles')
-            ->get()
-            ->flatMap->detalles
-            ->groupBy('id_producto')
-            ->map->sum('cantidad');
+        // Iniciar logging del evento
+        $logger = \App\Services\EventLogger::start('PROCESAR_DEVOLUCION', [
+            'venta_id' => $venta->id,
+            'venta_total' => $venta->total,
+            'num_items' => count($data['items']),
+            'sucursal_id' => SucursalService::getSucursalActiva(),
+        ]);
 
-        DB::transaction(function () use ($data, $venta, $productosVenta, $devueltos) {
-            $totalDevuelto = 0;
-            $detallesValidos = [];
+        try {
+            $productosVenta = ProductoVenta::where('id_venta', $venta->id)->get()->keyBy('id_producto');
+            $devueltos = Devoluciones::where('id_venta', $venta->id)
+                ->with('detalles')
+                ->get()
+                ->flatMap->detalles
+                ->groupBy('id_producto')
+                ->map->sum('cantidad');
 
-            foreach ($data['items'] as $item) {
-                $productoId = (int) $item['producto_id'];
-                $cantidad = (float) $item['cantidad'];
-                if ($cantidad <= 0) continue;
-
-                $pv = $productosVenta[$productoId] ?? null;
-                if (!$pv) {
-                    continue; // producto no pertenece a la venta
-                }
-                $yaDev = (float) ($devueltos[$productoId] ?? 0);
-                $max = max(0, (float)$pv->cantidad - $yaDev);
-                if ($cantidad > $max) {
-                    $cantidad = $max; // clamp
-                }
-                if ($cantidad <= 0) continue;
-
-                $precioUnit = $pv->cantidad > 0 ? ($pv->total_productos / $pv->cantidad) : 0;
-                $importe = round($precioUnit * $cantidad, 2);
-                $detallesValidos[] = [
-                    'id_producto' => $productoId,
-                    'cantidad' => $cantidad,
-                    'total' => $importe,
-                ];
-                $totalDevuelto += $importe;
-            }
-
-            if (empty($detallesValidos)) {
-                abort(422, 'No hay Devoluciones válidas.');
-            }
-
-            $Devoluciones = Devoluciones::create([
-                'id_venta' => $venta->id,
-                'id_usuario' => Auth::id(),
-                'id_sucursal' => SucursalService::getSucursalActiva(),
-                'total_devuelto' => $totalDevuelto,
-                'observaciones' => $data['observaciones'] ?? null,
+            $logger->step('Datos de venta cargados', [
+                'productos_venta' => $productosVenta->count(),
+                'devoluciones_previas' => $devueltos->count(),
             ]);
 
-            foreach ($detallesValidos as $det) {
-                DevolucionesDetalle::create([
-                    'id_devolucion' => $Devoluciones->id,
-                    'id_producto' => $det['id_producto'],
-                    'cantidad' => $det['cantidad'],
-                    'total' => $det['total'],
+            DB::transaction(function () use ($data, $venta, $productosVenta, $devueltos, $logger) {
+                $totalDevuelto = 0;
+                $detallesValidos = [];
+
+                foreach ($data['items'] as $item) {
+                    $productoId = (int) $item['producto_id'];
+                    $cantidad = (float) $item['cantidad'];
+                    if ($cantidad <= 0)
+                        continue;
+
+                    $pv = $productosVenta[$productoId] ?? null;
+                    if (!$pv) {
+                        continue; // producto no pertenece a la venta
+                    }
+                    $yaDev = (float) ($devueltos[$productoId] ?? 0);
+                    $max = max(0, (float) $pv->cantidad - $yaDev);
+                    if ($cantidad > $max) {
+                        $cantidad = $max; // clamp
+                    }
+                    if ($cantidad <= 0)
+                        continue;
+
+                    $precioUnit = $pv->cantidad > 0 ? ($pv->total_productos / $pv->cantidad) : 0;
+                    $importe = round($precioUnit * $cantidad, 2);
+                    $detallesValidos[] = [
+                        'id_producto' => $productoId,
+                        'cantidad' => $cantidad,
+                        'total' => $importe,
+                    ];
+                    $totalDevuelto += $importe;
+                }
+
+                if (empty($detallesValidos)) {
+                    $logger->warning('No hay devoluciones válidas');
+                    abort(422, 'No hay Devoluciones válidas.');
+                }
+
+                $logger->step('Items validados', [
+                    'items_validos' => count($detallesValidos),
+                    'total_devuelto' => $totalDevuelto,
                 ]);
 
-                // Regresar al inventario
-                $ultima = AltaInventario::where('id_producto', $det['id_producto'])
-                    ->where('id_sucursal', SucursalService::getSucursalActiva())
-                    ->orderByDesc('id')
-                    ->first();
+                $Devoluciones = Devoluciones::create([
+                    'id_venta' => $venta->id,
+                    'id_usuario' => Auth::id(),
+                    'id_sucursal' => SucursalService::getSucursalActiva(),
+                    'total_devuelto' => $totalDevuelto,
+                    'observaciones' => $data['observaciones'] ?? null,
+                ]);
 
-                $actual = $ultima ? (float)$ultima->cantidad_nueva : 0;
-                $alta = new AltaInventario();
-                $alta->cantidad_actual = $actual;
-                $alta->cantidad_nueva = $actual + (float)$det['cantidad'];
-                $alta->id_usuario = Auth::id();
-                $alta->id_producto = $det['id_producto'];
-                $alta->id_sucursal = SucursalService::getSucursalActiva();
-                $alta->tipo_evento = AltaInventario::EVENTO_ALTA;
-                $alta->save();
-            }
+                $logger->step('Devolución creada', [
+                    'devolucion_id' => $Devoluciones->id,
+                ]);
 
-            // Ajustar venta total
-            $venta->total = max(0, (float)$venta->total - $totalDevuelto);
-            $venta->save();
+                foreach ($detallesValidos as $index => $det) {
+                    DevolucionesDetalle::create([
+                        'id_devolucion' => $Devoluciones->id,
+                        'id_producto' => $det['id_producto'],
+                        'cantidad' => $det['cantidad'],
+                        'total' => $det['total'],
+                    ]);
 
-            // Ajustar cuenta del cliente
-            $cliente = Clientes::find($venta->id_cliente);
-            if ($cliente) {
-                // Reducir adeudo por lo devuelto
-                $cliente->adeudo_total = max(0, (float)$cliente->adeudo_total - $totalDevuelto);
-                if ($venta->tipo_venta === 'Contado') {
-                    // Si fue contado y se reembolsa, reducimos también lo abonado para mantener balance
-                    $cliente->abono_total = max(0, (float)$cliente->abono_total - $totalDevuelto);
+                    // Regresar al inventario
+                    $ultima = AltaInventario::where('id_producto', $det['id_producto'])
+                        ->where('id_sucursal', SucursalService::getSucursalActiva())
+                        ->orderByDesc('id')
+                        ->first();
+
+                    $actual = $ultima ? (float) $ultima->cantidad_nueva : 0;
+                    $alta = new AltaInventario();
+                    $alta->cantidad_actual = $actual;
+                    $alta->cantidad_nueva = $actual + (float) $det['cantidad'];
+                    $alta->id_usuario = Auth::id();
+                    $alta->id_producto = $det['id_producto'];
+                    $alta->id_sucursal = SucursalService::getSucursalActiva();
+                    $alta->tipo_evento = AltaInventario::EVENTO_ALTA;
+                    $alta->save();
+
+                    $logger->step("Producto {$index} devuelto a inventario", [
+                        'producto_id' => $det['id_producto'],
+                        'cantidad' => $det['cantidad'],
+                        'stock_anterior' => $actual,
+                        'stock_nuevo' => $alta->cantidad_nueva,
+                    ]);
                 }
-                $cliente->balance = (float)$cliente->adeudo_total - (float)$cliente->abono_total;
-                $cliente->save();
-            }
-        });
 
-        return redirect()->route('devoluciones.list')->with('success', 'Devolución registrada correctamente');
+                // Ajustar venta total
+                $totalAnterior = $venta->total;
+                $venta->total = max(0, (float) $venta->total - $totalDevuelto);
+                $venta->save();
+
+                $logger->step('Venta ajustada', [
+                    'total_anterior' => $totalAnterior,
+                    'total_nuevo' => $venta->total,
+                    'monto_devuelto' => $totalDevuelto,
+                ]);
+
+                // Ajustar cuenta del cliente
+                $cliente = Clientes::find($venta->id_cliente);
+                if ($cliente) {
+                    $balanceAnterior = $cliente->balance;
+                    // Reducir adeudo por lo devuelto
+                    $cliente->adeudo_total = max(0, (float) $cliente->adeudo_total - $totalDevuelto);
+                    if ($venta->tipo_venta === 'Contado') {
+                        // Si fue contado y se reembolsa, reducimos también lo abonado para mantener balance
+                        $cliente->abono_total = max(0, (float) $cliente->abono_total - $totalDevuelto);
+                    }
+                    $cliente->balance = (float) $cliente->adeudo_total - (float) $cliente->abono_total;
+                    $cliente->save();
+
+                    $logger->step('Cliente ajustado', [
+                        'cliente_id' => $cliente->id,
+                        'balance_anterior' => $balanceAnterior,
+                        'balance_nuevo' => $cliente->balance,
+                    ]);
+                }
+            });
+
+            $logger->success([
+                'venta_id' => $venta->id,
+                'total_devuelto' => $totalDevuelto ?? 0,
+            ]);
+
+            return redirect()->route('devoluciones.list')->with('success', 'Devolución registrada correctamente');
+
+        } catch (\Exception $e) {
+            $logger->error($e, [
+                'venta_id' => $venta->id,
+                'items' => $data['items'],
+            ]);
+
+            throw $e;
+        }
     }
 }

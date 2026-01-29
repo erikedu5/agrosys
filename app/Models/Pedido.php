@@ -29,6 +29,6 @@ class Pedido extends Model
 
     public function producto()
     {
-        return $this->belongsTo(Producto::class, 'id_producto');
+        return $this->belongsTo(Producto::class, 'id_producto')->withTrashed();
     }
 }
