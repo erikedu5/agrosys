@@ -169,7 +169,12 @@ const navItems = computed(() => {
                 { label: 'Facturas de ventas', route: 'facturas.index', params: { fechaInicio, fechaFin } },
             ],
         },
-        { type: 'link', label: 'Reportes', route: 'reporte' },
+        {
+            type: 'link',
+            label: 'Reportes',
+            route: 'reporte',
+            condition: ['inventario', 'vendedor', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
+        },
         {
             type: 'link',
             condition: ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
