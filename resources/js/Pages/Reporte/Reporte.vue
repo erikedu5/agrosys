@@ -209,7 +209,9 @@
 
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <p :class="helperTextClass">Si el rango es muy grande, se descargará un CSV.</p>
-                            <button @click="generarReporteVentas()" :class="primaryButtonClass">Generar reporte</button>
+                            <div class="flex flex-wrap gap-2">
+                                <button @click="generarReporteVentas()" :class="primaryButtonClass">Generar reporte</button>
+                            </div>
                         </div>
                     </section>
 

@@ -1,14 +1,19 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue';
-import { router, useForm } from '@inertiajs/vue3';
+import { router, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+import DialogModal from '@/Components/DialogModal.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { notify } from '@/utils/notify';
 
 const productoVenta = reactive([]);
 let total = 0.0;
 let selectClient = false;
 let venta_id = 0;
+
+const page = usePage();
 
 const props = defineProps({
     productos: {
@@ -48,6 +53,49 @@ const props = defineProps({
 const bloqueoManual = ref(false);
 const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || bloqueoManual.value);
 const mensajeBloqueo = computed(() => props.motivoBloqueo || 'VEsta sección está bloqueada, Contacte a su administrador.');
+
+const ventasDiaModalOpen = ref(false);
+const ventasDiaLoading = ref(false);
+const ventasDiaData = ref(null);
+const ventasDiaError = ref(null);
+const currencyFormatter = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+
+const formatCurrency = (value) => currencyFormatter.format(Number(value ?? 0));
+const formatNumber = (value, digits = 2) => Number(value ?? 0).toFixed(digits);
+const displayStock = (value) => (value === null || value === undefined ? 'N/D' : formatNumber(value, 2));
+
+const abrirVentasDiaModal = async () => {
+    ventasDiaModalOpen.value = true;
+    await cargarVentasDia();
+};
+
+const cerrarVentasDiaModal = () => {
+    ventasDiaModalOpen.value = false;
+};
+
+const cargarVentasDia = async () => {
+    ventasDiaLoading.value = true;
+    ventasDiaData.value = null;
+    ventasDiaError.value = null;
+
+    try {
+        const params = {};
+        const sucursalId = page.props?.sucursalActiva?.id;
+        if (sucursalId) {
+            params.id_sucursal = sucursalId;
+        }
+        const { data } = await axios.get(route('reporte.ventasDia', params), {
+            headers: { Accept: 'application/json' },
+        });
+        ventasDiaData.value = data;
+    } catch (error) {
+        ventasDiaError.value = 'No se pudieron cargar las ventas del día.';
+        notify('No se pudieron cargar las ventas del día.', 'error');
+        ventasDiaData.value = { rows: [] };
+    } finally {
+        ventasDiaLoading.value = false;
+    }
+};
 
 watch(bloqueoActivo, (value) => {
     if (value) {
@@ -459,12 +507,23 @@ const searchProductPrice = async () => {
 <template>
     <AppLayout title="Dashboard">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Venta de agroquimicos
-            </h2>
-            <br>
-            <span class="dark:text-gray-400">F2: Buscar en sucursal</span>
-            <span class="ml-4 dark:text-gray-400">F3: Buscar precio y existencias</span>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                        Venta de agroquimicos
+                    </h2>
+                    <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <span>F2: Buscar en sucursal</span>
+                        <span class="ml-4">F3: Buscar precio y existencias</span>
+                    </div>
+                </div>
+                <button
+                    @click="abrirVentasDiaModal"
+                    class="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                >
+                    Ver ventas de hoy
+                </button>
+            </div>
         </template>
 
         <hr class="my-6">
@@ -759,5 +818,113 @@ const searchProductPrice = async () => {
                 </div>
             </div>
         </div>
+
+        <DialogModal :show="ventasDiaModalOpen" maxWidth="6xl" @close="cerrarVentasDiaModal">
+            <template #title>
+                Ventas del día
+            </template>
+            <template #content>
+                <div v-if="ventasDiaLoading" class="text-sm text-gray-600 dark:text-gray-300">
+                    Cargando ventas de hoy...
+                </div>
+                <div v-else>
+                    <div class="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300">
+                        <span><strong class="text-gray-800 dark:text-gray-100">Sucursal:</strong> {{ ventasDiaData?.sucursal?.nombre ?? 'Sucursal activa' }}</span>
+                        <span><strong class="text-gray-800 dark:text-gray-100">Fecha:</strong> {{ ventasDiaData?.fecha ?? 'Hoy' }}</span>
+                    </div>
+
+                    <div v-if="ventasDiaError" class="mt-3 text-sm text-red-600 dark:text-red-300">
+                        {{ ventasDiaError }}
+                    </div>
+
+                    <div v-if="!ventasDiaData || !ventasDiaData.rows || ventasDiaData.rows.length === 0" class="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                        No hay ventas registradas para la fecha actual.
+                    </div>
+                    <div v-else class="mt-4 space-y-3 md:space-y-0">
+                        <div class="grid gap-3 md:hidden">
+                            <div v-for="(row, index) in ventasDiaData.rows" :key="index" class="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">Venta #{{ row.venta_id }}</div>
+                                    <span class="text-[11px] uppercase text-gray-500 dark:text-gray-400">{{ row.tipo_venta }}</span>
+                                </div>
+                                <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ row.fecha_venta }}</div>
+                                <div class="mt-3">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.producto }}</div>
+                                    <div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                                        <div>
+                                            <div class="uppercase text-gray-400">Cantidad</div>
+                                            <div>{{ formatNumber(row.cantidad, 2) }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="uppercase text-gray-400">Precio</div>
+                                            <div>{{ formatCurrency(row.precio_unitario) }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="uppercase text-gray-400">Total</div>
+                                            <div class="font-semibold text-gray-900 dark:text-gray-100">{{ formatCurrency(row.total) }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="uppercase text-gray-400">Cliente</div>
+                                            <div>{{ row.cliente }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="uppercase text-gray-400">Stock anterior</div>
+                                            <div>{{ displayStock(row.stock_anterior) }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="uppercase text-gray-400">Nuevo stock</div>
+                                            <div>{{ displayStock(row.stock_nuevo) }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">Usuario: {{ row.usuario }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hidden md:block max-h-[60vh] overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                            <table class="min-w-full text-xs text-left text-gray-700 dark:text-gray-200">
+                                <thead class="sticky top-0 bg-gray-100 text-[11px] uppercase tracking-wide text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                    <tr>
+                                        <th class="px-3 py-2">Id venta</th>
+                                        <th class="px-3 py-2">Fecha</th>
+                                        <th class="px-3 py-2">Tipo</th>
+                                        <th class="px-3 py-2">Producto</th>
+                                        <th class="px-3 py-2">Cantidad</th>
+                                        <th class="px-3 py-2">Precio unitario</th>
+                                        <th class="px-3 py-2">Total</th>
+                                        <th class="px-3 py-2">Cliente</th>
+                                        <th class="px-3 py-2">Stock anterior</th>
+                                        <th class="px-3 py-2">Nuevo stock</th>
+                                        <th class="px-3 py-2">Usuario</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(row, index) in ventasDiaData.rows" :key="index" class="border-t border-gray-200 dark:border-gray-700">
+                                        <td class="px-3 py-2">{{ row.venta_id }}</td>
+                                        <td class="px-3 py-2 whitespace-nowrap">{{ row.fecha_venta }}</td>
+                                        <td class="px-3 py-2">{{ row.tipo_venta }}</td>
+                                        <td class="px-3 py-2">{{ row.producto }}</td>
+                                        <td class="px-3 py-2">{{ formatNumber(row.cantidad, 2) }}</td>
+                                        <td class="px-3 py-2">{{ formatCurrency(row.precio_unitario) }}</td>
+                                        <td class="px-3 py-2">{{ formatCurrency(row.total) }}</td>
+                                        <td class="px-3 py-2">{{ row.cliente }}</td>
+                                        <td class="px-3 py-2">{{ displayStock(row.stock_anterior) }}</td>
+                                        <td class="px-3 py-2">{{ displayStock(row.stock_nuevo) }}</td>
+                                        <td class="px-3 py-2">{{ row.usuario }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-end text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        Total del día: {{ formatCurrency(ventasDiaData?.total ?? 0) }}
+                    </div>
+                </div>
+            </template>
+            <template #footer>
+                <SecondaryButton @click="cerrarVentasDiaModal">Cerrar</SecondaryButton>
+            </template>
+        </DialogModal>
     </AppLayout>
 </template>

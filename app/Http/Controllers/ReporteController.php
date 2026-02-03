@@ -681,6 +681,90 @@ class ReporteController extends Controller
         return $pdf->stream('ventas_marca_producto_ticket.pdf');
     }
 
+    public function ventasDia(Request $request)
+    {
+        $idSucursal = $this->resolveSucursalIdForReport($request);
+        $fechaInicio = now()->startOfDay();
+        $fechaFin = now()->endOfDay();
+
+        $ventas = Venta::whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->where('id_sucursal', $idSucursal)
+            ->orderBy('id')
+            ->get();
+
+        $ventaIds = $ventas->pluck('id');
+        $lineas = $ventaIds->isEmpty()
+            ? collect()
+            : ProductoVenta::whereIn('id_venta', $ventaIds)->get();
+
+        $productos = $lineas->isEmpty()
+            ? collect()
+            : Producto::withTrashed()
+                ->whereIn('id', $lineas->pluck('id_producto')->unique())
+                ->get()
+                ->keyBy('id');
+
+        $clientes = $ventas->isEmpty()
+            ? collect()
+            : Clientes::whereIn('id', $ventas->pluck('id_cliente')->filter()->unique())
+                ->get()
+                ->keyBy('id');
+
+        $usuarios = $ventas->isEmpty()
+            ? collect()
+            : User::whereIn('id', $ventas->pluck('id_usuario')->filter()->unique())
+                ->get()
+                ->keyBy('id');
+
+        $lineasPorVenta = $lineas->groupBy('id_venta');
+        $rows = [];
+
+        foreach ($ventas as $venta) {
+            $clienteNombre = optional($clientes->get($venta->id_cliente))->nombre ?? 'Cliente público';
+            $usuarioNombre = optional($usuarios->get($venta->id_usuario))->name ?? 'N/D';
+            $ventaFecha = $venta->created_at ? \Carbon\Carbon::parse($venta->created_at)->format('Y-m-d H:i:s') : null;
+
+            foreach ($lineasPorVenta->get($venta->id, collect()) as $linea) {
+                $productoDetalle = $productos->get($linea->id_producto);
+                if ($productoDetalle) {
+                    $productoNombre = $productoDetalle->nombre;
+                    if ($productoDetalle->trashed()) {
+                        $productoNombre .= ' (BORRADO)';
+                    }
+                } else {
+                    $productoNombre = 'Producto (BORRADO)';
+                }
+
+                $precioUnitario = $linea->cantidad ? ($linea->total_productos / $linea->cantidad) : 0;
+                [$stockAnterior, $stockNuevo] = $this->resolveStockMovimientoForProductoVenta($linea, $venta, $idSucursal);
+
+                $rows[] = [
+                    'venta_id' => $venta->id,
+                    'fecha_venta' => $ventaFecha,
+                    'tipo_venta' => $venta->tipo_venta,
+                    'producto' => $productoNombre,
+                    'cantidad' => (float) $linea->cantidad,
+                    'precio_unitario' => (float) $precioUnitario,
+                    'total' => (float) $linea->total_productos,
+                    'cliente' => $clienteNombre,
+                    'stock_anterior' => $stockAnterior,
+                    'stock_nuevo' => $stockNuevo,
+                    'usuario' => $usuarioNombre,
+                ];
+            }
+        }
+
+        $sucursal = Sucursales::find($idSucursal);
+        $totalVentas = (float) $ventas->sum('total');
+
+        return response()->json([
+            'sucursal' => $sucursal ? ['id' => $sucursal->id, 'nombre' => $sucursal->nombre] : null,
+            'fecha' => now()->format('Y-m-d'),
+            'total' => $totalVentas,
+            'rows' => $rows,
+        ]);
+    }
+
     private function resolveSucursalIdForReport(Request $request): int
     {
         $idSucursal = SucursalService::getSucursalActiva();
