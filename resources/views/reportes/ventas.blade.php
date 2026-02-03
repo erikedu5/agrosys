@@ -1,85 +1,99 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Venta</title>
     <style>
+        body {
+            font-family: sans-serif;
+            font-size: 12px;
+            color: #222;
+        }
+
         table {
-        border-collapse: collapse;
-        width: 100%;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
         }
 
         th, td {
-        text-align: left;
-        padding: 8px;
+            text-align: left;
+            padding: 6px;
+            border: 1px solid #ddd;
         }
 
-        tr:nth-child(even) {background-color: #f2f2f2;}
+        th {
+            background-color: #f5f5f5;
+        }
+
+        .meta {
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
-    <div>
-        <div style=" text-align: center"> {{ $empresa->nombre}} </div>
-        <div style=" text-align: center"> {{ $empresa->direccion}} </div>
-        <div style=" text-align: center"><strong>Email: </strong> {{ $empresa->email}} </div>
-        <div style=" text-align: center"><strong>Telefono: </strong> {{ $empresa->telefono}} </div>
-        <div style=" text-align: center"><strong>RFC: </strong> {{ $empresa->rfc}} </div>
+    <div style="text-align: center">
+        <div>{{ $empresa->nombre }}</div>
+        <div><strong>Email:</strong> {{ $empresa->email }}</div>
+        <div><strong>Telefono:</strong> {{ $empresa->telefono }}</div>
+        <div><strong>RFC:</strong> {{ $empresa->rfc }}</div>
     </div>
 
-    <br><br>
+    <div class="meta">
+        <div><strong>Sucursal:</strong> {{ optional($sucursalUser)->nombre ?? 'N/A' }}</div>
+        <div><strong>Fecha de reporte:</strong> {{ $fechaInicio }} al {{ $fechaFin }}</div>
+    </div>
 
-        <div style=" text-align: left"> <strong>Reporte de ventas correspondiente rango del  </strong> {{ $fechaInicio }} <strong> al </strong> {{ $fechaFin }} </div>
-        <br>
-
-        <div style=" text-align: left"> <strong> Monto total de ventas de contado: </strong>  $ {{ $montoContado }}  </div>
-        <br>
-
-        <div style=" text-align: left"> <strong> Monto total de ventas de credito: </strong> $ {{ $montoCredito }} </div>
-        <br>
-
-        <div style=" text-align: left"> <strong> Monto total de ventas del rango: </strong> $ {{ $montoCredito + $montoContado }} </div>
-        <br>
-
-        <div style=" text-align: left"> <strong> Abonos recibidos dentro del rango de fechas: </strong> $ {{ $totalAbonadoRango }} </div>
-        <br>
-
-    <br>
-    
-    @foreach ($ventas as $venta)
-
-    <hr class="my-6">
-    <div style="margin-bottom:25px;"><strong>Vendedor:</strong> {{ $venta->usuario->name }}</div>
-    <div style="margin-bottom:25px;"><strong>Cliente:</strong> {{ $venta->cliente->nombre }}</div>
-    <div style="margin-bottom:25px;"><strong>Fecha de Venta:</strong> {{ $venta->created_at }}</div>
-    <div style="margin-bottom:25px;"><strong>Tipo de venta:</strong> {{ $venta->tipo_venta }}</div>
-    
-    <div style="overflow-x:auto;">
-        <table>
-            <thead>
-                <tr>
-                    <th>Id</th>
-                    <th>Nombre del producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio unitario</th>
-                    <th>Importe</th>
-                </tr>
-            </thead>
-            <tbody>
+    <table>
+        <thead>
+            <tr>
+                <th>Id venta</th>
+                <th>Fecha de venta</th>
+                <th>Tipo de venta</th>
+                <th>Nombre del producto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Total</th>
+                <th>Cliente</th>
+                <th>Stock anterior</th>
+                <th>Nuevo stock</th>
+                <th>Usuario</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($ventas as $venta)
                 @foreach ($venta->productos as $producto)
+                    @php
+                        $precioUnitario = $producto->cantidad ? ($producto->total_productos / $producto->cantidad) : 0;
+                        $clienteNombre = optional($venta->cliente)->nombre ?? 'Cliente público';
+                        $usuarioNombre = optional($venta->usuario)->name ?? 'N/D';
+                        $stockAnterior = is_numeric($producto->stock_anterior) ? number_format($producto->stock_anterior, 2) : 'N/D';
+                        $stockNuevo = is_numeric($producto->stock_nuevo) ? number_format($producto->stock_nuevo, 2) : 'N/D';
+                    @endphp
                     <tr>
-                    <td class="px-4 py-2">  {{ $producto->detail->id }} </td>
-                    <td class="px-4 py-2">  {{ $producto->detail->nombre }} </td>
-                    <td class="px-4 py-2">  {{ $producto->cantidad }} </td>
-                    <td class="px-4 py-2">  {{ $producto->total_productos/$producto->cantidad }} </td>
-                    <td class="px-4 py-2">  {{ $producto->total_productos }} </td>
+                        <td>{{ $venta->id }}</td>
+                        <td>{{ $venta->created_at }}</td>
+                        <td>{{ $venta->tipo_venta }}</td>
+                        <td>{{ $producto->detail->nombre }}</td>
+                        <td>{{ number_format($producto->cantidad, 2) }}</td>
+                        <td>${{ number_format($precioUnitario, 2) }}</td>
+                        <td>${{ number_format($producto->total_productos, 2) }}</td>
+                        <td>{{ $clienteNombre }}</td>
+                        <td>{{ $stockAnterior }}</td>
+                        <td>{{ $stockNuevo }}</td>
+                        <td>{{ $usuarioNombre }}</td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
-    <br>
-    <div style="margin-bottom:25px; text-align: right"><strong>Total de la venta:</strong> {{ $venta->total }}</div>
-    @endforeach
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4"><strong>Sumatoria total de las ventas</strong></td>
+                <td><strong>${{ number_format($montoCredito + $montoContado, 2) }}</strong></td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
+    </table>
 </body>
 </html>
