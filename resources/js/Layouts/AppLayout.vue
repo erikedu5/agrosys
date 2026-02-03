@@ -207,10 +207,11 @@ const navItems = computed(() => {
 const searchItems = computed(() => {
     const items = [];
     navItems.value.forEach((i) => {
+        const isVisible = i.condition === undefined ? true : Boolean(i.condition);
         console.log('i', i);
-        if (i.type === 'link' && i.condition) {
+        if (i.type === 'link' && isVisible) {
             items.push({ label: i.label, route: i.route, params: i.params });
-        } else if (i.type === 'dropdown' && i.condition) {
+        } else if (i.type === 'dropdown' && isVisible) {
             i.children.forEach((c) => items.push(c));
         }
     });

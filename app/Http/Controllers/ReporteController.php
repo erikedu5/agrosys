@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Log;
 
 class ReporteController extends Controller
 {
+    private const MAX_PDF_LINEAS_VENTA = 2000;
 
     public function index(Request $request)
     {
@@ -37,6 +38,8 @@ class ReporteController extends Controller
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         } elseif ($usuario->tipo === 'adminEmpresa') {
             $sucursales = $usuario->sucursalesEmpresa();
+        } elseif ($usuario->tipo === 'superAdmin') {
+            $sucursales = Sucursales::all();
         }
 
         return Inertia::render('Reporte/Reporte', [
@@ -50,8 +53,8 @@ class ReporteController extends Controller
     public function venta(Request $request)
     {
         $request->validate([
-            'fechaInicio' => 'required',
-            'fechaFin' => 'required'
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin' => ['required', 'date_format:Y-m-d'],
         ]);
 
         $fechaInicio = new DateTime($request->fechaInicio);
@@ -61,13 +64,21 @@ class ReporteController extends Controller
         $fechaFin = new DateTime($request->fechaFin);
         $fechaFin->setTime(23, 59, 59);
         $fechaFin->format('Y-m-d h:i:s a');
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
+
+        $lineasCount = ProductoVenta::join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
+            ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin])
+            ->where('ventas.id_sucursal', $idSucursal)
+            ->count();
+
+        if ($lineasCount > self::MAX_PDF_LINEAS_VENTA) {
+            $ventasBase = Venta::whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->where('id_sucursal', $idSucursal);
+            $montoContado = (clone $ventasBase)->where('tipo_venta', 'Contado')->sum('total');
+            $montoCredito = (clone $ventasBase)->where('tipo_venta', 'Credito')->sum('total');
+            $sucursalUser = Sucursales::where('id', $idSucursal)->first();
+
+            return $this->streamVentasCsv($fechaInicio, $fechaFin, $idSucursal, (float) $montoContado, (float) $montoCredito, $sucursalUser);
         }
 
         $ventas = Venta::where('created_at', '>=', $fechaInicio)
@@ -100,6 +111,9 @@ class ReporteController extends Controller
                     ];
                 }
                 $producto->detail = $detalle;
+                [$stockAnterior, $stockNuevo] = $this->resolveStockMovimientoForProductoVenta($producto, $venta, $idSucursal);
+                $producto->stock_anterior = $stockAnterior;
+                $producto->stock_nuevo = $stockNuevo;
                 array_push($productosArray, $producto);
             }
             $venta->productos = $productosArray;
@@ -131,7 +145,7 @@ class ReporteController extends Controller
         $pdf->getDomPDF()->set_option("enable_php", true);
         $pdf->loadView(
             'reportes/ventas',
-            compact("ventas", "empresa", "fechaInicio", "fechaFin", 'montoCredito', 'montoContado', 'totalAbonadoRango')
+            compact("ventas", "empresa", "fechaInicio", "fechaFin", 'montoCredito', 'montoContado', 'totalAbonadoRango', 'sucursalUser')
         );
         $pdf->setOption('javascript-delay', 3000);
 
@@ -142,8 +156,8 @@ class ReporteController extends Controller
     public function ventaTicket(Request $request)
     {
         $request->validate([
-            'fechaInicio' => 'required',
-            'fechaFin' => 'required'
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin' => ['required', 'date_format:Y-m-d'],
         ]);
 
         $fechaInicio = new DateTime($request->fechaInicio);
@@ -151,14 +165,7 @@ class ReporteController extends Controller
         $fechaFin = new DateTime($request->fechaFin);
         $fechaFin->setTime(23, 59, 59);
 
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
-        }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
 
         $ventas = Venta::where('created_at', '>=', $fechaInicio)
             ->where('created_at', '<=', $fechaFin)
@@ -205,14 +212,7 @@ class ReporteController extends Controller
         $fechaCreacion = Date('Y-m-d h:i:s a');
         $clasificacion = null;
         $marca = null;
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
-        }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
         if ($request->has('id_clasificacion')) {
             $inventario->where('id_clasificacion', $request->id_clasificacion);
             $clasificacion = CatClasificacion::find($request->id_clasificacion);
@@ -258,14 +258,7 @@ class ReporteController extends Controller
 
         $inventario = Producto::where('id', '>', 0);
 
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
-        }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
         if ($request->has('id_clasificacion')) {
             $inventario->where('id_clasificacion', $request->id_clasificacion);
         }
@@ -309,12 +302,14 @@ class ReporteController extends Controller
 
         $request->validate(
             [
-                'fechaInicio' => ['required'],
-                'fechaFin' => ['required'],
+                'fechaInicio' => ['required', 'date_format:Y-m-d'],
+                'fechaFin' => ['required', 'date_format:Y-m-d'],
             ],
             [
                 'fechaInicio.required' => 'La fecha de inicio es requerida.',
                 'fechaFin.required' => 'La fecha de fin es requerida.',
+                'fechaInicio.date_format' => 'La fecha de inicio debe tener el formato YYYY-MM-DD.',
+                'fechaFin.date_format' => 'La fecha de fin debe tener el formato YYYY-MM-DD.',
             ]
         );
 
@@ -415,50 +410,18 @@ class ReporteController extends Controller
         $sucursalActiva = Sucursales::find(SucursalService::getSucursalActiva());
         $sucursales = collect();
         $sucursalSeleccionada = null;
-        $sucursalSolicitud = $request->filled('id_sucursal') ? (int) $request->id_sucursal : null;
 
         if ($usuario->tipo === 'admin' && $sucursalActiva && $sucursalActiva->es_matriz) {
-            if ($sucursalSolicitud) {
-                $sucursal = Sucursales::where('id', $sucursalSolicitud)
-                    ->where('id_empresa', $sucursalActiva->id_empresa)
-                    ->first();
-                if (!$sucursal) {
-                    abort(403, 'No tiene permisos para consultar la sucursal solicitada.');
-                }
-                $sucursales = collect([$sucursal]);
-                $sucursalSeleccionada = $sucursal;
-            } else {
-                $sucursales = Sucursales::where('id_empresa', $sucursalActiva->id_empresa)->get();
-            }
+            $sucursales = Sucursales::where('id_empresa', $sucursalActiva->id_empresa)->get();
         } elseif ($usuario->tipo === 'adminEmpresa') {
-            $sucursalesEmpresa = $usuario->sucursalesEmpresa();
-            if ($sucursalSolicitud) {
-                $sucursal = $sucursalesEmpresa->firstWhere('id', $sucursalSolicitud);
-                if (!$sucursal) {
-                    abort(403, 'No tiene permisos para consultar la sucursal solicitada.');
-                }
-                $sucursales = collect([$sucursal]);
-                $sucursalSeleccionada = $sucursal;
-            } else {
-                $sucursales = $sucursalesEmpresa;
-            }
+            $sucursales = $usuario->sucursalesEmpresa();
         } elseif ($usuario->tipo === 'superAdmin') {
-            if ($sucursalSolicitud) {
-                $sucursal = Sucursales::find($sucursalSolicitud);
-                if (!$sucursal) {
-                    abort(404, 'La sucursal seleccionada no existe.');
-                }
-                $sucursales = collect([$sucursal]);
-                $sucursalSeleccionada = $sucursal;
-            } else {
-                $sucursales = Sucursales::all();
-            }
+            $sucursales = Sucursales::all();
         } else {
             if (!$sucursalActiva) {
                 abort(404, 'No se encontró la sucursal activa para el usuario.');
             }
             $sucursales = collect([$sucursalActiva]);
-            $sucursalSeleccionada = $sucursalActiva;
         }
 
         if ($sucursales->isEmpty()) {
@@ -522,8 +485,8 @@ class ReporteController extends Controller
     public function ventaPorProductoMarca(Request $request)
     {
         $request->validate([
-            'fechaInicio' => ['required'],
-            'fechaFin' => ['required']
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin' => ['required', 'date_format:Y-m-d'],
         ]);
 
         $fechaInicio = new DateTime($request->fechaInicio);
@@ -538,14 +501,7 @@ class ReporteController extends Controller
         $porProducto = $request->id_producto != 0;
         $porMarca = $request->id_marca != 0;
         $nameFilter = "";
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
-        }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
 
         if ($porProducto) {
             $ventas = Venta::select('ventas.*')
@@ -637,8 +593,8 @@ class ReporteController extends Controller
     public function ventaPorProductoMarcaTicket(Request $request)
     {
         $request->validate([
-            'fechaInicio' => ['required'],
-            'fechaFin' => ['required']
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin' => ['required', 'date_format:Y-m-d'],
         ]);
 
         $fechaInicio = new DateTime($request->fechaInicio);
@@ -650,14 +606,7 @@ class ReporteController extends Controller
         $porProducto = $request->id_producto != 0;
         $porMarca = $request->id_marca != 0;
         $nameFilter = "";
-        $idSucursal = SucursalService::getSucursalActiva();
-        $sucursalUser = Sucursales::find(SucursalService::getSucursalActiva());
-        if ($request->has('id_sucursal') && Auth::user()->tipo === 'admin' && $sucursalUser->es_matriz) {
-            $sucursal = Sucursales::find($request->id_sucursal);
-            if ($sucursal && $sucursal->id_empresa === $sucursalUser->id_empresa) {
-                $idSucursal = $request->id_sucursal;
-            }
-        }
+        $idSucursal = $this->resolveSucursalIdForReport($request);
 
         if ($porProducto) {
             $ventas = Venta::select('ventas.*')
@@ -730,5 +679,248 @@ class ReporteController extends Controller
         $pdf->setPaper($customPaper, 'portrait');
         $pdf->setOption('javascript-delay', 500);
         return $pdf->stream('ventas_marca_producto_ticket.pdf');
+    }
+
+    private function resolveSucursalIdForReport(Request $request): int
+    {
+        $idSucursal = SucursalService::getSucursalActiva();
+        $usuario = Auth::user();
+        $sucursalActiva = Sucursales::find($idSucursal);
+
+        if (!$request->filled('id_sucursal')) {
+            return $idSucursal;
+        }
+
+        $idSolicitada = (int) $request->id_sucursal;
+
+        if ($usuario->tipo === 'admin' && $sucursalActiva && $sucursalActiva->es_matriz) {
+            $sucursal = Sucursales::where('id', $idSolicitada)
+                ->where('id_empresa', $sucursalActiva->id_empresa)
+                ->first();
+            if ($sucursal) {
+                return $sucursal->id;
+            }
+        } elseif ($usuario->tipo === 'adminEmpresa') {
+            $sucursal = $usuario->sucursalesEmpresa()->firstWhere('id', $idSolicitada);
+            if ($sucursal) {
+                return $sucursal->id;
+            }
+        } elseif ($usuario->tipo === 'superAdmin') {
+            $sucursal = Sucursales::find($idSolicitada);
+            if ($sucursal) {
+                return $sucursal->id;
+            }
+        }
+
+        return $idSucursal;
+    }
+
+    private function resolveStockMovimientoForProductoVenta(ProductoVenta $producto, Venta $venta, int $idSucursal): array
+    {
+        $createdAt = $producto->created_at ?? $venta->created_at;
+        if (!$createdAt) {
+            return [null, null];
+        }
+
+        $createdAt = $createdAt instanceof \Carbon\Carbon
+            ? $createdAt
+            : \Carbon\Carbon::parse($createdAt);
+
+        $windowEnd = $createdAt->copy()->addMinutes(5);
+        $movimientos = AltaInventario::where('id_producto', $producto->id_producto)
+            ->where('id_sucursal', $idSucursal)
+            ->where('id_usuario', $venta->id_usuario)
+            ->whereBetween('created_at', [$createdAt, $windowEnd])
+            ->where(function ($query) {
+                $query->whereNull('tipo_evento')
+                    ->orWhere('tipo_evento', AltaInventario::EVENTO_VENTA);
+            })
+            ->orderBy('created_at')
+            ->limit(10)
+            ->get();
+
+        if ($movimientos->isEmpty() && $venta->created_at) {
+            $ventaAt = $venta->created_at instanceof \Carbon\Carbon
+                ? $venta->created_at
+                : \Carbon\Carbon::parse($venta->created_at);
+            $windowStart = $ventaAt->copy()->subMinutes(2);
+            $windowEnd = $ventaAt->copy()->addMinutes(5);
+
+            $movimientos = AltaInventario::where('id_producto', $producto->id_producto)
+                ->where('id_sucursal', $idSucursal)
+                ->whereBetween('created_at', [$windowStart, $windowEnd])
+                ->where(function ($query) {
+                    $query->whereNull('tipo_evento')
+                        ->orWhere('tipo_evento', AltaInventario::EVENTO_VENTA);
+                })
+                ->orderBy('created_at')
+                ->limit(10)
+                ->get();
+        }
+
+        $stockMovimiento = $movimientos->first(function ($movimiento) use ($producto) {
+            $vendido = (float) $producto->cantidad;
+            $delta = (float) $movimiento->cantidad_actual - (float) $movimiento->cantidad_nueva;
+            return abs($delta - $vendido) < 0.01;
+        }) ?? $movimientos->first();
+
+        if (!$stockMovimiento) {
+            return [null, null];
+        }
+
+        return [$stockMovimiento->cantidad_actual, $stockMovimiento->cantidad_nueva];
+    }
+
+    private function streamVentasCsv(
+        DateTime $fechaInicio,
+        DateTime $fechaFin,
+        int $idSucursal,
+        float $montoContado,
+        float $montoCredito,
+        ?Sucursales $sucursalUser
+    ) {
+        $fechaInicioCsv = $fechaInicio->format('Y-m-d');
+        $fechaFinCsv = $fechaFin->format('Y-m-d');
+        $sucursalNombre = optional($sucursalUser)->nombre ?? '';
+        $fileName = 'ventas_' . $fechaInicioCsv . '_' . $fechaFinCsv . '.csv';
+
+        return response()->streamDownload(function () use (
+            $fechaInicio,
+            $fechaFin,
+            $fechaInicioCsv,
+            $fechaFinCsv,
+            $idSucursal,
+            $sucursalNombre,
+            $montoContado,
+            $montoCredito
+        ) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+
+            fputs($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, [
+                'Sucursal',
+                'Fecha reporte inicio',
+                'Fecha reporte fin',
+                'Id venta',
+                'Fecha de venta',
+                'Nombre del producto',
+                'Cantidad',
+                'Precio unitario',
+                'Total',
+                'Cliente',
+                'Stock anterior',
+                'Nuevo stock',
+                'Usuario',
+            ]);
+
+            $ventasQuery = Venta::whereBetween('created_at', [$fechaInicio, $fechaFin])
+                ->where('id_sucursal', $idSucursal)
+                ->orderBy('id')
+                ->select(['id', 'created_at', 'id_cliente', 'id_usuario']);
+
+            $ventasQuery->chunkById(200, function ($ventas) use (
+                $handle,
+                $idSucursal,
+                $sucursalNombre,
+                $fechaInicioCsv,
+                $fechaFinCsv
+            ) {
+                if ($ventas->isEmpty()) {
+                    return;
+                }
+
+                $ventaIds = $ventas->pluck('id');
+                $productosVenta = ProductoVenta::whereIn('id_venta', $ventaIds)->get();
+                if ($productosVenta->isEmpty()) {
+                    return;
+                }
+
+                $productosByVenta = $productosVenta->groupBy('id_venta');
+
+                $productoIds = $productosVenta->pluck('id_producto')->unique()->values();
+                $productosCatalogo = $productoIds->isEmpty()
+                    ? collect()
+                    : Producto::withTrashed()->whereIn('id', $productoIds)->get()->keyBy('id');
+
+                $clienteIds = $ventas->pluck('id_cliente')->filter()->unique()->values();
+                $clientes = $clienteIds->isEmpty()
+                    ? collect()
+                    : Clientes::whereIn('id', $clienteIds)->get()->keyBy('id');
+
+                $usuarioIds = $ventas->pluck('id_usuario')->filter()->unique()->values();
+                $usuarios = $usuarioIds->isEmpty()
+                    ? collect()
+                    : User::whereIn('id', $usuarioIds)->get()->keyBy('id');
+
+                foreach ($ventas as $venta) {
+                    $clienteNombre = optional($clientes->get($venta->id_cliente))->nombre ?? 'Cliente público';
+                    $usuarioNombre = optional($usuarios->get($venta->id_usuario))->name ?? 'N/D';
+                    $lineas = $productosByVenta->get($venta->id, collect());
+
+                    foreach ($lineas as $productoVenta) {
+                        $productoDetalle = $productosCatalogo->get($productoVenta->id_producto);
+                        if ($productoDetalle) {
+                            $productoNombre = $productoDetalle->nombre;
+                            if ($productoDetalle->trashed()) {
+                                $productoNombre .= ' (BORRADO)';
+                            }
+                        } else {
+                            $productoNombre = 'Producto (BORRADO)';
+                        }
+
+                        $precioUnitario = $productoVenta->cantidad
+                            ? ($productoVenta->total_productos / $productoVenta->cantidad)
+                            : 0;
+
+                        [$stockAnterior, $stockNuevo] = $this->resolveStockMovimientoForProductoVenta($productoVenta, $venta, $idSucursal);
+                        $stockAnterior = $stockAnterior === null ? 'N/D' : $stockAnterior;
+                        $stockNuevo = $stockNuevo === null ? 'N/D' : $stockNuevo;
+
+                        fputcsv($handle, [
+                            $sucursalNombre,
+                            $fechaInicioCsv,
+                            $fechaFinCsv,
+                            $venta->id,
+                            $venta->created_at,
+                            $productoNombre,
+                            $productoVenta->cantidad,
+                            $precioUnitario,
+                            $productoVenta->total_productos,
+                            $clienteNombre,
+                            $stockAnterior,
+                            $stockNuevo,
+                            $usuarioNombre,
+                        ]);
+                    }
+                }
+
+                fflush($handle);
+            });
+
+            $totalVentas = $montoContado + $montoCredito;
+            fputcsv($handle, []);
+            fputcsv($handle, [
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                'Sumatoria total de las ventas',
+                $totalVentas,
+                '',
+                '',
+                '',
+            ]);
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 }

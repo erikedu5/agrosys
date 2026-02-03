@@ -39,16 +39,17 @@ class Handler extends ExceptionHandler
     public function render($request, Throwable $e)
     {
         if ($e instanceof BadMethodCallException) {
+            $this->logHttpError($request, $e, 404);
             return $this->renderSafeError($request, 404);
         }
 
         if ($e instanceof QueryException) {
-            Log::error('Database error.', [
+            Log::error('Database error.', array_merge([
                 'message' => $e->getMessage(),
                 'code' => $e->getCode(),
                 'sql' => $e->getSql(),
                 'bindings' => $e->getBindings(),
-            ]);
+            ], $this->baseLogContext($request, 500, $e)));
 
             $message = $this->isDatabaseConnectionError($e)
                 ? 'No se pudo conectar con la base de datos. Verifica que el servicio este arriba.'
@@ -58,12 +59,16 @@ class Handler extends ExceptionHandler
         }
 
         if ($e instanceof ValidationException) {
+            $this->logHttpError($request, $e, $e->status);
             return $this->convertValidationExceptionToResponse($e, $request);
         }
 
-        if ($request->expectsJson() && !($e instanceof ValidationException)) {
-            $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
+        $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
+        if ($status >= 400) {
+            $this->logHttpError($request, $e, $status);
+        }
 
+        if ($request->expectsJson() && !($e instanceof ValidationException)) {
             if ($status >= 500) {
                 return response()->json([
                     'message' => 'Ocurrio un error inesperado. Intenta de nuevo mas tarde o contacta al administrador.',
@@ -72,14 +77,11 @@ class Handler extends ExceptionHandler
         }
 
         if ($request->header('X-Inertia')) {
-            $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
             $message = config('app.debug') ? $this->debugMessage($e, $status) : null;
             return $this->renderInertiaError($request, $status, $message);
         }
 
         if (!config('app.debug')) {
-            $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
-
             if (in_array($status, [404, 419, 429, 500, 503])) {
                 return response()->view("errors.{$status}", [], $status);
             }
@@ -140,5 +142,40 @@ class Handler extends ExceptionHandler
         $location = $e->getFile() . ':' . $e->getLine();
 
         return get_class($e) . ' - ' . $e->getMessage() . ' (' . $location . ')';
+    }
+
+    private function logHttpError($request, Throwable $e, int $status): void
+    {
+        $context = $this->baseLogContext($request, $status, $e);
+        if ($e instanceof ValidationException) {
+            $context['errors'] = $e->errors();
+        }
+
+        $message = $status >= 500 ? 'HTTP server error.' : 'HTTP client error.';
+        if ($status >= 500) {
+            Log::error($message, $context);
+        } else {
+            Log::warning($message, $context);
+        }
+    }
+
+    private function baseLogContext($request, int $status, Throwable $e): array
+    {
+        $fileKeys = $request->files->keys();
+        $input = $request->except(array_merge($this->dontFlash, $fileKeys));
+
+        return [
+            'status' => $status,
+            'exception' => get_class($e),
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+            'route' => optional($request->route())->getName(),
+            'user_id' => optional($request->user())->id,
+            'ip' => $request->ip(),
+            'input' => $input,
+        ];
     }
 }
