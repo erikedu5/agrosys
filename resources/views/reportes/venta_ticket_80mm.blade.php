@@ -4,19 +4,19 @@
 <head>
     <meta charset="utf-8" />
     <style>
-        @page { margin: 4px; }
+        @page {margin: 8px; padding: 10px;}
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 10px;
+            font-size: 16px;
             width: {{ $ticketWidthMm ?? 80 }}mm;
         }
         .center { text-align: center; }
         .right { text-align: right; }
         .bold { font-weight: bold; }
-        .small { font-size: 9px; }
+        .small { font-size: 13px; }
         hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
         table { width: 100%; border-collapse: collapse; }
-        td { padding: 2px 0; vertical-align: top; }
+        td { padding: 4px 0; vertical-align: top; }
     </style>
     <title>Ticket de Venta</title>
     <script>

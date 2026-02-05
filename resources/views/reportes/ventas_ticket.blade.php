@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8" />
     <style>
-        @page { margin: 6px; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11px; width: {{ $ticketWidthMm ?? 80 }}mm; }
+        @page { margin: 8px; padding: 10px; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 16px; width: {{ $ticketWidthMm ?? 80 }}mm; }
         .center { text-align: center; }
         .bold { font-weight: bold; }
         .line { border-bottom: 1px dashed #000; margin: 4px 0; }
         .row { display: flex; justify-content: space-between; }
-        .small { font-size: 10px; }
+        .small { font-size: 13px; }
         .mt { margin-top: 6px; }
     </style>
     <title>Reporte Ventas Ticket</title>
