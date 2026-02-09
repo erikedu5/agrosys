@@ -269,7 +269,8 @@ const finalizeSale = () => {
             {
                 preserveState: true,
                 onSuccess: (data) => {
-                    const url = route('venta.ticket.html', { venta: data.props.venta.id }) + '?size=80';
+                    // Do not force ?size=80; let the backend use the sucursal preference (ticket_width_mm).
+                    const url = route('venta.ticket.html', { venta: data.props.venta.id });
                     printTicketSilently(url, () => {
                         location.replace('/venta');
                     });
@@ -308,7 +309,8 @@ const reprintLastTicket = async () => {
             return;
         }
 
-        const url = route('venta.ticket.html', { venta: payload.venta_id }) + '?size=80';
+        // Do not force ?size=80; let the backend use the sucursal preference (ticket_width_mm).
+        const url = route('venta.ticket.html', { venta: payload.venta_id });
         printTicketSilently(url, () => {
             notify('Ticket enviado a impresión.', 'success');
         });

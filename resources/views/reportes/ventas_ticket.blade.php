@@ -3,13 +3,16 @@
 <head>
     <meta charset="utf-8" />
     <style>
-        @page { margin: 8px; padding: 10px; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 16px; width: {{ $ticketWidthMm ?? 80 }}mm; }
+        @page { }
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 18px; width: {{ $ticketWidthMm ?? 80 }}mm;
+
+         margin: 4px; padding-top: 50px 50px;
+    }
         .center { text-align: center; }
         .bold { font-weight: bold; }
         .line { border-bottom: 1px dashed #000; margin: 4px 0; }
         .row { display: flex; justify-content: space-between; }
-        .small { font-size: 13px; }
+        .small { font-size: 14px; }
         .mt { margin-top: 6px; }
     </style>
     <title>Reporte Ventas Ticket</title>
@@ -17,7 +20,7 @@
         if (isset($pdf)) { $pdf->get_canvas()->page_script(''); }
     </script>
     <script>
-        setTimeout(function(){ window.print && window.print(); }, 300);
+        setTimeout(function(){ window.print && window.print(); }, 400);
     </script>
     </head>
 <body>

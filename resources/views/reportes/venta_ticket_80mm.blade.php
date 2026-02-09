@@ -4,16 +4,16 @@
 <head>
     <meta charset="utf-8" />
     <style>
-        @page {margin: 8px; padding: 10px;}
+        @page {margin: 4px; padding: 10px {{$ticketWidthMm == 80 ? 10 : 5 }}px;}
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 16px;
-            width: {{ $ticketWidthMm ?? 80 }}mm;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: {{$ticketWidthMm == 80 ? 14 : 11 }}px
+            width: {{ $ticketWidthMm ?? 58 }}mm;
         }
         .center { text-align: center; }
         .right { text-align: right; }
         .bold { font-weight: bold; }
-        .small { font-size: 13px; }
+        .small { font-size: {{$ticketWidthMm == 80 ? 11 : 10 }}px; }
         hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
         table { width: 100%; border-collapse: collapse; }
         td { padding: 4px 0; vertical-align: top; }
@@ -91,6 +91,9 @@
     @else
         <div class="center small">Gracias por su compra</div>
     @endif
+
+    <br>
+    <div style="width: 100%; border-bottom: dotted #000;"></div>
 </body>
 
 </html>
