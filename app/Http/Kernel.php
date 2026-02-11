@@ -68,5 +68,6 @@ class Kernel extends HttpKernel
         'hasRoles' => \App\Http\Middleware\CheckRole::class,
         'api.key' => \App\Http\Middleware\CheckApiKey::class,
         'sucursal.selection' => \App\Http\Middleware\CheckSucursalSelection::class,
+        'subscription' => \App\Http\Middleware\CheckSubscription::class,
     ];
 }

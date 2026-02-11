@@ -703,7 +703,7 @@ Los catálogos te ayudan a organizar mejor tu inventario.
 
 ---
 
-### 🎉 ¡Felicidades!
+### ¡Felicidades!
 
 Has completado la guía de AgroSys. Con esta información podrás manejar eficientemente tu negocio agrícola. Recuerda que la práctica hace al maestro, así que no dudes en explorar todas las funcionalidades del sistema.
 

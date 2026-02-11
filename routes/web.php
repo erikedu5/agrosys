@@ -17,6 +17,36 @@ use App\Http\Controllers\TransferenciaController;
 */
 
 
+// Rutas de Registro Público (sin autenticación)
+Route::get('/registro', [\App\Http\Controllers\RegistroPublicoController::class, 'showRegistrationForm'])
+    ->name('registro.form')
+    ->middleware('guest');
+
+Route::post('/registro', [\App\Http\Controllers\RegistroPublicoController::class, 'register'])
+    ->name('registro.store')
+    ->middleware('guest');
+
+// Rutas de Suscripción (requieren autenticación)
+Route::middleware(['auth', 'subscription'])->group(function () {
+    Route::get('/suscripcion', [\App\Http\Controllers\SuscripcionController::class, 'index'])
+        ->name('suscripcion.index');
+    Route::get('/suscripcion/subscribe', [\App\Http\Controllers\SuscripcionController::class, 'create'])
+        ->name('suscripcion.create');
+    Route::post('/suscripcion/subscribe', [\App\Http\Controllers\SuscripcionController::class, 'subscribe'])
+        ->name('suscripcion.subscribe');
+    Route::get('/suscripcion/portal', [\App\Http\Controllers\SuscripcionController::class, 'billingPortal'])
+        ->name('suscripcion.portal');
+    Route::post('/suscripcion/cancel', [\App\Http\Controllers\SuscripcionController::class, 'cancel'])
+        ->name('suscripcion.cancel');
+    Route::post('/suscripcion/resume', [\App\Http\Controllers\SuscripcionController::class, 'resume'])
+        ->name('suscripcion.resume');
+});
+
+// Ruta de suscripción vencida (sin middleware de suscripción)
+Route::get('/suscripcion/vencida', [\App\Http\Controllers\SuscripcionController::class, 'expired'])
+    ->name('suscripcion.expired')
+    ->middleware('auth');
+
 Route::get('/', function () {
     return Inertia::render('Welcome');
 });
@@ -38,14 +68,14 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
     ->name('dashboard')
-    ->middleware(['auth:sanctum', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'sucursal.selection']);
 Route::get('/venta/devoluciones/index', [App\Http\Controllers\DevolucionesController::class, 'index'])
     ->name('venta.devoluciones.index')
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 Route::get('/devoluciones/list', [App\Http\Controllers\DevolucionesController::class, 'list'])
     ->name('devoluciones.list')
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 Route::get('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesController::class, 'create'])
     ->name('venta.devoluciones.create')
@@ -58,7 +88,7 @@ Route::post('/venta/{venta}/devoluciones', [App\Http\Controllers\DevolucionesCon
     ->whereNumber('venta');
 
 Route::resource('/venta', App\Http\Controllers\VentaController::class)
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'ticket'])
     ->name("ticket")
@@ -67,15 +97,15 @@ Route::get('/ticket/{venta}', [App\Http\Controllers\VentaController::class, 'tic
 
 Route::get('/ticket/print/{venta}', [App\Http\Controllers\VentaController::class, 'ticketHtml'])
     ->name('venta.ticket.html')
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 Route::get('/ticket/print-last', [App\Http\Controllers\VentaController::class, 'ultimoTicketPorSucursal'])
     ->name('venta.ticket.last')
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 Route::get('/buscar-precio', [App\Http\Controllers\VentaController::class, 'buscarPrecio'])
     ->name('venta.buscar.precio')
-    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
+    ->middleware(['auth:sanctum', 'subscription', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);
 
 
 Route::resource('/inventario', App\Http\Controllers\ProductoController::class)
@@ -214,3 +244,9 @@ Route::get('/pedidos/index', [\App\Http\Controllers\PedidoController::class, 'in
 Route::put('/pedidos/{pedido}/completar', [\App\Http\Controllers\PedidoController::class, 'complete'])
     ->name('pedidos.complete')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
+
+// Webhook de Stripe (sin middleware CSRF)
+Route::post(
+    'stripe/webhook',
+    '\App\Http\Controllers\StripeWebhookController@handleWebhook'
+)->name('cashier.webhook');

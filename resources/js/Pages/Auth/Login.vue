@@ -102,5 +102,21 @@ const submit = () => {
                 </PrimaryButton>
             </div>
         </form>
+
+        <!-- Enlace de Registro -->
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+                ¿No tienes una cuenta?
+                <Link 
+                    :href="route('registro.form')" 
+                    class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+                >
+                    Registra tu empresa aquí
+                </Link>
+            </p>
+            <p class="mt-1 text-xs text-green-600 dark:text-green-400">
+                Prueba gratuita de 15 días (se requiere tarjeta)
+            </p>
+        </div>
     </AuthenticationCard>
 </template>

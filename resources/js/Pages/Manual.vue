@@ -590,7 +590,7 @@ onMounted(() => {
 
                 <!-- Footer de finalización -->
                 <div class="text-center bg-gradient-to-r from-green-800 to-green-600 text-white p-8 rounded-2xl">
-                    <h2 class="text-3xl font-bold mb-4">🎉 ¡Felicidades!</h2>
+                    <h2 class="text-3xl font-bold mb-4">¡Felicidades!</h2>
                     <p class="text-xl mb-4">Has completado la guía de AgroSys. Con esta información podrás manejar eficientemente tu negocio agrícola.</p>
                     <p class="text-lg">Recuerda que la práctica hace al maestro, así que no dudes en explorar todas las funcionalidades del sistema.</p>
                     <p class="text-xl font-bold mt-6">🌱 AgroSys está diseñado para crecer contigo y hacer tu trabajo más fácil.</p>

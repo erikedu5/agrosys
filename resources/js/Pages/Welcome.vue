@@ -24,7 +24,10 @@ defineProps({
                             <span class="font-bold text-2xl text-white tracking-tight drop-shadow-md">Agrosys</span>
                         </div>
                     </div>
-                    <div class="hidden md:flex items-center space-x-8">
+                    <div class="hidden md:flex items-center space-x-4">
+                        <Link :href="route('registro.form')" class="px-6 py-2 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition duration-300 ease-in-out shadow-md">
+                            Prueba Gratis
+                        </Link>
                         <Link :href="route('login')" class="px-6 py-2 rounded-lg bg-white text-green-700 font-bold hover:bg-gray-100 transition duration-300 ease-in-out shadow-md">
                             Ingresar
                         </Link>
@@ -52,7 +55,10 @@ defineProps({
                         Optimiza tu inventario, controla tus ventas y gestiona tu negocio agrícola con la plataforma que combina tecnología y naturaleza.
                     </p>
                     <div class="mt-10 max-w-sm sm:flex sm:max-w-none gap-4">
-                        <Link :href="route('login')" class="flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
+                        <Link :href="route('registro.form')" class="flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
+                            Prueba Gratis 15 Días
+                        </Link>
+                        <Link :href="route('login')" class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
                             Iniciar Sesión
                         </Link>
                          <a href="#features" class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-white text-base font-bold rounded-lg text-white hover:bg-white hover:text-green-800 md:py-4 md:text-lg md:px-10 transition-colors bg-white/10 backdrop-blur-sm">
