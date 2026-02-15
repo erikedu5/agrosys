@@ -4,6 +4,10 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\TransferenciaController;
+use App\Http\Controllers\LegalController;
+use App\Http\Controllers\Subscription\OnboardingController;
+use App\Http\Controllers\Subscription\PlanController;
+use App\Http\Controllers\Subscription\SubscriptionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +23,24 @@ use App\Http\Controllers\TransferenciaController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
+});
+
+// Public: planes y legales
+Route::get('/planes', [PlanController::class, 'index'])->name('plans.index');
+Route::get('/legal/terminos', [LegalController::class, 'terms'])->name('legal.terms');
+Route::get('/legal/privacidad', [LegalController::class, 'privacy'])->name('legal.privacy');
+
+// Onboarding (trial sin tarjeta): GET accesible aun estando autenticado para mostrar el Paso 2 en la misma pagina.
+Route::get('/suscribirse', [OnboardingController::class, 'create'])->name('subscription.onboarding');
+Route::post('/suscribirse', [OnboardingController::class, 'store'])
+    ->middleware(['guest'])
+    ->name('subscription.onboarding.store');
+
+// Auth: administrar suscripcion
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/cuenta/suscripcion', [SubscriptionController::class, 'show'])->name('subscription.show');
+    Route::post('/cuenta/suscripcion/checkout', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
+    Route::post('/cuenta/suscripcion/portal', [SubscriptionController::class, 'portal'])->name('subscription.portal');
 });
 
 

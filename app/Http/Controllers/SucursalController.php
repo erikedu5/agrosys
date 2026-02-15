@@ -82,6 +82,20 @@ class SucursalController extends Controller
             'es_matriz' => $request->es_matriz,
         ]);
 
+        // Enforcement: limite de sucursales segun plan (si aplica).
+        $empresa = $request->id_empresa ? Empresa::find($request->id_empresa) : null;
+        if ($empresa && $empresa->plan_code && $empresa->numero_sucursales) {
+            $actual = Sucursales::where('id_empresa', $empresa->id)->count();
+            if ($actual >= (int) $empresa->numero_sucursales) {
+                $logger->warning('Limite de sucursales alcanzado', [
+                    'empresa_id' => $empresa->id,
+                    'max' => (int) $empresa->numero_sucursales,
+                    'actual' => $actual,
+                ]);
+                return back()->with('error', 'Limite de sucursales alcanzado para tu plan. Actualiza tu suscripcion para agregar mas.');
+            }
+        }
+
         try {
             $sucursal = Sucursales::create([
                 'nombre' => $request->nombre,

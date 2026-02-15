@@ -52,12 +52,12 @@ defineProps({
                         Optimiza tu inventario, controla tus ventas y gestiona tu negocio agrícola con la plataforma que combina tecnología y naturaleza.
                     </p>
                     <div class="mt-10 max-w-sm sm:flex sm:max-w-none gap-4">
-                        <Link :href="route('login')" class="flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
-                            Iniciar Sesión
+                        <Link :href="route('plans.index')" class="flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
+                            Ver planes
                         </Link>
-                         <a href="#features" class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-white text-base font-bold rounded-lg text-white hover:bg-white hover:text-green-800 md:py-4 md:text-lg md:px-10 transition-colors bg-white/10 backdrop-blur-sm">
-                            Conocer más
-                        </a>
+                        <Link :href="route('subscription.onboarding')" class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-white text-base font-bold rounded-lg text-white hover:bg-white hover:text-green-800 md:py-4 md:text-lg md:px-10 transition-colors bg-white/10 backdrop-blur-sm">
+                            Iniciar prueba gratis
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -265,8 +265,8 @@ defineProps({
                         &copy; 2024 Agrosys Inc. Todos los derechos reservados.
                     </p>
                     <div class="flex space-x-6">
-                        <a href="#" class="text-slate-400 hover:text-white transition-colors">Aviso de Privacidad</a>
-                        <a href="#" class="text-slate-400 hover:text-white transition-colors">Términos de Uso</a>
+                        <Link :href="route('legal.privacy')" class="text-slate-400 hover:text-white transition-colors">Aviso de Privacidad</Link>
+                        <Link :href="route('legal.terms')" class="text-slate-400 hover:text-white transition-colors">Términos de Uso</Link>
                     </div>
                 </div>
             </div>
