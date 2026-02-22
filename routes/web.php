@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\TransferenciaController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\Subscription\OnboardingController;
 use App\Http\Controllers\Subscription\PlanController;
 use App\Http\Controllers\Subscription\SubscriptionController;
@@ -142,6 +143,14 @@ Route::resource('/cliente', \App\Http\Controllers\ClientesController::class)
 
 Route::resource('/empresa', \App\Http\Controllers\EmpresaController::class)
     ->middleware(['auth:sanctum', 'hasRoles:superAdmin-adminEmpresa']);
+
+Route::get('/empresa/suscripciones/panel', [EmpresaController::class, 'subscriptions'])
+    ->name('empresa.subscriptions.index')
+    ->middleware(['auth:sanctum', 'hasRoles:superAdmin']);
+
+Route::put('/empresa/{empresa}/suscripcion-manual', [EmpresaController::class, 'updateSubscription'])
+    ->name('empresa.subscriptions.update')
+    ->middleware(['auth:sanctum', 'hasRoles:superAdmin']);
 
 Route::put('/empresa/{id}/restore', [\App\Http\Controllers\EmpresaController::class, 'restore'])
     ->name('empresa.restore')

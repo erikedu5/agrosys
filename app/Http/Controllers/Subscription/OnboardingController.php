@@ -8,6 +8,7 @@ use App\Models\Clientes;
 use App\Models\Empresa;
 use App\Models\Sucursales;
 use App\Models\User;
+use App\Services\SucursalService;
 use App\Support\SubscriptionPlans;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,6 +26,24 @@ class OnboardingController extends Controller
         $step = (int) $request->query('step', 1);
         if (Auth::check()) {
             $step = max($step, 2);
+        }
+
+        $showTrialBenefits = true;
+        if (Auth::check()) {
+            $empresa = SucursalService::getEmpresaActiva();
+
+            if (!$empresa && Auth::user()?->id_empresa) {
+                $empresa = Empresa::query()->find(Auth::user()->id_empresa);
+            }
+
+            if ($empresa) {
+                $hasSubscriptionHistory = $empresa
+                    ->subscriptions()
+                    ->where('type', 'default')
+                    ->exists();
+
+                $showTrialBenefits = !$hasSubscriptionHistory;
+            }
         }
 
         $defaults = config('subscriptions.defaults');
@@ -63,6 +82,7 @@ class OnboardingController extends Controller
             ],
             'step' => $step,
             'trialDays' => SubscriptionPlans::trialDays(),
+            'showTrialBenefits' => $showTrialBenefits,
             'termsVersion' => config('legal.terms_version'),
             'privacyVersion' => config('legal.privacy_version'),
         ]);

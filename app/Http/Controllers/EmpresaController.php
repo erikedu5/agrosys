@@ -3,13 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empresa;
+use App\Support\SubscriptionPlans;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class EmpresaController extends Controller
 {
+    private function ensureSuperAdmin(): void
+    {
+        abort_unless(Auth::user()?->tipo === 'superAdmin', 403);
+    }
+
 
     /**
      * Display a listing of the resource.
@@ -171,5 +179,142 @@ class EmpresaController extends Controller
         $empresa = Empresa::onlyTrashed()->findOrFail($id);
         $empresa->restore();
         return redirect()->route('empresa.index');
+    }
+
+    public function subscriptions(Request $request)
+    {
+        $this->ensureSuperAdmin();
+
+        $q = trim((string) $request->input('q', ''));
+        $availablePlans = collect(SubscriptionPlans::all())->values();
+        $planNames = $availablePlans->mapWithKeys(function (array $plan) {
+            return [(string) $plan['code'] => (string) $plan['name']];
+        });
+
+        $empresas = Empresa::query()
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where('nombre', 'LIKE', "%{$q}%");
+            })
+            ->with(['subscriptions' => function ($query) {
+                $query->where('type', 'default')->latest();
+            }])
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $empresas->through(function (Empresa $empresa) use ($planNames) {
+            $subscription = $empresa->subscriptions->first();
+            $hasStripe = $subscription ? $subscription->active() : false;
+            $hasManual = $empresa->hasActiveManualSubscription();
+
+            $status = 'Sin suscripcion';
+            if ($empresa->manual_subscription_blocked) {
+                $status = 'Bloqueada manualmente';
+            } elseif ($hasManual && $hasStripe) {
+                $status = 'Suscripcion hibrida activa';
+            } elseif ($hasManual) {
+                $status = 'Suscripcion manual activa';
+            } elseif ($empresa->hasManualSubscriptionWindow()) {
+                $status = 'Suscripcion manual vencida';
+            } elseif ($hasStripe) {
+                $status = 'Suscripcion Stripe activa';
+            } elseif ($empresa->onTrial()) {
+                $status = 'En periodo de prueba';
+            }
+
+            return [
+                'id' => $empresa->id,
+                'nombre' => $empresa->nombre,
+                'plan_code' => $empresa->plan_code,
+                'plan_name' => $empresa->plan_code ? ($planNames[$empresa->plan_code] ?? $empresa->plan_code) : null,
+                'plan_cycle' => $empresa->plan_cycle,
+                'manual_subscription_starts_at' => optional($empresa->manual_subscription_starts_at)->format('Y-m-d\TH:i'),
+                'manual_subscription_ends_at' => optional($empresa->manual_subscription_ends_at)->format('Y-m-d\TH:i'),
+                'manual_subscription_blocked' => (bool) $empresa->manual_subscription_blocked,
+                'stripe_active' => $hasStripe,
+                'trial_ends_at' => optional($empresa->trial_ends_at)->toIso8601String(),
+                'can_access' => $empresa->canAccessApp(),
+                'status' => $status,
+            ];
+        });
+
+        return Inertia::render('Empresa/Suscripciones', [
+            'empresas' => $empresas,
+            'filters' => [
+                'q' => $q,
+            ],
+            'plans' => $availablePlans->map(function (array $plan) {
+                return [
+                    'code' => $plan['code'],
+                    'name' => $plan['name'],
+                    'has_yearly' => !empty($plan['prices']['yearly_mxn']),
+                ];
+            })->values(),
+        ]);
+    }
+
+    public function updateSubscription(Request $request, Empresa $empresa)
+    {
+        $this->ensureSuperAdmin();
+
+        $planCodes = array_keys(SubscriptionPlans::all());
+
+        $data = $request->validate([
+            'manual_subscription_starts_at' => ['nullable', 'date'],
+            'manual_subscription_ends_at' => ['nullable', 'date', 'after_or_equal:manual_subscription_starts_at'],
+            'manual_subscription_blocked' => ['required', 'boolean'],
+            'clear_manual_dates' => ['nullable', 'boolean'],
+            'plan_code' => ['nullable', Rule::in($planCodes)],
+            'plan_cycle' => ['nullable', Rule::in(['monthly', 'yearly'])],
+        ], [
+            'manual_subscription_ends_at.after_or_equal' => 'La fecha de vencimiento debe ser mayor o igual a la fecha de inicio.',
+        ]);
+
+        $clearDates = (bool) ($data['clear_manual_dates'] ?? false);
+
+        $startsAt = $clearDates || empty($data['manual_subscription_starts_at'])
+            ? null
+            : Carbon::parse($data['manual_subscription_starts_at']);
+
+        $endsAt = $clearDates || empty($data['manual_subscription_ends_at'])
+            ? null
+            : Carbon::parse($data['manual_subscription_ends_at']);
+
+        if (!$clearDates && $startsAt && $startsAt->isFuture()) {
+            return back()->withErrors([
+                'manual_subscription_starts_at' => 'La activacion manual solo aplica para pagos previos a hoy.',
+            ])->withInput();
+        }
+
+        $planCode = $data['plan_code'] ?? null;
+        $planCycle = $planCode ? ($data['plan_cycle'] ?? 'monthly') : null;
+
+        $payload = [
+            'manual_subscription_starts_at' => $startsAt,
+            'manual_subscription_ends_at' => $endsAt,
+            'manual_subscription_blocked' => (bool) $data['manual_subscription_blocked'],
+        ];
+
+        if ($planCode) {
+            $plan = SubscriptionPlans::find($planCode);
+
+            if ($planCycle === 'yearly' && empty($plan['prices']['yearly_mxn'])) {
+                return back()->withErrors([
+                    'plan_cycle' => 'El plan seleccionado no tiene ciclo anual.',
+                ])->withInput();
+            }
+
+            $payload['plan_code'] = $planCode;
+            $payload['plan_cycle'] = $planCycle;
+            $payload['numero_sucursales'] = (int) ($plan['limits']['max_sucursales'] ?? $empresa->numero_sucursales);
+            $payload['numero_dispositivos_por_sucursal'] = (int) ($plan['limits']['devices_per_sucursal'] ?? $empresa->numero_dispositivos_por_sucursal);
+        } else {
+            $payload['plan_code'] = null;
+            $payload['plan_cycle'] = null;
+        }
+
+        $empresa->forceFill($payload)->save();
+
+        return back()->with('success', 'Configuracion de suscripcion manual actualizada.');
     }
 }

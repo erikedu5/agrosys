@@ -1,10 +1,14 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
 });
+
+const page = usePage();
+const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
 </script>
 
 <template>
@@ -55,8 +59,11 @@ defineProps({
                         <Link :href="route('plans.index')" class="flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-lg text-white bg-orange-500 hover:bg-orange-600 md:py-4 md:text-lg md:px-10 shadow-lg transform transition hover:-translate-y-1">
                             Ver planes
                         </Link>
-                        <Link :href="route('subscription.onboarding')" class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-white text-base font-bold rounded-lg text-white hover:bg-white hover:text-green-800 md:py-4 md:text-lg md:px-10 transition-colors bg-white/10 backdrop-blur-sm">
-                            Iniciar prueba gratis
+                        <Link
+                            :href="isAuthenticated ? route('subscription.show') : route('subscription.onboarding')"
+                            class="mt-3 sm:mt-0 flex items-center justify-center px-8 py-3 border border-white text-base font-bold rounded-lg text-white hover:bg-white hover:text-green-800 md:py-4 md:text-lg md:px-10 transition-colors bg-white/10 backdrop-blur-sm"
+                        >
+                            {{ isAuthenticated ? 'Mi suscripcion' : 'Iniciar prueba gratis' }}
                         </Link>
                     </div>
                 </div>

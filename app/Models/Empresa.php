@@ -25,6 +25,9 @@ class Empresa extends Model
         'numero_dispositivos_por_sucursal',
         'plan_code',
         'plan_cycle',
+        'manual_subscription_starts_at',
+        'manual_subscription_ends_at',
+        'manual_subscription_blocked',
         'billing_requires_invoice',
         'billing_email',
         'billing_razon_social',
@@ -51,6 +54,9 @@ class Empresa extends Model
         'facturapi_sandbox' => 'boolean',
         'billing_requires_invoice' => 'boolean',
         'trial_ends_at' => 'datetime',
+        'manual_subscription_starts_at' => 'datetime',
+        'manual_subscription_ends_at' => 'datetime',
+        'manual_subscription_blocked' => 'boolean',
         'terms_accepted_at' => 'datetime',
         'privacy_accepted_at' => 'datetime',
         'trial_reminder_7d_sent_at' => 'datetime',
@@ -92,8 +98,11 @@ class Empresa extends Model
 
     public function canAccessApp(): bool
     {
-        // Empresas legacy / internas (sin plan_code) no se bloquean.
-        if (!$this->plan_code) {
+        if ($this->manual_subscription_blocked) {
+            return false;
+        }
+
+        if ($this->hasActiveManualSubscription()) {
             return true;
         }
 
@@ -101,7 +110,75 @@ class Empresa extends Model
             return true;
         }
 
+        // Empresas legacy / internas (sin plan_code) no se bloquean por defecto
+        // si no tienen una vigencia manual definida.
+        if (!$this->plan_code && !$this->hasManualSubscriptionWindow()) {
+            return true;
+        }
+
         return $this->onTrial();
+    }
+
+    public function hasManualSubscriptionWindow(): bool
+    {
+        return (bool) ($this->manual_subscription_starts_at || $this->manual_subscription_ends_at);
+    }
+
+    public function hasActiveManualSubscription(): bool
+    {
+        if (!$this->hasManualSubscriptionWindow()) {
+            return false;
+        }
+
+        $now = now();
+
+        if ($this->manual_subscription_starts_at && $now->lt($this->manual_subscription_starts_at)) {
+            return false;
+        }
+
+        if ($this->manual_subscription_ends_at && $now->gt($this->manual_subscription_ends_at)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function hasActiveStripeSubscription(): bool
+    {
+        $subscription = $this->subscription('default');
+        return (bool) ($subscription && $subscription->active());
+    }
+
+    public function activeSubscriptionSource(): string
+    {
+        if ($this->manual_subscription_blocked) {
+            return 'blocked';
+        }
+
+        $manual = $this->hasActiveManualSubscription();
+        $stripe = $this->hasActiveStripeSubscription();
+
+        if ($manual && $stripe) {
+            return 'hybrid';
+        }
+
+        if ($manual) {
+            return 'manual';
+        }
+
+        if ($stripe) {
+            return 'stripe';
+        }
+
+        if ($this->onTrial()) {
+            return 'trial';
+        }
+
+        if (!$this->plan_code) {
+            return 'legacy';
+        }
+
+        return 'none';
     }
 
     // Cashier: map model fields to Stripe customer fields.

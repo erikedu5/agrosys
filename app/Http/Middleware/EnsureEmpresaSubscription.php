@@ -28,6 +28,13 @@ class EnsureEmpresaSubscription
             return $next($request);
         }
 
+        $message = 'Suscripcion requerida: tu periodo de prueba ya vencio.';
+        if ($empresa->manual_subscription_blocked) {
+            $message = 'Acceso bloqueado por administracion. Contacta a soporte para reactivar tu empresa.';
+        } elseif ($empresa->hasManualSubscriptionWindow() && !$empresa->hasActiveManualSubscription()) {
+            $message = 'Tu suscripcion manual vencio. Contacta a soporte para renovar.';
+        }
+
         // Permitir rutas necesarias aun cuando el trial/suscripcion haya vencido.
         $route = $request->route();
         $isAllowed =
@@ -43,12 +50,12 @@ class EnsureEmpresaSubscription
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Suscripcion requerida: tu periodo de prueba ya vencio.',
+                'message' => $message,
             ], 402);
         }
 
         return redirect()
             ->route('subscription.show')
-            ->with('error', 'Tu periodo de prueba ya vencio. Suscribete para continuar usando AgroSys.');
+            ->with('error', $message);
     }
 }

@@ -19,6 +19,8 @@ class SubscriptionController extends Controller
         $empresa = SucursalService::getEmpresaActiva();
 
         $subscription = $empresa?->subscription('default');
+        $manualStartsAt = $empresa?->manual_subscription_starts_at;
+        $manualEndsAt = $empresa?->manual_subscription_ends_at;
 
         $plans = collect(SubscriptionPlans::all())->map(function (array $p) {
             return [
@@ -40,6 +42,11 @@ class SubscriptionController extends Controller
                 'trial_ends_at' => optional($empresa->trial_ends_at)->toIso8601String(),
                 'trial_days_left' => $empresa->diasRestantesTrial(),
                 'can_access' => $empresa->canAccessApp(),
+                'subscription_source' => $empresa->activeSubscriptionSource(),
+                'manual_subscription_active' => $empresa->hasActiveManualSubscription(),
+                'manual_subscription_starts_at' => optional($manualStartsAt)->toIso8601String(),
+                'manual_subscription_ends_at' => optional($manualEndsAt)->toIso8601String(),
+                'manual_subscription_blocked' => (bool) $empresa->manual_subscription_blocked,
                 'has_stripe_id' => $empresa->hasStripeId(),
             ] : null,
             'subscription' => $subscription ? [

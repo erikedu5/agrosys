@@ -7,6 +7,7 @@ const props = defineProps({
     selected: Object,
     step: Number,
     trialDays: Number,
+    showTrialBenefits: Boolean,
     termsVersion: String,
     privacyVersion: String,
 });
@@ -97,9 +98,14 @@ const checkoutStripe = () => {
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-8">
                 <div class="flex-1">
-                    <h1 class="text-4xl font-extrabold tracking-tight">Inicia tu prueba gratis</h1>
-                    <p class="mt-2 text-slate-600">
+                    <h1 class="text-4xl font-extrabold tracking-tight">
+                        {{ showTrialBenefits ? 'Inicia tu prueba gratis' : 'Gestiona tu suscripcion' }}
+                    </h1>
+                    <p v-if="showTrialBenefits" class="mt-2 text-slate-600">
                         {{ trialDays }} dias gratis. El pago es opcional ahora; te avisaremos antes de que venza.
+                    </p>
+                    <p v-else class="mt-2 text-slate-600">
+                        Selecciona tu plan y periodo para continuar con tu suscripcion.
                     </p>
 
                     <div class="mt-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -125,7 +131,7 @@ const checkoutStripe = () => {
                             <span class="font-semibold text-slate-800">Precio:</span>
                             <span v-if="price !== null">${{ Number(price).toFixed(2) }} MXN / {{ effectiveCycle === 'yearly' ? 'anio' : 'mes' }}</span>
                             <span v-else>-</span>
-                            <span class="ml-2 text-slate-500">(no se cobra hoy durante el trial)</span>
+                            <span v-if="showTrialBenefits" class="ml-2 text-slate-500">(no se cobra hoy durante el trial)</span>
                         </div>
                     </div>
 
@@ -283,7 +289,7 @@ const checkoutStripe = () => {
                         >
                             <div class="text-left">
                                 <div class="text-sm font-semibold text-slate-500">Paso 2</div>
-                                <div class="text-xl font-extrabold">Pago (opcional)</div>
+                                <div class="text-xl font-extrabold">{{ showTrialBenefits ? 'Pago (opcional)' : 'Pago' }}</div>
                             </div>
                             <div class="text-sm font-semibold" :class="activeStep === 2 ? 'text-emerald-700' : 'text-slate-500'">
                                 {{ activeStep === 2 ? 'Abierto' : 'Abrir' }}
@@ -297,7 +303,9 @@ const checkoutStripe = () => {
 
                             <div v-else class="space-y-4">
                                 <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
-                                    Si te suscribes ahora, tu primer cobro se programara al final de tu prueba (si aun esta vigente).
+                                    {{ showTrialBenefits
+                                        ? 'Si te suscribes ahora, tu primer cobro se programara al final de tu prueba (si aun esta vigente).'
+                                        : 'Si te suscribes ahora, el cobro se procesa en este momento.' }}
                                 </div>
 
                                 <div class="flex flex-col sm:flex-row gap-3">
@@ -339,7 +347,7 @@ const checkoutStripe = () => {
                         <div class="mt-3 text-sm text-slate-700 space-y-2" v-if="planData">
                             <div><span class="font-semibold">Periodo:</span> {{ effectiveCycle === 'yearly' ? 'Anual' : 'Mensual' }}</div>
                             <div><span class="font-semibold">Precio:</span> ${{ Number(price).toFixed(2) }} MXN</div>
-                            <div><span class="font-semibold">Trial:</span> {{ trialDays }} dias gratis</div>
+                            <div v-if="showTrialBenefits"><span class="font-semibold">Trial:</span> {{ trialDays }} dias gratis</div>
                             <div><span class="font-semibold">Sucursales:</span> hasta {{ planData.limits?.max_sucursales }}</div>
                             <div><span class="font-semibold">Dispositivos:</span> {{ planData.limits?.devices_per_sucursal }} por sucursal</div>
                         </div>

@@ -198,6 +198,7 @@ const navItems = computed(() => {
             condition: ['superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Empresas', route: 'empresa.index' },
+                ...(tipo === 'superAdmin' ? [{ label: 'Suscripciones', route: 'empresa.subscriptions.index' }] : []),
                 { label: 'Sucursal', route: 'sucursal.index' },
                 { label: 'Usuarios', route: 'usuario.index' },
             ],

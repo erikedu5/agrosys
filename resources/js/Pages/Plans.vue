@@ -6,16 +6,29 @@ const props = defineProps({
     plans: Array,
     trialDays: Number,
     defaults: Object,
+    viewer: Object,
 });
 
 const cycle = ref(props.defaults?.cycle ?? 'monthly'); // monthly|yearly
+const showTrialBenefits = computed(() => Boolean(props.viewer?.show_trial_benefits));
+const isAuthenticated = computed(() => Boolean(props.viewer?.is_authenticated));
+const activePlanCode = computed(() => props.viewer?.active_plan_code ?? null);
+const activePlanName = computed(() => props.viewer?.active_plan_name ?? null);
+const activePlanCycle = computed(() => props.viewer?.active_plan_cycle ?? null);
+
+const activePlanLabel = computed(() => {
+    if (!activePlanName.value) return null;
+    const cycleLabel = activePlanCycle.value === 'yearly' ? 'anual' : (activePlanCycle.value === 'monthly' ? 'mensual' : null);
+    return cycleLabel ? `${activePlanName.value} (${cycleLabel})` : activePlanName.value;
+});
 
 const normalizedPlans = computed(() => {
     return (props.plans || []).map((p) => {
         const hasYearly = Boolean(p.has_yearly);
         const effectiveCycle = cycle.value === 'yearly' && !hasYearly ? 'monthly' : cycle.value;
         const price = effectiveCycle === 'yearly' ? p.prices?.yearly_mxn : p.prices?.monthly_mxn;
-        return { ...p, effectiveCycle, price };
+        const isActivePlan = Boolean(activePlanCode.value) && activePlanCode.value === p.code;
+        return { ...p, effectiveCycle, price, isActivePlan };
     });
 });
 </script>
@@ -28,8 +41,14 @@ const normalizedPlans = computed(() => {
             <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                     <h1 class="text-4xl font-extrabold tracking-tight">Planes AgroSys</h1>
-                    <p class="mt-2 text-slate-600">
+                    <p v-if="showTrialBenefits" class="mt-2 text-slate-600">
                         {{ trialDays }} dias gratis. Sin tarjeta para iniciar. Recibe recordatorios antes de vencer.
+                    </p>
+                    <p v-else-if="isAuthenticated && activePlanLabel" class="mt-2 text-slate-600">
+                        Plan actual: <span class="font-semibold text-slate-800">{{ activePlanLabel }}</span>.
+                    </p>
+                    <p v-else class="mt-2 text-slate-600">
+                        Selecciona un plan y gestiona tu suscripcion.
                     </p>
                 </div>
 
@@ -81,21 +100,39 @@ const normalizedPlans = computed(() => {
 
                     <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
                         <Link
+                            v-if="!isAuthenticated"
                             :href="route('subscription.onboarding', { plan: plan.code, cycle: plan.effectiveCycle })"
                             class="w-full text-center px-4 py-3 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700"
                         >
                             Iniciar prueba gratis
+                        </Link>
+                        <button
+                            v-else-if="plan.isActivePlan"
+                            type="button"
+                            class="w-full text-center px-4 py-3 rounded-lg bg-amber-100 text-amber-800 font-bold cursor-not-allowed"
+                            disabled
+                        >
+                            Plan activo
+                        </button>
+                        <Link
+                            v-else
+                            :href="route('subscription.show')"
+                            class="w-full text-center px-4 py-3 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800"
+                        >
+                            Gestionar suscripcion
                         </Link>
                     </div>
                 </div>
             </div>
 
             <div class="mt-10 text-sm text-slate-600">
-                <Link :href="route('login')" class="font-semibold text-emerald-700 hover:underline">
+                <Link v-if="!isAuthenticated" :href="route('login')" class="font-semibold text-emerald-700 hover:underline">
                     Ya tienes cuenta? Inicia sesion
+                </Link>
+                <Link v-else :href="route('subscription.show')" class="font-semibold text-emerald-700 hover:underline">
+                    Ir a mi suscripcion
                 </Link>
             </div>
         </div>
     </div>
 </template>
-
