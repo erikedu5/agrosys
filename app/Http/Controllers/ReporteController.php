@@ -855,6 +855,49 @@ class ReporteController extends Controller
         return [$stockMovimiento->cantidad_actual, $stockMovimiento->cantidad_nueva];
     }
 
+    public function reporteAumentosInventario(Request $request)
+    {
+        $request->validate([
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin'    => ['required', 'date_format:Y-m-d'],
+        ]);
+
+        $fechaInicio = new DateTime($request->fechaInicio);
+        $fechaInicio->setTime(0, 0, 0);
+        $fechaFin = new DateTime($request->fechaFin);
+        $fechaFin->setTime(23, 59, 59);
+
+        $idSucursal = $this->resolveSucursalIdForReport($request);
+
+        $aumentos = AltaInventario::with(['producto.marca', 'usuario'])
+            ->where('id_sucursal', $idSucursal)
+            ->where('tipo_evento', AltaInventario::EVENTO_ALTA)
+            ->whereBetween('created_at', [$fechaInicio, $fechaFin])
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($alta) {
+                $alta->cantidad_agregada = (float)$alta->cantidad_nueva - (float)$alta->cantidad_actual;
+                return $alta;
+            });
+
+        $sucursalUser = Sucursales::find($idSucursal);
+        $empresa = $sucursalUser ? Empresa::find($sucursalUser->id_empresa) : null;
+
+        $fechaInicioTexto = (new DateTime($request->fechaInicio))->format('d/m/Y');
+        $fechaFinTexto    = (new DateTime($request->fechaFin))->format('d/m/Y');
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->getDomPDF()->set_option('enable_php', true);
+        $pdf->loadView(
+            'reportes/aumentos_inventario',
+            compact('aumentos', 'empresa', 'sucursalUser', 'fechaInicioTexto', 'fechaFinTexto')
+        );
+        $pdf->set_paper('A4', 'landscape');
+        $pdf->setOption('javascript-delay', 500);
+
+        return $pdf->stream('aumentos_inventario.pdf');
+    }
+
     private function streamVentasCsv(
         DateTime $fechaInicio,
         DateTime $fechaFin,

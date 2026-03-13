@@ -176,6 +176,10 @@ Route::get('/reporte/inventario-ticket', [App\Http\Controllers\ReporteController
     ->name('reporte.inventarioTicket')
     ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
 
+Route::get('/reporte/aumentos-inventario', [App\Http\Controllers\ReporteController::class, 'reporteAumentosInventario'])
+    ->name('reporte.aumentosInventario')
+    ->middleware(['auth:sanctum', 'hasRoles:inventario-admin-superAdmin-adminEmpresa']);
+
 Route::get('/reporte/ventaPorProductoMarca-ticket', [App\Http\Controllers\ReporteController::class, 'ventaPorProductoMarcaTicket'])
     ->name('reporte.ventaPorProductoMarcaTicket')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
