@@ -7,7 +7,7 @@ import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue'
 import CardexModal from '@/Components/CardexModal.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline } from '@mdi/js';
+import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline, mdiTrendingUp } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -45,6 +45,32 @@ const icons = {
     reset: mdiBackupRestore,
     cardex: mdiClipboardListOutline,
     delete: mdiTrashCanOutline,
+    trending: mdiTrendingUp,
+};
+
+// --- Reporte de aumentos de inventario ---
+const today = new Date().toISOString().split('T')[0];
+const showReporteAumentosModal = ref(false);
+const reporteFechaInicio = ref(today);
+const reporteFechaFin = ref(today);
+
+const openReporteAumentos = () => {
+    reporteFechaInicio.value = today;
+    reporteFechaFin.value = today;
+    showReporteAumentosModal.value = true;
+};
+
+const cerrarReporteAumentos = () => {
+    showReporteAumentosModal.value = false;
+};
+
+const descargarReporteAumentos = () => {
+    const url = route('reporte.aumentosInventario', {
+        fechaInicio: reporteFechaInicio.value,
+        fechaFin:    reporteFechaFin.value,
+    });
+    window.open(url, '_blank');
+    cerrarReporteAumentos();
 };
 
 const puedeGestionarCostos = computed(() => {
@@ -199,7 +225,20 @@ const confirmarEliminar = () => {
                 <p class="mt-1 text-sm">{{ mensajeBloqueo }}</p>
             </div>
         </div>
-        <div v-if="!bloqueoActivo" class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div v-if="!bloqueoActivo" class="flex justify-end gap-2 max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+            <button
+                type="button"
+                @click="openReporteAumentos"
+                class="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded
+                       hover:bg-green-700 focus:z-10 focus:ring-2 focus:ring-green-500
+                       dark:bg-green-700 dark:hover:bg-green-600 dark:focus:ring-green-500"
+                title="Reporte de aumentos de inventario"
+            >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path :d="icons.trending" />
+                </svg>
+                Reporte de Aumentos
+            </button>
             <Link :href="route('inventario.create')"
                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
@@ -392,6 +431,85 @@ const confirmarEliminar = () => {
         <UpdateProductPricesModal :show="showPriceModal" :producto="selectedProduct"
             :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
         <CardexModal :show="showCardexModal" :producto="cardexProducto" @close="closeCardexModal" />
+
+        <!-- Modal: Reporte de Aumentos de Inventario -->
+        <Transition name="fade">
+            <div v-if="showReporteAumentosModal"
+                class="fixed inset-0 z-50 flex items-center justify-center"
+                role="dialog" aria-modal="true" aria-labelledby="modal-reporte-title"
+            >
+                <!-- backdrop -->
+                <div class="absolute inset-0 bg-black/40" @click="cerrarReporteAumentos"></div>
+
+                <!-- panel -->
+                <div class="relative z-10 bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                    <h3 id="modal-reporte-title"
+                        class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <svg class="h-5 w-5 text-green-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path :d="icons.trending" />
+                        </svg>
+                        Reporte de Aumentos de Inventario
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="reporte-fecha-inicio"
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Fecha inicio
+                            </label>
+                            <input
+                                id="reporte-fecha-inicio"
+                                type="date"
+                                v-model="reporteFechaInicio"
+                                class="w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                       px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+                        <div>
+                            <label for="reporte-fecha-fin"
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Fecha fin
+                            </label>
+                            <input
+                                id="reporte-fecha-fin"
+                                type="date"
+                                v-model="reporteFechaFin"
+                                class="w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                       px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button
+                            type="button"
+                            @click="cerrarReporteAumentos"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700
+                                   border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600
+                                   focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            @click="descargarReporteAumentos"
+                            :disabled="!reporteFechaInicio || !reporteFechaFin"
+                            class="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium text-white
+                                   bg-green-600 border border-transparent rounded-md hover:bg-green-700
+                                   focus:outline-none focus:ring-2 focus:ring-green-500
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path :d="icons.trending" />
+                            </svg>
+                            Descargar PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
         <ConfirmationModal :show="showDeleteModal" @close="cerrarEliminar">
             <template #title>
                 Eliminar producto
