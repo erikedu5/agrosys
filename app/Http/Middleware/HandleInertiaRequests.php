@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'mostrar_campos_precio' => true,
             'enviar_facturas_automaticas' => false,
         ];
+        $subscription = null;
 
         if ($user) {
             $sucursalId = SucursalService::getSucursalActiva();
@@ -90,6 +91,26 @@ class HandleInertiaRequests extends Middleware
             if ($empresa) {
                 $empresaConfig['mostrar_campos_precio'] = (bool) $empresa->mostrar_campos_precio;
                 $empresaConfig['enviar_facturas_automaticas'] = (bool) $empresa->enviar_facturas_automaticas;
+
+                $sub = $empresa->subscription('default');
+                $subscription = [
+                    'empresa_id' => $empresa->id,
+                    'plan_code' => $empresa->plan_code,
+                    'plan_cycle' => $empresa->plan_cycle,
+                    'can_access' => $empresa->canAccessApp(),
+                    'on_trial' => $empresa->onTrial(),
+                    'trial_ends_at' => optional($empresa->trial_ends_at)->toIso8601String(),
+                    'trial_days_left' => $empresa->diasRestantesTrial(),
+                    'subscribed' => $empresa->subscribed('default'),
+                    'subscription' => $sub ? [
+                        'stripe_status' => $sub->stripe_status,
+                        'stripe_price' => $sub->stripe_price,
+                        'trial_ends_at' => optional($sub->trial_ends_at)->toIso8601String(),
+                        'ends_at' => optional($sub->ends_at)->toIso8601String(),
+                        'cancelled' => $sub->canceled(),
+                        'active' => $sub->active(),
+                    ] : null,
+                ];
             }
         }
 
@@ -106,6 +127,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'sucursalActiva' => $sucursalActiva,
             'empresaConfig' => $empresaConfig,
+            'subscription' => $subscription,
         ]);
     }
 }

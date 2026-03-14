@@ -116,6 +116,30 @@ class UsuarioController extends Controller
             'tipo' => $request->tipo,
         ]);
 
+        // Enforcement: limite de "dispositivos" por sucursal (modelado como usuarios activos por sucursal).
+        if (!in_array($request->tipo, ['adminEmpresa', 'superAdmin'], true) && $request->filled('id_sucursal')) {
+            $sucursal = Sucursales::find($request->id_sucursal);
+            $empresa = $sucursal ? Empresa::find($sucursal->id_empresa) : null;
+            $limit = $empresa?->numero_dispositivos_por_sucursal;
+
+            if ($empresa && $empresa->plan_code && $limit) {
+                $actual = User::query()
+                    ->where('id_sucursal', $sucursal->id)
+                    ->whereNotIn('tipo', ['adminEmpresa', 'superAdmin'])
+                    ->count();
+
+                if ($actual >= (int) $limit) {
+                    $logger->warning('Limite de dispositivos alcanzado', [
+                        'empresa_id' => $empresa->id,
+                        'sucursal_id' => $sucursal->id,
+                        'max' => (int) $limit,
+                        'actual' => $actual,
+                    ]);
+                    return back()->with('error', 'Limite de dispositivos alcanzado para tu plan. Actualiza tu suscripcion para agregar mas.');
+                }
+            }
+        }
+
         try {
             $data = [];
             if ($request->password !== null) {

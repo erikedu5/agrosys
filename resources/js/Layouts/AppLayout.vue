@@ -11,6 +11,7 @@ import Toast from '@/Components/Toast.vue';
 import SearchBar from '@/Components/SearchBar.vue';
 import Loading from '@/Components/Loading.vue';
 import SucursalSelectionModal from '@/Components/SucursalSelectionModal.vue';
+import SubscriptionBanner from '@/Components/SubscriptionBanner.vue';
 
 defineProps({
     title: String,
@@ -197,6 +198,7 @@ const navItems = computed(() => {
             condition: ['superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Empresas', route: 'empresa.index' },
+                ...(tipo === 'superAdmin' ? [{ label: 'Suscripciones', route: 'empresa.subscriptions.index' }] : []),
                 { label: 'Sucursal', route: 'sucursal.index' },
                 { label: 'Usuarios', route: 'usuario.index' },
             ],
@@ -224,6 +226,7 @@ const searchItems = computed(() => {
         <Head :title="title" />
 
         <Banner />
+        <SubscriptionBanner />
 
         <Toast />
         <Loading :show="isLoading" />
@@ -441,6 +444,17 @@ const searchItems = computed(() => {
                                 </svg>
                                 <span class="text-xs font-medium">Manual</span>
                             </a>
+
+                            <!-- Botón de Suscripción -->
+                            <Link
+                                :href="route('subscription.show')"
+                                :class="route().current('subscription.show') ? 'bg-emerald-100 border-emerald-500 text-emerald-800 dark:bg-emerald-900 dark:border-emerald-400 dark:text-emerald-200' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
+                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 10h20M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"></path>
+                                </svg>
+                                <span class="text-xs font-medium">Suscripción</span>
+                            </Link>
                         </div>
 
                         <!-- Botón de cambiar sucursal si aplica -->
