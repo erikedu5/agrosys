@@ -212,6 +212,10 @@ class VentaController extends Controller
             }
 
             $venta = Venta::create([
+                'client_sale_id' => $request->input('sale_id', (string) \Illuminate\Support\Str::uuid()),
+                'operation_id' => $request->input('operation_id', (string) \Illuminate\Support\Str::uuid()),
+                'device_id' => $request->input('device_id'),
+                'occurred_at' => $request->input('occurred_at', now()),
                 'id_cliente' => $request->id_cliente,
                 'total' => $total,
                 'id_usuario' => $id_usuario,

@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (DB::getDriverName() === 'pgsql') {
+        if (in_array(DB::getDriverName(), ['pgsql', 'sqlite'], true)) {
             return;
         }
 
@@ -29,7 +29,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::getDriverName() === 'pgsql') {
+        if (in_array(DB::getDriverName(), ['pgsql', 'sqlite'], true)) {
             return;
         }
 

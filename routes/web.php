@@ -26,6 +26,20 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
+Route::get('/api/v1/offline/health', [App\Http\Controllers\OfflineController::class, 'health'])
+    ->name('offline.health');
+
+Route::get('/api/v1/offline/bootstrap', [App\Http\Controllers\OfflineController::class, 'bootstrap'])
+    ->middleware(['auth:sanctum', 'sucursal.selection'])
+    ->name('offline.bootstrap');
+
+Route::middleware(['auth:sanctum', 'sucursal.selection'])->prefix('/api/v1/offline')->group(function () {
+    Route::post('/sync/push', [App\Http\Controllers\OfflineController::class, 'push'])->name('offline.push');
+    Route::get('/sync/pull', [App\Http\Controllers\OfflineController::class, 'pull'])->name('offline.pull');
+    Route::get('/operations/{operationId}', [App\Http\Controllers\OfflineController::class, 'operation'])->whereUuid('operationId')->name('offline.operation');
+    Route::post('/device/heartbeat', [App\Http\Controllers\OfflineController::class, 'heartbeat'])->name('offline.heartbeat');
+});
+
 // Public: planes y legales
 Route::get('/planes', [PlanController::class, 'index'])->name('plans.index');
 Route::get('/legal/terminos', [LegalController::class, 'terms'])->name('legal.terms');

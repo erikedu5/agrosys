@@ -12,6 +12,11 @@ import SearchBar from '@/Components/SearchBar.vue';
 import Loading from '@/Components/Loading.vue';
 import SucursalSelectionModal from '@/Components/SucursalSelectionModal.vue';
 import SubscriptionBanner from '@/Components/SubscriptionBanner.vue';
+import OfflineBanner from '@/Components/OfflineBanner.vue';
+import RequiresConnection from '@/Components/RequiresConnection.vue';
+import SyncStatus from '@/Components/SyncStatus.vue';
+import { useConnectivityStore } from '@/stores/connectivity';
+import { canVisitOffline } from '@/Offline/guards/routePolicies';
 
 defineProps({
     title: String,
@@ -38,6 +43,8 @@ const showingNavigationDropdown = ref(false);
 const showingSucursalModal = ref(false);
 const page = usePage();
 const isLoading = ref(false);
+const connectivity = useConnectivityStore();
+const isOfflineNow = computed(() => navigator.onLine === false || connectivity.isLimited);
 
 router.on('start', () => (isLoading.value = true));
 router.on('finish', () => (isLoading.value = false));
@@ -88,10 +95,36 @@ onMounted(() => {
 });
 
 const logout = () => {
+    if (isOfflineNow.value) {
+        notify('Cerrar sesión requiere conexión. La sesión local se conserva temporalmente.', 'error');
+        return;
+    }
     router.post(route('logout'));
 };
 
+const isItemOfflineBlocked = (item) => isOfflineNow.value && !canVisitOffline(route(item.route, item.params));
+
+const handleOfflineNavigation = (event, item) => {
+    if (!isOfflineNow.value) return;
+    event.preventDefault();
+    event.stopImmediatePropagation?.();
+
+    if (isItemOfflineBlocked(item)) {
+        notify('Esta función requiere conexión.', 'error');
+        return;
+    }
+
+    const target = new URL(route(item.route, item.params), window.location.origin);
+    const destination = `${target.pathname}${target.search}`;
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (destination !== current) window.location.assign(destination);
+};
+
 const abrirModalSucursal = () => {
+    if (isOfflineNow.value) {
+        notify('Cambiar de sucursal requiere conexión.', 'error');
+        return;
+    }
     console.log('Abriendo modal de sucursal...');
     console.log('Estado actual del modal:', showingSucursalModal.value);
     showingSucursalModal.value = true;
@@ -227,11 +260,13 @@ const searchItems = computed(() => {
 
         <Banner />
         <SubscriptionBanner />
+        <OfflineBanner />
+        <SyncStatus v-if="$page.props.offline?.enabled" />
 
         <Toast />
         <Loading :show="isLoading" />
         <div>
-            <nav class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 fixed top-0 w-full z-50">
+            <nav :class="connectivity.mode !== 'online' ? 'top-12' : 'top-0'" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 fixed w-full z-50 transition-[top] duration-200">
                 <!-- Menú de navegación principal -->
                 <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between items-center h-16">
@@ -247,7 +282,7 @@ const searchItems = computed(() => {
                             
                             <!-- Logo -->
                             <div class="shrink-0 flex items-center">
-                                <Link :href="route('dashboard')">
+                                <Link :href="route('dashboard')" @click.capture="handleOfflineNavigation($event, { route: 'dashboard' })">
                                     <ApplicationMark class="block h-9 w-auto" />
                                 </Link>
                             </div>
@@ -258,7 +293,9 @@ const searchItems = computed(() => {
                             <button 
                                 v-if="$page.props.auth.user.tipo === 'adminEmpresa' && $page.props.sucursalActiva?.sucursalesDisponibles?.length > 1"
                                 @click="abrirModalSucursal"
-                                class="text-right p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 group">
+                                :disabled="connectivity.isLimited"
+                                :aria-disabled="connectivity.isLimited"
+                                class="text-right p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 group disabled:cursor-not-allowed disabled:opacity-50">
                                 <div class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
                                     {{ $page.props.auth.user.name }}
                                 </div>
@@ -316,8 +353,14 @@ const searchItems = computed(() => {
                             <template v-for="item in searchItems" :key="item.label">
                                 <Link 
                                     :href="route(item.route, item.params)"
-                                    :class="route().current(item.route) ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'"
-                                    class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                    @click.capture="handleOfflineNavigation($event, item)"
+                                    :aria-disabled="isItemOfflineBlocked(item)"
+                                    :class="[
+                                        route().current(item.route) ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600',
+                                        { 'cursor-not-allowed opacity-50': isItemOfflineBlocked(item) }
+                                    ]"
+                                    class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center"
+                                >
                                     
                                     <!-- Iconos para cada tipo de menú -->
                                     <div class="mb-2">
@@ -392,6 +435,7 @@ const searchItems = computed(() => {
                                     </div>
                                     
                                     <span class="text-xs font-medium leading-tight">{{ item.label }}</span>
+                                    <RequiresConnection v-if="isItemOfflineBlocked(item)" label="Requiere conexión" class="mt-1" />
                                 </Link>
                             </template>
                         </div>
@@ -426,8 +470,14 @@ const searchItems = computed(() => {
                             <!-- Botón de Perfil -->
                             <Link 
                                 :href="route('profile.show')"
-                                :class="route().current('profile.show') ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
-                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                @click.capture="handleOfflineNavigation($event, { route: 'profile.show' })"
+                                :aria-disabled="isItemOfflineBlocked({ route: 'profile.show' })"
+                                :class="[
+                                    route().current('profile.show') ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900 dark:border-blue-400 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
+                                    { 'cursor-not-allowed opacity-50': isItemOfflineBlocked({ route: 'profile.show' }) }
+                                ]"
+                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center"
+                            >
                                 <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                 </svg>
@@ -438,7 +488,10 @@ const searchItems = computed(() => {
                             <a 
                                 :href="route('manual')" 
                                 target="_blank"
-                                class="flex flex-col items-center justify-center p-3 border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                @click="handleOfflineNavigation($event, { route: 'manual' })"
+                                :aria-disabled="isItemOfflineBlocked({ route: 'manual' })"
+                                class="flex flex-col items-center justify-center p-3 border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center"
+                                :class="{ 'cursor-not-allowed opacity-50': isItemOfflineBlocked({ route: 'manual' }) }">
                                 <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                 </svg>
@@ -448,8 +501,14 @@ const searchItems = computed(() => {
                             <!-- Botón de Suscripción -->
                             <Link
                                 :href="route('subscription.show')"
-                                :class="route().current('subscription.show') ? 'bg-emerald-100 border-emerald-500 text-emerald-800 dark:bg-emerald-900 dark:border-emerald-400 dark:text-emerald-200' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'"
-                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center">
+                                @click.capture="handleOfflineNavigation($event, { route: 'subscription.show' })"
+                                :aria-disabled="isItemOfflineBlocked({ route: 'subscription.show' })"
+                                :class="[
+                                    route().current('subscription.show') ? 'bg-emerald-100 border-emerald-500 text-emerald-800 dark:bg-emerald-900 dark:border-emerald-400 dark:text-emerald-200' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
+                                    { 'cursor-not-allowed opacity-50': isItemOfflineBlocked({ route: 'subscription.show' }) }
+                                ]"
+                                class="flex flex-col items-center justify-center p-3 border-2 rounded-lg transition-all duration-200 hover:shadow-md min-h-[80px] text-center"
+                            >
                                 <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 10h20M4 6h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z"></path>
                                 </svg>
@@ -461,7 +520,9 @@ const searchItems = computed(() => {
                         <div v-if="$page.props.auth.user.tipo === 'adminEmpresa' && $page.props.sucursalActiva?.sucursalesDisponibles?.length > 1" class="mb-4">
                             <button 
                                 @click="abrirModalSucursal"
-                                class="w-full flex items-center justify-center p-3 border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:border-green-600 dark:text-green-300 dark:hover:bg-green-800 rounded-lg transition-all duration-200 hover:shadow-md">
+                                :disabled="connectivity.isLimited"
+                                :aria-disabled="connectivity.isLimited"
+                                class="w-full flex items-center justify-center p-3 border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:border-green-600 dark:text-green-300 dark:hover:bg-green-800 rounded-lg transition-all duration-200 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                                 </svg>
@@ -493,8 +554,11 @@ const searchItems = computed(() => {
             </div>
 
             <div 
-                :class="{'lg:ml-80': showingNavigationDropdown}"
-                class="pt-16 transition-all duration-300 ease-in-out">
+                :class="[
+                    { 'lg:ml-80': showingNavigationDropdown },
+                    connectivity.mode !== 'online' ? 'pt-28' : 'pt-16'
+                ]"
+                class="transition-all duration-300 ease-in-out">
                 <!-- Encabezado de la página -->
                 <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
                     <div class="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">

@@ -1,8 +1,11 @@
 {
   "name": "AgroSys",
   "short_name": "AgroSys",
-  "start_url": "/",
+  "id": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "description": "Gestión y punto de venta AgroSys con consulta temporal sin conexión.",
   "background_color": "#4bb7c0",
   "theme_color": "#4bb7c0",
   "icons": [

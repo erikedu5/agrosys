@@ -7,6 +7,12 @@ import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { notify } from '@/utils/notify';
+import { useConnectivityStore } from '@/stores/connectivity';
+import { offlineProductRepository } from '@/Offline/repositories/OfflineProductRepository';
+import { offlineSaleRepository } from '@/Offline/repositories/OfflineSaleRepository';
+import { getOrCreateDeviceId } from '@/Offline/services/device';
+import { SaleApplicationService } from '@/Domain/Sales/SaleApplicationService';
+import { printProvisionalTicket } from '@/Offline/services/provisionalTicket';
 
 const productoVenta = reactive([]);
 let total = 0.0;
@@ -14,6 +20,10 @@ let selectClient = false;
 let venta_id = 0;
 
 const page = usePage();
+const connectivity = useConnectivityStore();
+const localProducts = ref([]);
+const isCompletingSale = ref(false);
+const saleApplicationService = new SaleApplicationService(connectivity);
 
 const props = defineProps({
     productos: {
@@ -79,6 +89,11 @@ const cargarVentasDia = async () => {
     ventasDiaError.value = null;
 
     try {
+        if (!connectivity.isUsableOnline) {
+            ventasDiaData.value = await buildOfflineDailySales();
+            return;
+        }
+
         const params = {};
         const sucursalId = page.props?.sucursalActiva?.id;
         if (sucursalId) {
@@ -97,13 +112,77 @@ const cargarVentasDia = async () => {
     }
 };
 
+const isToday = value => {
+    const date = new Date(value);
+    const today = new Date();
+    return date.getFullYear() === today.getFullYear()
+        && date.getMonth() === today.getMonth()
+        && date.getDate() === today.getDate();
+};
+
+const buildOfflineDailySales = async () => {
+    const localSales = (await offlineSaleRepository.listLocalSales())
+        .filter(sale => sale.operation && sale.status !== 'cancelled_local' && isToday(sale.occurredAt));
+    const rows = localSales.flatMap(sale => {
+        const payload = sale.operation?.payload ?? {};
+        const items = payload.items?.length ? payload.items : sale.items;
+        return items.map(item => ({
+            venta_id: sale.localFolio,
+            fecha_venta: new Date(sale.occurredAt).toLocaleString('es-MX'),
+            tipo_venta: sale.saleType,
+            producto: item.name ?? `Producto ${item.productId}`,
+            cantidad: Number(item.quantity),
+            precio_unitario: Number(item.unitPrice),
+            total: Number(item.total),
+            cliente: payload.customerName ?? 'Cliente público',
+            stock_anterior: null,
+            stock_nuevo: null,
+            usuario: payload.sellerName ?? page.props.auth.user.name,
+            local_status: sale.status,
+        }));
+    });
+
+    return {
+        sucursal: { id: page.props.sucursalActiva?.id, nombre: page.props.sucursalActiva?.nombre },
+        fecha: new Date().toLocaleDateString('es-MX'),
+        total: localSales.reduce((sum, sale) => sum + Number(sale.total), 0),
+        rows,
+        offlinePartial: true,
+        offlineSalesCount: localSales.length,
+    };
+};
+
 watch(bloqueoActivo, (value) => {
     if (value) {
         notify(mensajeBloqueo.value, 'error');
     }
 }, { immediate: true });
 
-const productosFiltrados = computed(() => props.productos.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + p.tamano })));
+const productSource = computed(() => connectivity.isUsableOnline ? props.productos : localProducts.value);
+const productosFiltrados = computed(() => productSource.value.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + (p.tamano ?? '') })));
+
+const loadLocalProducts = async (query = '') => {
+    try {
+        const products = await offlineProductRepository.search(query);
+        localProducts.value = products.map((product) => ({
+            id: Number(product.serverId),
+            nombre: product.name,
+            tamano: product.size,
+            barcode: product.barcode,
+            precio_unitario: product.unitPrice,
+            precio_ieps: product.price,
+            cantidad: product.stock?.estimatedQuantity ?? 0,
+            offlineStock: product.stock,
+        }));
+    } catch (error) {
+        localProducts.value = [];
+        notify('El catálogo local todavía no está disponible. Conéctate para sincronizarlo.', 'error');
+    }
+};
+
+watch(() => connectivity.mode, (mode) => {
+    if (mode !== 'online') loadLocalProducts();
+});
 
 let form = useForm({
     cantidad: 1,
@@ -167,12 +246,20 @@ const q = ref('');
 const clientSelected = ref(true);
 
 watch(q, (value) => {
+    if (!connectivity.isUsableOnline) {
+        loadLocalProducts(value);
+        return;
+    }
     router.get(route('venta.index', { q: value }), {}, { preserveState: true });
 });
 
 const b = ref('');
 
 watch(b, (value) => {
+    if (!connectivity.isUsableOnline) {
+        notify('La consulta entre sucursales requiere conexión.', 'error');
+        return;
+    }
     router.get(route('venta.index', { b: value }), {}, { preserveState: true });
 });
 
@@ -253,10 +340,67 @@ const printTicketSilently = (url, callback = () => { }) => {
     document.body.appendChild(iframe);
 };
 
-const finalizeSale = () => {
+const finalizeSale = async () => {
     if (bloqueoActivo.value) {
         return;
     }
+    if (!page.props.offline?.salesEnabled) {
+        if (!connectivity.isUsableOnline) notify('Las ventas offline no están habilitadas para esta instalación.', 'error');
+        else submitLegacySale();
+        return;
+    }
+    if (productoVenta.length === 0 || isCompletingSale.value) return;
+
+    isCompletingSale.value = true;
+    try {
+        const deviceId = await getOrCreateDeviceId();
+        const command = {
+            saleId: crypto.randomUUID(),
+            operationId: crypto.randomUUID(),
+            branchId: String(page.props.sucursalActiva.id),
+            deviceId,
+            userId: String(page.props.auth.user.id),
+            customerId: String(form.cliente.id),
+            customerName: form.cliente.nombre,
+            sellerName: page.props.auth.user.name,
+            saleType: formVenta.tipoVenta,
+            total: Number(total),
+            items: productoVenta.map(item => ({ productId: String(item.producto.id), name: item.producto.nombre, quantity: Number(item.cantidad), unitPrice: Number(item.precio_unitario), total: Number(item.importe) })),
+            payments: [{ id: crypto.randomUUID(), method: 'cash', amount: formVenta.tipoVenta === 'Contado' ? Number(total) : Number(form.abono ?? 0) }],
+            occurredAt: new Date().toISOString(),
+            ticket: {
+                companyName: page.props.empresaConfig?.nombre ?? 'AgroSys',
+                address: page.props.sucursalActiva?.direccion ?? page.props.empresaConfig?.direccion,
+                phone: page.props.empresaConfig?.telefono,
+                rfc: page.props.empresaConfig?.rfc,
+                notice: page.props.empresaConfig?.aviso ?? 'Gracias por su compra',
+                branchName: page.props.sucursalActiva?.nombre,
+            },
+        };
+        const result = await saleApplicationService.complete(command);
+        if (result.status === 'pending_sync') {
+            printProvisionalTicket(command, result, command.ticket);
+            notify(`Venta ${result.localFolio} guardada y pendiente de sincronización.`, 'success');
+            productoVenta.splice(0);
+            recalculateTotal();
+            await loadLocalProducts();
+        } else {
+            const url = route('venta.ticket.html', { venta: result.serverSaleId ?? result.serverFolio });
+            printTicketSilently(url, () => location.replace('/venta'));
+        }
+    } catch (error) {
+        const messages = {
+            OFFLINE_SESSION_EXPIRED: 'La autorización offline venció. Las ventas pendientes siguen disponibles, pero no se puede crear otra venta.',
+            OFFLINE_SESSION_MISMATCH: 'La sesión offline no corresponde a este usuario o sucursal.',
+            OFFLINE_SALE_NOT_AUTHORIZED: 'Este usuario o dispositivo no tiene autorización para vender sin conexión.',
+        };
+        notify(messages[error.message] ?? error?.response?.data?.message ?? error.message ?? 'No se pudo completar la venta.', 'error');
+    } finally {
+        isCompletingSale.value = false;
+    }
+}
+
+const submitLegacySale = () => {
     if (productoVenta.length !== 0) {
         form.post(route('venta.store',
             {
@@ -281,12 +425,16 @@ const finalizeSale = () => {
                     }
                     console.error(errors);
                 }
-            });
+        });
     }
 }
 
 const reprintLastTicket = async () => {
     if (bloqueoActivo.value || isReprintingTicket.value) {
+        return;
+    }
+    if (!connectivity.isUsableOnline) {
+        notify('Reimprimir una venta central requiere conexión.', 'error');
         return;
     }
 
@@ -398,6 +546,7 @@ const handleKeydown = (event) => {
 // Agregar y remover el evento cuando el componente se monta/desmonta
 onMounted(() => {
     window.addEventListener("keydown", handleKeydown);
+    if (!connectivity.isUsableOnline) loadLocalProducts();
     
     // Establecer valores por defecto
     if (props.clientePublicoDefault && props.clientes.length > 0) {
@@ -445,6 +594,24 @@ const searchProductPrice = async () => {
     }
     if (!priceSearchQuery.value.trim()) {
         priceSearchResults.value = [];
+        return;
+    }
+
+    if (!connectivity.isUsableOnline) {
+        isSearching.value = true;
+        const products = await offlineProductRepository.search(priceSearchQuery.value);
+        priceSearchResults.value = products.map((product) => ({
+            id: Number(product.serverId),
+            nombre: product.name,
+            barcode: product.barcode,
+            tamano: product.size,
+            precio_unitario: product.unitPrice,
+            precio_ieps: product.price,
+            stock: product.stock?.estimatedQuantity ?? 0,
+            cantidad: product.stock?.estimatedQuantity ?? 0,
+            offline: true,
+        }));
+        isSearching.value = false;
         return;
     }
 
@@ -649,12 +816,12 @@ const searchProductPrice = async () => {
                         </hr>
                         <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
                             <div class="flex flex-col sm:flex-row gap-3">
-                                <button @click="finalizeSale()" :disabled="clientSelected"
+                                <button @click="finalizeSale()" :disabled="clientSelected || isCompletingSale"
                                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                             hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                             focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                             dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Terminar venta
+                                    {{ isCompletingSale ? 'Guardando...' : 'Terminar venta' }}
                                 </button>
                                 <button @click="reprintLastTicket" :disabled="isReprintingTicket"
                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded
@@ -835,12 +1002,17 @@ const searchProductPrice = async () => {
                         <span><strong class="text-gray-800 dark:text-gray-100">Fecha:</strong> {{ ventasDiaData?.fecha ?? 'Hoy' }}</span>
                     </div>
 
+                    <div v-if="ventasDiaData?.offlinePartial" class="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                        <p class="font-semibold">Mostrando únicamente las ventas guardadas en este dispositivo.</p>
+                        <p class="mt-1">Las demás ventas realizadas hoy en la sucursal aparecerán cuando Agrosys vuelva a estar en línea.</p>
+                    </div>
+
                     <div v-if="ventasDiaError" class="mt-3 text-sm text-red-600 dark:text-red-300">
                         {{ ventasDiaError }}
                     </div>
 
                     <div v-if="!ventasDiaData || !ventasDiaData.rows || ventasDiaData.rows.length === 0" class="mt-4 text-sm text-gray-600 dark:text-gray-300">
-                        No hay ventas registradas para la fecha actual.
+                        {{ ventasDiaData?.offlinePartial ? 'No hay ventas offline registradas hoy en este dispositivo.' : 'No hay ventas registradas para la fecha actual.' }}
                     </div>
                     <div v-else class="mt-4 space-y-3 md:space-y-0">
                         <div class="grid gap-3 md:hidden">
@@ -849,6 +1021,7 @@ const searchProductPrice = async () => {
                                     <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">Venta #{{ row.venta_id }}</div>
                                     <span class="text-[11px] uppercase text-gray-500 dark:text-gray-400">{{ row.tipo_venta }}</span>
                                 </div>
+                                <span v-if="row.local_status" class="mt-2 inline-flex rounded bg-amber-100 px-2 py-1 text-[10px] font-semibold uppercase text-amber-800">{{ row.local_status }}</span>
                                 <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ row.fecha_venta }}</div>
                                 <div class="mt-3">
                                     <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ row.producto }}</div>
@@ -902,7 +1075,10 @@ const searchProductPrice = async () => {
                                 </thead>
                                 <tbody>
                                     <tr v-for="(row, index) in ventasDiaData.rows" :key="index" class="border-t border-gray-200 dark:border-gray-700">
-                                        <td class="px-3 py-2">{{ row.venta_id }}</td>
+                                        <td class="px-3 py-2">
+                                            <div>{{ row.venta_id }}</div>
+                                            <span v-if="row.local_status" class="mt-1 inline-flex rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">{{ row.local_status }}</span>
+                                        </td>
                                         <td class="px-3 py-2 whitespace-nowrap">{{ row.fecha_venta }}</td>
                                         <td class="px-3 py-2">{{ row.tipo_venta }}</td>
                                         <td class="px-3 py-2">{{ row.producto }}</td>

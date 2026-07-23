@@ -44,6 +44,11 @@ class HandleInertiaRequests extends Middleware
         $empresaConfig = [
             'mostrar_campos_precio' => true,
             'enviar_facturas_automaticas' => false,
+            'nombre' => config('app.name', 'AgroSys'),
+            'direccion' => null,
+            'telefono' => null,
+            'rfc' => null,
+            'aviso' => null,
         ];
         $subscription = null;
 
@@ -91,6 +96,11 @@ class HandleInertiaRequests extends Middleware
             if ($empresa) {
                 $empresaConfig['mostrar_campos_precio'] = (bool) $empresa->mostrar_campos_precio;
                 $empresaConfig['enviar_facturas_automaticas'] = (bool) $empresa->enviar_facturas_automaticas;
+                $empresaConfig['nombre'] = $empresa->nombre;
+                $empresaConfig['direccion'] = $empresa->direccion;
+                $empresaConfig['telefono'] = $empresa->telefono;
+                $empresaConfig['rfc'] = $empresa->rfc;
+                $empresaConfig['aviso'] = $empresa->aviso;
 
                 $sub = $empresa->subscription('default');
                 $subscription = [
@@ -128,6 +138,13 @@ class HandleInertiaRequests extends Middleware
             'sucursalActiva' => $sucursalActiva,
             'empresaConfig' => $empresaConfig,
             'subscription' => $subscription,
+            'offline' => [
+                'enabled' => config('offline.enabled'),
+                'catalogEnabled' => config('offline.catalog_enabled'),
+                // Offline sale persistence intentionally remains disabled in phase one.
+                'salesEnabled' => config('offline.sales_enabled'),
+                'syncEnabled' => config('offline.sync_enabled'),
+            ],
         ]);
     }
 }

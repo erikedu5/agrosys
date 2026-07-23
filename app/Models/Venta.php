@@ -17,7 +17,13 @@ class Venta extends Model
         'venta_pagada',
         'fecha_pago',
         'id_sucursal',
+        'client_sale_id',
+        'operation_id',
+        'device_id',
+        'occurred_at',
     ];
+
+    protected $casts = ['occurred_at' => 'datetime'];
 
     public function usuario()
     {

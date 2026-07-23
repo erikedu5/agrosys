@@ -114,10 +114,34 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                                 </div>
                                 <h4 class="text-2xl font-bold text-gray-900">Punto de Venta Ágil</h4>
                             </div>
+                            <div class="inline-flex w-fit items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-700">
+                                <span class="h-2 w-2 rounded-full bg-green-500"></span>
+                                Disponible sin conexión
+                            </div>
                              <p class="mt-2 text-base text-gray-500 leading-relaxed">
-                                Ventas rápidas, facturación electrónica integrada y control de adeudos. Todo optimizado para reducir tiempos de espera en mostrador.
+                                Sigue realizando ventas aunque se interrumpa Internet. Los movimientos pendientes se guardan de forma segura y se sincronizan al recuperar la conexión.
                             </p>
                              <img class="mt-4 rounded-2xl shadow-xl border border-gray-100" src="/images/pos.png" alt="POS">
+                        </div>
+                    </div>
+
+                    <!-- Offline availability -->
+                    <div class="mb-16 overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-green-50 px-6 py-8 md:px-10">
+                        <div class="flex flex-col gap-6 md:flex-row md:items-center">
+                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-md">
+                                <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404A5.5 5.5 0 0115.89 8.626M5.286 19.229a9.5 9.5 0 0113.428-13.43M1.858 22.657A14.5 14.5 0 0122.142 2.373M12 18h.01" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-extrabold text-green-800">Tu mostrador sigue trabajando sin Internet</h3>
+                                <p class="mt-2 text-lg text-gray-700">
+                                    Registra ventas y consulta soluciones recomendadas aun cuando pierdas la conexión. Agrosys conserva la información necesaria en tu dispositivo y sincroniza las ventas pendientes cuando vuelves a estar en línea.
+                                </p>
+                                <p class="mt-3 text-sm font-semibold text-orange-800">
+                                    Requisito: debes haber iniciado sesión y sincronizado la información previamente mientras tenías Internet.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -167,7 +191,8 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                                     </svg>
                                 </div>
                                 <h4 class="text-xl font-bold text-gray-900 mb-2">Diccionario Agrícola</h4>
-                                <p class="text-gray-600 text-sm">Más que un sistema, es tu enciclopedia. Consulta al instante <b>Enfermedades</b>, plagas y sus <b>Soluciones</b> recomendadas. Asesora a tus clientes con respaldo técnico.</p>
+                                <p class="text-gray-600 text-sm">Más que un sistema, es tu enciclopedia. Consulta al instante <b>Enfermedades</b>, plagas y sus <b>Soluciones</b> recomendadas, incluso si pierdes temporalmente la conexión.</p>
+                                <p class="mt-3 text-xs font-bold uppercase tracking-wide text-green-700">Consulta offline disponible después de una sincronización previa</p>
                             </div>
 
                             <!-- Facturación -->
