@@ -28,8 +28,8 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                             <span class="font-bold text-2xl text-white tracking-tight drop-shadow-md">Agrosys</span>
                         </div>
                     </div>
-                    <div class="hidden md:flex items-center space-x-8">
-                        <Link :href="route('login')" class="px-6 py-2 rounded-lg bg-white text-green-700 font-bold hover:bg-gray-100 transition duration-300 ease-in-out shadow-md">
+                    <div class="flex items-center space-x-8">
+                        <Link :href="route('login')" class="inline-flex min-h-11 items-center px-4 py-2 sm:px-6 rounded-lg bg-white text-green-700 font-bold hover:bg-gray-100 transition duration-300 ease-in-out shadow-md">
                             Ingresar
                         </Link>
                     </div>
