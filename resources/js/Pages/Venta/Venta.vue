@@ -1,9 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ref, watch, onMounted, onUnmounted, reactive, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, reactive, computed, nextTick } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { notify } from '@/utils/notify';
@@ -15,9 +14,6 @@ import { SaleApplicationService } from '@/Domain/Sales/SaleApplicationService';
 import { printProvisionalTicket } from '@/Offline/services/provisionalTicket';
 
 const productoVenta = reactive([]);
-let total = 0.0;
-let selectClient = false;
-let venta_id = 0;
 
 const page = usePage();
 const connectivity = useConnectivityStore();
@@ -62,7 +58,7 @@ const props = defineProps({
 
 const bloqueoManual = ref(false);
 const bloqueoActivo = computed(() => Boolean(props.ventasBloqueadas) || bloqueoManual.value);
-const mensajeBloqueo = computed(() => props.motivoBloqueo || 'VEsta sección está bloqueada, Contacte a su administrador.');
+const mensajeBloqueo = computed(() => props.motivoBloqueo || 'Esta sección está bloqueada, Contacte a su administrador.');
 
 const ventasDiaModalOpen = ref(false);
 const ventasDiaLoading = ref(false);
@@ -72,7 +68,12 @@ const currencyFormatter = new Intl.NumberFormat('es-MX', { style: 'currency', cu
 
 const formatCurrency = (value) => currencyFormatter.format(Number(value ?? 0));
 const formatNumber = (value, digits = 2) => Number(value ?? 0).toFixed(digits);
+const formatQuantity = (value) => {
+    const number = Number(value ?? 0);
+    return Number.isInteger(number) ? String(number) : number.toFixed(2);
+};
 const displayStock = (value) => (value === null || value === undefined ? 'N/D' : formatNumber(value, 2));
+const normalize = (value) => String(value ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 const abrirVentasDiaModal = async () => {
     ventasDiaModalOpen.value = true;
@@ -158,8 +159,11 @@ watch(bloqueoActivo, (value) => {
     }
 }, { immediate: true });
 
+// ---------------------------------------------------------------------------
+// Catálogo
+// ---------------------------------------------------------------------------
+
 const productSource = computed(() => connectivity.isUsableOnline ? props.productos : localProducts.value);
-const productosFiltrados = computed(() => productSource.value.map(p => ({ ...p, barcode: p.barcode ?? '', nombre: p.nombre + " - " + (p.tamano ?? '') })));
 
 const loadLocalProducts = async (query = '') => {
     try {
@@ -184,12 +188,36 @@ watch(() => connectivity.mode, (mode) => {
     if (mode !== 'online') loadLocalProducts();
 });
 
-let form = useForm({
-    cantidad: 1,
-    importe: 0,
-    porcentaje_descuento: 0,
-    precio_ieps_con_descuento: 0,
-    producto: {},
+const busqueda = ref('');
+const categoriaActiva = ref('Todas');
+const searchInput = ref(null);
+
+const categorias = computed(() => {
+    const nombres = new Set(productSource.value.map(p => p.clasificacion).filter(Boolean));
+    return ['Todas', ...[...nombres].sort((a, b) => a.localeCompare(b, 'es'))];
+});
+
+watch(categorias, (lista) => {
+    if (!lista.includes(categoriaActiva.value)) categoriaActiva.value = 'Todas';
+});
+
+const productosVisibles = computed(() => {
+    const needle = normalize(busqueda.value);
+    return productSource.value.filter((producto) => {
+        if (categoriaActiva.value !== 'Todas' && producto.clasificacion !== categoriaActiva.value) return false;
+        if (!needle) return true;
+        return normalize(`${producto.nombre} ${producto.tamano ?? ''} ${producto.marca ?? ''}`).includes(needle)
+            || normalize(producto.barcode).includes(needle);
+    });
+});
+
+const nombreProducto = (producto) => producto.tamano ? `${producto.nombre} - ${producto.tamano}` : producto.nombre;
+
+// ---------------------------------------------------------------------------
+// Cliente y venta actual
+// ---------------------------------------------------------------------------
+
+const form = useForm({
     cliente: {},
     abono: 0
 });
@@ -202,120 +230,195 @@ const mensajeBloqueoUI = computed(() => {
     return form.errors.bloqueo || null;
 });
 
-const formVenta = useForm({
-    productoVenta: {},
-    clientVenta: {},
-    tipoVenta: "",
-    total: 0
-});
-
+const tipoVenta = ref('Contado');
 const isReprintingTicket = ref(false);
 
-// Estado del modal de búsqueda de precio
-const isPriceSearchModalOpen = ref(false);
-const priceSearchQuery = ref('');
-const priceSearchResults = ref([]);
-const isSearching = ref(false);
+const clienteActual = computed(() => form.cliente ?? {});
+const descuentoCliente = computed(() => Number(clienteActual.value?.porcentaje_descuento ?? 0));
+const esClientePublico = computed(() => !clienteActual.value?.id || clienteActual.value.id === props.clientePublicoDefault);
 
-const tipoVentaOptions = [
-    { value: 'Contado', label: 'Contado' },
-    { value: 'Credito', label: 'Credito' }
-];
-const tipoVentaSeleccionado = ref(tipoVentaOptions.find(o => o.value === formVenta.tipoVenta) || null);
-watch(tipoVentaSeleccionado, (v) => {
-    formVenta.tipoVenta = v ? v.value : '';
-});
+const precioConDescuento = (producto) => (Number(producto.precio_ieps)
+    - ((Number(producto.precio_ieps) / 100) * descuentoCliente.value)).toFixed(2);
 
-// Watcher para búsqueda de precio en tiempo real
-watch(priceSearchQuery, (newQuery) => {
-    if (newQuery && newQuery.trim().length > 0) {
-        searchProductPrice();
-    } else {
-        priceSearchResults.value = [];
-    }
-});
-
-const canAddProducto = computed(() =>
-    !bloqueoActivo.value &&
-    form.cliente && form.cliente.id &&
-    form.producto && form.producto.id
-);
-
-const q = ref('');
-
-const clientSelected = ref(true);
-
-watch(q, (value) => {
-    if (!connectivity.isUsableOnline) {
-        loadLocalProducts(value);
-        return;
-    }
-    router.get(route('venta.index', { q: value }), {}, { preserveState: true });
-});
-
-const b = ref('');
-
-watch(b, (value) => {
-    if (!connectivity.isUsableOnline) {
-        notify('La consulta entre sucursales requiere conexión.', 'error');
-        return;
-    }
-    router.get(route('venta.index', { b: value }), {}, { preserveState: true });
-});
-
-const recalculateTotal = () => {
-    total = productoVenta.reduce((sum, p) => sum + parseFloat(p.importe), 0).toFixed(2);
+const recalcularLinea = (linea) => {
+    linea.importe = (Number(linea.cantidad) * Number(linea.precio_unitario)).toFixed(2);
 };
 
-const agregarVenta = () => {
-    if (bloqueoActivo.value) {
-        return false;
+const lineaDe = (productoId) => productoVenta.find(p => p.producto.id === productoId);
+const cantidadEnVenta = (productoId) => Number(lineaDe(productoId)?.cantidad ?? 0);
+const existencia = (producto) => Number(producto.cantidad ?? 0);
+
+const avisoSinExistencia = (producto) => {
+    const stock = existencia(producto);
+    notify(stock <= 0
+        ? `${producto.nombre} está agotado en esta sucursal.`
+        : `Solo hay ${formatQuantity(stock)} de ${producto.nombre} en existencia.`, 'error');
+};
+
+const agregarProducto = (producto, cantidad = 1) => {
+    if (bloqueoActivo.value) return;
+    if (existencia(producto) <= 0) {
+        abrirBusquedaSucursales(producto.nombre);
+        return;
     }
-    if (!canAddProducto.value) {
-        return false;
-    }
-    const existente = productoVenta.find(p => p.producto.id === form.producto.id);
-    const cantidadTotal = (existente ? existente.cantidad : 0) + form.cantidad;
-    if (form.producto.cantidad < cantidadTotal) {
-        notify('No tienes esa cantidad en stock, tu tienes ' + form.producto.cantidad + ' en bodega', 'error');
-        return false;
+    const existente = lineaDe(producto.id);
+    const nuevaCantidad = Number(existente?.cantidad ?? 0) + cantidad;
+    if (nuevaCantidad > existencia(producto)) {
+        avisoSinExistencia(producto);
+        return;
     }
     if (existente) {
-        existente.cantidad += form.cantidad;
-        existente.importe = (existente.cantidad * existente.precio_unitario).toFixed(2);
-    } else {
-        let venta = {
-            'producto': form.producto,
-            'cantidad': form.cantidad,
-            'precio_unitario': form.precio_ieps_con_descuento,
-            'importe': form.importe
-        };
-        productoVenta.push(venta);
-    }
-    recalculateTotal();
-    let cliente = form.cliente;
-    form.reset();
-    form.producto = 0;
-    form.cliente = cliente;
-    form.porcentaje_descuento = cliente.porcentaje_descuento;
-    selectClient = true;
-};
-
-const updateQuantity = (producto) => {
-    if (producto.cantidad === null || producto.cantidad === '') {
-        producto.importe = 0;
-        recalculateTotal();
+        existente.cantidad = nuevaCantidad;
+        recalcularLinea(existente);
         return;
     }
-    if (producto.cantidad > producto.producto.cantidad) {
-        notify('No tienes esa cantidad en stock, tu tienes ' + producto.producto.cantidad + ' en bodega', 'error');
-        producto.cantidad = producto.producto.cantidad;
+    const linea = {
+        producto: { ...producto, nombre: nombreProducto(producto) },
+        cantidad: nuevaCantidad,
+        precio_unitario: precioConDescuento(producto),
+        importe: 0,
+    };
+    recalcularLinea(linea);
+    productoVenta.push(linea);
+};
+
+const cambiarCantidad = (linea, delta) => {
+    const nuevaCantidad = Number(linea.cantidad) + delta;
+    if (nuevaCantidad < 1) return;
+    if (nuevaCantidad > existencia(linea.producto)) {
+        avisoSinExistencia(linea.producto);
+        return;
     }
-    if (producto.cantidad < 1) {
-        producto.cantidad = 1;
+    linea.cantidad = nuevaCantidad;
+    recalcularLinea(linea);
+};
+
+const updateQuantity = (linea) => {
+    if (linea.cantidad === null || linea.cantidad === '') {
+        linea.importe = 0;
+        return;
     }
-    producto.importe = (producto.cantidad * producto.precio_unitario).toFixed(2);
-    recalculateTotal();
+    if (linea.cantidad > existencia(linea.producto)) {
+        avisoSinExistencia(linea.producto);
+        linea.cantidad = existencia(linea.producto);
+    }
+    if (linea.cantidad < 0.01) {
+        linea.cantidad = 1;
+    }
+    recalcularLinea(linea);
+};
+
+const eliminarProducto = (linea) => {
+    productoVenta.splice(productoVenta.indexOf(linea), 1);
+};
+
+const vaciarVenta = () => {
+    productoVenta.splice(0);
+};
+
+// Al cambiar de cliente, se recalculan los precios con su descuento.
+watch(descuentoCliente, () => {
+    productoVenta.forEach((linea) => {
+        linea.precio_unitario = precioConDescuento(linea.producto);
+        recalcularLinea(linea);
+    });
+});
+
+watch(esClientePublico, (publico) => {
+    if (publico) tipoVenta.value = 'Contado';
+});
+
+const subtotalVenta = computed(() => productoVenta.reduce((sum, linea) => sum + Number(linea.producto.precio_ieps) * Number(linea.cantidad || 0), 0));
+const totalVenta = computed(() => Number(productoVenta.reduce((sum, linea) => sum + Number(linea.importe || 0), 0).toFixed(2)));
+const descuentoVenta = computed(() => Math.max(0, subtotalVenta.value - totalVenta.value));
+const unidadesVenta = computed(() => productoVenta.reduce((sum, linea) => sum + Number(linea.cantidad || 0), 0));
+const resumenArticulos = computed(() => {
+    if (productoVenta.length === 0) return 'Sin productos';
+    const unidades = formatQuantity(unidadesVenta.value);
+    return unidadesVenta.value === 1 ? '1 artículo' : `${unidades} artículos`;
+});
+
+const clientesModalOpen = ref(false);
+const busquedaCliente = ref('');
+const clientesFiltrados = computed(() => {
+    const needle = normalize(busquedaCliente.value);
+    return props.clientes.filter(c => !needle || normalize(c.nombre).includes(needle));
+});
+
+const abrirClientes = () => {
+    busquedaCliente.value = '';
+    clientesModalOpen.value = true;
+};
+
+const seleccionarCliente = (cliente) => {
+    form.cliente = cliente;
+    clientesModalOpen.value = false;
+};
+
+// Hoja inferior del carrito en pantallas chicas
+const carritoAbierto = ref(false);
+
+// ---------------------------------------------------------------------------
+// Cobro
+// ---------------------------------------------------------------------------
+
+const pagoModalOpen = ref(false);
+const efectivoRecibido = ref('');
+const ventaCompletada = ref(null);
+
+const montoIngresado = computed(() => {
+    const valor = parseFloat(String(efectivoRecibido.value).replace(/[^0-9.]/g, ''));
+    return Number.isFinite(valor) ? valor : null;
+});
+const esCredito = computed(() => tipoVenta.value === 'Credito');
+const cambio = computed(() => montoIngresado.value === null ? null : montoIngresado.value - totalVenta.value);
+const saldoCredito = computed(() => Math.max(0, totalVenta.value - Number(form.abono || 0)));
+
+const montosRapidos = computed(() => {
+    const total = totalVenta.value;
+    if (esCredito.value) {
+        return [
+            { label: 'Sin abono', value: 0 },
+            { label: '50%', value: Number((total / 2).toFixed(2)) },
+            { label: 'Total', value: total },
+        ];
+    }
+    const montos = [{ label: 'Exacto', value: total }];
+    for (const paso of [100, 500, 1000]) {
+        let monto = Math.ceil(total / paso) * paso;
+        while (monto <= total || montos.some(m => m.value === monto)) monto += paso;
+        montos.push({ label: formatCurrency(monto).replace('.00', ''), value: monto });
+    }
+    return montos;
+});
+
+const elegirMontoRapido = (monto) => {
+    if (esCredito.value) {
+        form.abono = monto;
+    } else {
+        efectivoRecibido.value = String(monto);
+    }
+};
+
+const puedeConfirmar = computed(() => {
+    if (productoVenta.length === 0 || isCompletingSale.value) return false;
+    if (esCredito.value) {
+        const abono = Number(form.abono || 0);
+        return abono >= 0 && abono <= totalVenta.value;
+    }
+    return montoIngresado.value === null || montoIngresado.value >= totalVenta.value;
+});
+
+const abrirCobro = () => {
+    if (bloqueoActivo.value || productoVenta.length === 0) return;
+    if (!form.cliente?.id) {
+        notify('Selecciona un cliente para continuar.', 'error');
+        abrirClientes();
+        return;
+    }
+    efectivoRecibido.value = '';
+    form.abono = 0;
+    pagoModalOpen.value = true;
 };
 
 const printTicketSilently = (url, callback = () => { }) => {
@@ -340,8 +443,45 @@ const printTicketSilently = (url, callback = () => { }) => {
     document.body.appendChild(iframe);
 };
 
+const mostrarVentaCompletada = (detalle) => {
+    ventaCompletada.value = {
+        total: totalVenta.value,
+        cambio: !esCredito.value && cambio.value !== null && cambio.value > 0 ? cambio.value : 0,
+        credito: esCredito.value,
+        saldo: esCredito.value ? saldoCredito.value : 0,
+        ...detalle,
+    };
+    pagoModalOpen.value = false;
+    carritoAbierto.value = false;
+};
+
+const reimprimirVentaCompletada = () => {
+    const venta = ventaCompletada.value;
+    if (!venta) return;
+    if (venta.ticketUrl) {
+        printTicketSilently(venta.ticketUrl);
+    } else if (venta.provisional) {
+        printProvisionalTicket(...venta.provisional);
+    }
+};
+
+const nuevaVenta = () => {
+    const local = ventaCompletada.value?.local;
+    ventaCompletada.value = null;
+    if (local) {
+        productoVenta.splice(0);
+        seleccionarClientePorDefecto();
+        tipoVenta.value = 'Contado';
+        busqueda.value = '';
+        nextTick(() => searchInput.value?.focus());
+        return;
+    }
+    // Recarga para traer las existencias actualizadas del servidor.
+    location.replace('/venta');
+};
+
 const finalizeSale = async () => {
-    if (bloqueoActivo.value) {
+    if (bloqueoActivo.value || !puedeConfirmar.value) {
         return;
     }
     if (!page.props.offline?.salesEnabled) {
@@ -349,7 +489,6 @@ const finalizeSale = async () => {
         else submitLegacySale();
         return;
     }
-    if (productoVenta.length === 0 || isCompletingSale.value) return;
 
     isCompletingSale.value = true;
     try {
@@ -363,10 +502,10 @@ const finalizeSale = async () => {
             customerId: String(form.cliente.id),
             customerName: form.cliente.nombre,
             sellerName: page.props.auth.user.name,
-            saleType: formVenta.tipoVenta,
-            total: Number(total),
+            saleType: tipoVenta.value,
+            total: Number(totalVenta.value),
             items: productoVenta.map(item => ({ productId: String(item.producto.id), name: item.producto.nombre, quantity: Number(item.cantidad), unitPrice: Number(item.precio_unitario), total: Number(item.importe) })),
-            payments: [{ id: crypto.randomUUID(), method: 'cash', amount: formVenta.tipoVenta === 'Contado' ? Number(total) : Number(form.abono ?? 0) }],
+            payments: [{ id: crypto.randomUUID(), method: 'cash', amount: tipoVenta.value === 'Contado' ? Number(totalVenta.value) : Number(form.abono ?? 0) }],
             occurredAt: new Date().toISOString(),
             ticket: {
                 companyName: page.props.empresaConfig?.nombre ?? 'AgroSys',
@@ -380,13 +519,16 @@ const finalizeSale = async () => {
         const result = await saleApplicationService.complete(command);
         if (result.status === 'pending_sync') {
             printProvisionalTicket(command, result, command.ticket);
-            notify(`Venta ${result.localFolio} guardada y pendiente de sincronización.`, 'success');
-            productoVenta.splice(0);
-            recalculateTotal();
+            mostrarVentaCompletada({
+                folio: result.localFolio,
+                local: true,
+                provisional: [command, result, command.ticket],
+            });
             await loadLocalProducts();
         } else {
             const url = route('venta.ticket.html', { venta: result.serverSaleId ?? result.serverFolio });
-            printTicketSilently(url, () => location.replace('/venta'));
+            mostrarVentaCompletada({ folio: result.serverFolio ?? result.serverSaleId, ticketUrl: url });
+            printTicketSilently(url);
         }
     } catch (error) {
         const messages = {
@@ -401,32 +543,37 @@ const finalizeSale = async () => {
 }
 
 const submitLegacySale = () => {
-    if (productoVenta.length !== 0) {
-        form.post(route('venta.store',
-            {
-                'id_cliente': form.cliente.id,
-                'total': total,
-                'producto_venta': productoVenta,
-                'tipo_venta': formVenta.tipoVenta + "",
-                'abono': form.abono
-            }),
-            {
-                preserveState: true,
-                onSuccess: (data) => {
-                    // Do not force ?size=80; let the backend use the sucursal preference (ticket_width_mm).
-                    const url = route('venta.ticket.html', { venta: data.props.venta.id });
-                    printTicketSilently(url, () => {
-                        location.replace('/venta');
-                    });
-                },
-                onError: (errors) => {
-                    if (errors?.bloqueo) {
-                        bloqueoManual.value = true;
-                    }
-                    console.error(errors);
+    if (productoVenta.length === 0) return;
+    isCompletingSale.value = true;
+    form.post(route('venta.store',
+        {
+            'id_cliente': form.cliente.id,
+            'total': totalVenta.value,
+            'producto_venta': productoVenta,
+            'tipo_venta': tipoVenta.value + "",
+            'abono': form.abono
+        }),
+        {
+            preserveState: true,
+            onSuccess: (data) => {
+                // Do not force ?size=80; let the backend use the sucursal preference (ticket_width_mm).
+                const url = route('venta.ticket.html', { venta: data.props.venta.id });
+                mostrarVentaCompletada({ folio: data.props.venta.id, ticketUrl: url });
+                printTicketSilently(url);
+            },
+            onError: (errors) => {
+                if (errors?.bloqueo) {
+                    bloqueoManual.value = true;
                 }
+                pagoModalOpen.value = false;
+                const primerError = Object.values(errors ?? {})[0];
+                if (primerError) notify(primerError, 'error');
+                console.error(errors);
+            },
+            onFinish: () => {
+                isCompletingSale.value = false;
+            },
         });
-    }
 }
 
 const reprintLastTicket = async () => {
@@ -470,521 +617,589 @@ const reprintLastTicket = async () => {
     }
 };
 
-
-const handleSelectChange = (event) => {
-    if (event !== null) {
-        form.precio_ieps_con_descuento = (form.producto.precio_ieps
-            - ((form.producto.precio_ieps / 100)
-                * form.cliente.porcentaje_descuento)).toFixed(2);
-        form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
-        agregarVenta();
-    } else {
-        let cliente = form.cliente;
-        form.reset();
-        form.producto = 0;
-        form.cliente = cliente;
-        form.porcentaje_descuento = cliente.porcentaje_descuento;
-        selectClient = true;
+// Enter en el buscador: el lector de código de barras agrega el producto directo.
+const onBuscarEnter = () => {
+    const needle = normalize(busqueda.value);
+    if (!needle) return;
+    const porCodigo = productSource.value.find(p => p.barcode && normalize(p.barcode) === needle);
+    const candidato = porCodigo ?? (productosVisibles.value.length === 1 ? productosVisibles.value[0] : null);
+    if (candidato) {
+        agregarProducto(candidato);
+        busqueda.value = '';
+    } else if (productosVisibles.value.length === 0) {
+        abrirBusquedaSucursales(busqueda.value);
     }
-}
+};
 
-const changeClient = (event) => {
-    if (event !== null) {
-        clientSelected.value = false;
-        form.porcentaje_descuento = form.cliente.porcentaje_descuento;
-        if (form.producto !== null) {
-            form.precio_ieps_con_descuento = (form.producto.precio_ieps
-                - ((form.producto.precio_ieps / 100)
-                    * form.cliente.porcentaje_descuento)).toFixed(2);
-            form.importe = (form.precio_ieps_con_descuento * form.cantidad).toFixed(2);
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// Existencias en otras sucursales
+// ---------------------------------------------------------------------------
 
-const eliminarProducto = (producto) => {
-    const index = productoVenta.indexOf(producto);
-    productoVenta.splice(index, 1);
-    recalculateTotal();
-}
-
-// Estado del modal de búsqueda en sucursales
 const isModalOpen = ref(false);
+const b = ref('');
+const buscandoSucursales = ref(false);
+const sucursalSearchInput = ref(null);
+let sucursalTimeout = null;
 
-// Función para manejar las teclas F2 y F3
+const buscarEnSucursales = (value) => {
+    if (sucursalTimeout) clearTimeout(sucursalTimeout);
+    if (!connectivity.isUsableOnline || normalize(value).length < 2) {
+        buscandoSucursales.value = false;
+        return;
+    }
+    buscandoSucursales.value = true;
+    sucursalTimeout = setTimeout(() => {
+        router.get(route('venta.index', { b: value }), {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['productosSucursal'],
+            onFinish: () => {
+                buscandoSucursales.value = false;
+            },
+        });
+    }, 300);
+};
+
+watch(b, buscarEnSucursales);
+
+const abrirBusquedaSucursales = (texto = '') => {
+    if (bloqueoActivo.value) return;
+    isModalOpen.value = true;
+    if (b.value === texto) {
+        buscarEnSucursales(texto);
+    } else {
+        b.value = texto;
+    }
+    nextTick(() => sucursalSearchInput.value?.focus());
+};
+
+const closeModal = () => {
+    isModalOpen.value = false;
+};
+
+const resultadosSucursales = computed(() => {
+    const grupos = new Map();
+    for (const fila of props.productosSucursal ?? []) {
+        if (!grupos.has(fila.id)) {
+            const local = productSource.value.find(p => p.id === fila.id);
+            grupos.set(fila.id, {
+                id: fila.id,
+                nombre: fila.nombre,
+                tamano: fila.tamano,
+                marca: fila.marca,
+                precio: fila.precio_ieps,
+                existenciaLocal: local ? existencia(local) : 0,
+                sucursales: [],
+            });
+        }
+        grupos.get(fila.id).sucursales.push({ id: fila.sucursal?.id, nombre: fila.sucursal?.nombre, cantidad: Number(fila.cantidad) });
+    }
+    return [...grupos.values()].map(grupo => ({
+        ...grupo,
+        sucursales: grupo.sucursales.sort((x, y) => y.cantidad - x.cantidad),
+        totalOtras: grupo.sucursales.reduce((sum, s) => sum + s.cantidad, 0),
+    }));
+});
+
+const estiloExistencia = (cantidad) => {
+    if (cantidad <= 0) return 'bg-gray-100 text-gray-600';
+    if (cantidad <= 5) return 'bg-amber-100 text-amber-800';
+    return 'bg-green-100 text-green-800';
+};
+
+// ---------------------------------------------------------------------------
+// Teclado y arranque
+// ---------------------------------------------------------------------------
+
+const cerrarModalActivo = () => {
+    if (pagoModalOpen.value) pagoModalOpen.value = false;
+    else if (clientesModalOpen.value) clientesModalOpen.value = false;
+    else if (isModalOpen.value) closeModal();
+    else if (carritoAbierto.value) carritoAbierto.value = false;
+};
+
 const handleKeydown = (event) => {
     if (bloqueoActivo.value) {
         return;
     }
     if (event.key === "F2") {
-        event.preventDefault(); // Evita acciones predeterminadas del navegador
-        isModalOpen.value = true;
-    } else if (event.key === "F3") {
-        event.preventDefault(); // Evita acciones predeterminadas del navegador
-        isPriceSearchModalOpen.value = true;
-        // Limpiar resultados anteriores
-        priceSearchResults.value = [];
-        priceSearchQuery.value = '';
-        // Focus en el input después de un pequeño delay para que el modal se renderice
-        setTimeout(() => {
-            const searchInput = document.getElementById('price-search-input');
-            if (searchInput) {
-                searchInput.focus();
-            }
-        }, 100);
-    } else if (event.key === "Escape") {
         event.preventDefault();
-        // Cerrar cualquier modal que esté abierto
-        if (isModalOpen.value) {
-            closeModal();
-        }
-        if (isPriceSearchModalOpen.value) {
-            closePriceSearchModal();
-        }
+        abrirBusquedaSucursales();
+    } else if (event.key === "F3") {
+        event.preventDefault();
+        searchInput.value?.focus();
+        searchInput.value?.select();
+    } else if (event.key === "F4") {
+        event.preventDefault();
+        abrirCobro();
+    } else if (event.key === "Escape") {
+        cerrarModalActivo();
     }
 };
 
-// Agregar y remover el evento cuando el componente se monta/desmonta
-onMounted(() => {
-    window.addEventListener("keydown", handleKeydown);
-    if (!connectivity.isUsableOnline) loadLocalProducts();
-    
-    // Establecer valores por defecto
+const seleccionarClientePorDefecto = () => {
     if (props.clientePublicoDefault && props.clientes.length > 0) {
         const clientePublico = props.clientes.find(c => c.id === props.clientePublicoDefault);
         if (clientePublico) {
             form.cliente = clientePublico;
-            form.porcentaje_descuento = clientePublico.porcentaje_descuento;
+            return;
         }
     }
-    
+    if (props.clientes.length > 0) {
+        form.cliente = props.clientes[0];
+    }
+};
+
+onMounted(() => {
+    window.addEventListener("keydown", handleKeydown);
+    if (!connectivity.isUsableOnline) loadLocalProducts();
+
+    seleccionarClientePorDefecto();
+
     if (props.tipoVentaDefault) {
-        const tipoDefault = tipoVentaOptions.find(o => o.value.toLowerCase() === props.tipoVentaDefault.toLowerCase());
-        if (tipoDefault) {
-            tipoVentaSeleccionado.value = tipoDefault;
-            formVenta.tipoVenta = tipoDefault.value;
-        }
+        tipoVenta.value = props.tipoVentaDefault.toLowerCase() === 'credito' && !esClientePublico.value ? 'Credito' : 'Contado';
     }
 });
 
 onUnmounted(() => {
     window.removeEventListener("keydown", handleKeydown);
-    // Limpiar timeout de búsqueda si existe
-    if (searchTimeout) {
-        clearTimeout(searchTimeout);
+    if (sucursalTimeout) {
+        clearTimeout(sucursalTimeout);
     }
 });
-
-// Función para cerrar el modal de búsqueda en sucursales
-const closeModal = () => {
-    isModalOpen.value = false;
-};
-
-// Función para cerrar el modal de búsqueda de precio
-const closePriceSearchModal = () => {
-    isPriceSearchModalOpen.value = false;
-    priceSearchQuery.value = '';
-    priceSearchResults.value = [];
-};
-
-// Función para buscar precios de productos con debounce
-let searchTimeout = null;
-const searchProductPrice = async () => {
-    if (bloqueoActivo.value) {
-        return;
-    }
-    if (!priceSearchQuery.value.trim()) {
-        priceSearchResults.value = [];
-        return;
-    }
-
-    if (!connectivity.isUsableOnline) {
-        isSearching.value = true;
-        const products = await offlineProductRepository.search(priceSearchQuery.value);
-        priceSearchResults.value = products.map((product) => ({
-            id: Number(product.serverId),
-            nombre: product.name,
-            barcode: product.barcode,
-            tamano: product.size,
-            precio_unitario: product.unitPrice,
-            precio_ieps: product.price,
-            stock: product.stock?.estimatedQuantity ?? 0,
-            cantidad: product.stock?.estimatedQuantity ?? 0,
-            offline: true,
-        }));
-        isSearching.value = false;
-        return;
-    }
-
-    // Limpiar timeout anterior
-    if (searchTimeout) {
-        clearTimeout(searchTimeout);
-    }
-
-    // Usar debounce para evitar múltiples peticiones
-    searchTimeout = setTimeout(async () => {
-        isSearching.value = true;
-        
-        try {
-            const response = await fetch(`/buscar-precio?q=${encodeURIComponent(priceSearchQuery.value)}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                priceSearchResults.value = data.productos || [];
-            } else {
-                console.error('Error en la búsqueda:', response.statusText);
-                priceSearchResults.value = [];
-                notify('error', 'Error al buscar productos');
-            }
-        } catch (error) {
-            console.error('Error al buscar precios:', error);
-            priceSearchResults.value = [];
-            notify('error', 'Error de conexión al buscar productos');
-        } finally {
-            isSearching.value = false;
-        }
-    }, 300); // Esperar 300ms antes de hacer la búsqueda
-};
 </script>
 
-<style scoped>
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-}
-</style>
-
 <template>
-    <AppLayout title="Dashboard">
-        <template #header>
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                        Venta de agroquimicos
-                    </h2>
-                    <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <span>F2: Buscar en sucursal</span>
-                        <span class="ml-4">F3: Buscar precio y existencias</span>
+    <AppLayout title="Punto de venta">
+        <div
+            class="flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900"
+            :class="connectivity.mode !== 'online' ? 'h-[calc(100dvh-7rem)]' : 'h-[calc(100dvh-4rem)]'"
+        >
+            <!-- Barra de la caja -->
+            <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+                <div class="order-3 flex w-full min-w-0 items-center justify-between gap-3 border-t border-gray-100 pt-2 dark:border-gray-700 sm:order-none sm:w-auto sm:flex-1 sm:border-0 sm:pt-0">
+                    <div class="min-w-0">
+                        <h1 class="hidden text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100 sm:block">Punto de venta</h1>
+                        <p class="truncate text-sm text-gray-600 dark:text-gray-400">
+                            <span class="sm:hidden">Sucursal </span>
+                            <span class="font-semibold text-gray-900 dark:text-gray-100 sm:font-normal sm:text-gray-600 sm:dark:text-gray-400">{{ page.props.sucursalActiva?.nombre ?? 'Sucursal activa' }}</span>
+                        </p>
                     </div>
+                    <span v-if="connectivity.mode === 'online'" class="inline-flex h-8 shrink-0 items-center gap-2 rounded-full bg-green-100 px-3 text-xs font-bold text-green-800">
+                        <span class="h-2 w-2 rounded-full bg-green-600" aria-hidden="true"></span>En línea
+                    </span>
+                    <span v-else class="inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
+                        <span class="h-2 w-2 rounded-full bg-amber-600" aria-hidden="true"></span>Sin conexión
+                    </span>
                 </div>
-                <button
-                    @click="abrirVentasDiaModal"
-                    class="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                >
-                    Ver ventas de hoy
+                <div class="ml-auto flex items-center gap-2">
+                    <button type="button" @click="abrirBusquedaSucursales()" :disabled="bloqueoActivo"
+                        class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                        aria-label="Buscar en otras sucursales (F2)" title="Buscar en otras sucursales (F2)">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
+                        <span class="hidden lg:inline">Otras sucursales</span>
+                    </button>
+                    <button type="button" @click="abrirVentasDiaModal"
+                        class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                        aria-label="Ventas del día" title="Ventas del día">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        <span class="hidden lg:inline">Ventas del día</span>
+                    </button>
+                    <button type="button" @click="reprintLastTicket" :disabled="isReprintingTicket || bloqueoActivo"
+                        class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                        aria-label="Reimprimir último ticket" title="Reimprimir último ticket">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
+                        <span class="hidden lg:inline">{{ isReprintingTicket ? 'Reimprimiendo…' : 'Reimprimir' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ventas bloqueadas -->
+            <div v-if="mensajeBloqueoUI" class="shrink-0 px-4 pt-4 sm:px-6">
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800" role="alert">
+                    <p class="font-semibold">Ventas bloqueadas</p>
+                    <p class="mt-1 text-sm">{{ mensajeBloqueoUI }}</p>
+                </div>
+            </div>
+
+            <div v-if="!bloqueoActivo" class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_400px]">
+
+                <!-- Catálogo -->
+                <main class="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 lg:pb-8 [&>*]:shrink-0">
+                    <div v-if="connectivity.mode !== 'online'" class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                        <p><strong>Catálogo local.</strong> Puedes seguir vendiendo con los productos guardados en este dispositivo; las existencias son estimadas.</p>
+                    </div>
+
+                    <label class="relative block">
+                        <span class="sr-only">Buscar producto o escanear código</span>
+                        <svg class="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+                        <input ref="searchInput" v-model="busqueda" type="search" autocomplete="off" enterkeyhint="search"
+                            @keydown.enter.prevent="onBuscarEnter"
+                            placeholder="Buscar producto o escanear código"
+                            class="block h-14 w-full rounded-xl border-2 border-gray-300 bg-white pl-12 pr-4 text-[17px] text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
+                    </label>
+
+                    <div v-if="categorias.length > 2" class="-mx-1 flex gap-2 overflow-x-auto px-1 py-0.5 [scrollbar-width:none]" role="tablist" aria-label="Clasificación">
+                        <button v-for="categoria in categorias" :key="categoria" type="button" role="tab"
+                            :aria-selected="categoriaActiva === categoria"
+                            @click="categoriaActiva = categoria"
+                            class="h-11 shrink-0 rounded-full border px-4 text-[15px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                            :class="categoriaActiva === categoria
+                                ? 'border-gray-900 bg-gray-900 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200'">
+                            {{ categoria }}
+                        </button>
+                    </div>
+
+                    <div class="flex items-baseline justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+                        <span>{{ productosVisibles.length === 1 ? '1 producto' : `${productosVisibles.length} productos` }}</span>
+                        <span class="hidden sm:inline">Toca un producto para agregarlo · F3 buscar · F4 cobrar</span>
+                    </div>
+
+                    <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(176px,1fr))] sm:gap-3">
+                        <button v-for="producto in productosVisibles" :key="producto.id" type="button"
+                            @click="agregarProducto(producto)"
+                            :aria-label="existencia(producto) > 0 ? `Agregar ${nombreProducto(producto)}, ${formatCurrency(producto.precio_ieps)}` : `${nombreProducto(producto)} agotado. Ver otras sucursales`"
+                            class="relative flex min-h-[136px] flex-col gap-1.5 rounded-xl border-2 p-3 text-left text-gray-900 transition active:scale-[.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:text-gray-100 sm:min-h-[148px] sm:p-3.5"
+                            :class="existencia(producto) <= 0
+                                ? 'border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800'
+                                : cantidadEnVenta(producto.id) > 0
+                                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950'
+                                    : 'border-gray-200 bg-white hover:shadow-md dark:border-gray-700 dark:bg-gray-800'">
+                            <span class="flex items-center justify-between gap-2">
+                                <span class="truncate text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">{{ producto.clasificacion ?? producto.marca ?? '' }}</span>
+                                <span v-if="cantidadEnVenta(producto.id) > 0" class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 px-2 text-sm font-bold text-white">
+                                    {{ formatQuantity(cantidadEnVenta(producto.id)) }}
+                                </span>
+                            </span>
+                            <span class="text-[17px] font-bold leading-snug">{{ producto.nombre }}</span>
+                            <span v-if="producto.tamano" class="text-sm text-gray-600 dark:text-gray-400">{{ producto.tamano }}</span>
+                            <span class="flex-1"></span>
+                            <span v-if="existencia(producto) <= 0" class="inline-flex items-center gap-1.5 text-[13px] font-bold text-blue-700 dark:text-blue-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+                                Ver en otras sucursales
+                            </span>
+                            <span class="flex items-end justify-between gap-2">
+                                <span class="text-xl font-extrabold">{{ formatCurrency(producto.precio_ieps) }}</span>
+                                <span class="whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-bold"
+                                    :class="existencia(producto) <= 0 ? 'bg-gray-200 text-gray-700' : existencia(producto) <= 5 ? 'bg-amber-100 text-amber-800' : 'bg-green-50 text-green-800'">
+                                    {{ existencia(producto) <= 0 ? 'Agotado aquí' : existencia(producto) <= 5 ? `Quedan ${formatQuantity(existencia(producto))}` : `${formatQuantity(existencia(producto))} en exist.` }}
+                                </span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <div v-if="productosVisibles.length === 0" class="px-4 py-12 text-center text-gray-600 dark:text-gray-400">
+                        <p class="text-[17px] font-bold text-gray-900 dark:text-gray-100">
+                            {{ busqueda ? `No encontramos “${busqueda}” en esta sucursal` : 'No hay productos con existencia' }}
+                        </p>
+                        <p class="mt-1.5 text-[15px]">Revisa la escritura o búscalo en otras sucursales.</p>
+                        <button type="button" @click="abrirBusquedaSucursales(busqueda)"
+                            class="mt-4 inline-flex h-12 items-center gap-2 rounded-lg border border-blue-300 bg-white px-5 text-[15px] font-semibold text-blue-700 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:bg-gray-800 dark:text-blue-400">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
+                            Buscar en otras sucursales
+                        </button>
+                    </div>
+                </main>
+
+                <!-- Fondo de la hoja en pantallas chicas -->
+                <div v-if="carritoAbierto" class="fixed inset-0 z-40 bg-gray-900/50 lg:hidden" @click="carritoAbierto = false" aria-hidden="true"></div>
+
+                <!-- Venta actual -->
+                <aside aria-label="Venta actual"
+                    class="fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 dark:bg-gray-800 lg:static lg:z-auto lg:max-h-none lg:min-h-0 lg:translate-y-0 lg:rounded-none lg:border-l lg:border-gray-200 lg:shadow-none lg:dark:border-gray-700"
+                    :class="carritoAbierto ? 'translate-y-0' : 'translate-y-full'">
+                    <div class="flex items-center gap-2 px-5 pb-3 pt-4">
+                        <div class="min-w-0 flex-1">
+                            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">Venta actual</h2>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ resumenArticulos }}</p>
+                        </div>
+                        <button v-if="productoVenta.length" type="button" @click="vaciarVenta"
+                            class="h-11 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-500 dark:text-red-300 dark:hover:bg-red-900">
+                            Vaciar
+                        </button>
+                        <button type="button" @click="carritoAbierto = false" aria-label="Cerrar venta"
+                            class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 lg:hidden">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+
+                    <div class="px-5 pb-3">
+                        <button type="button" @click="abrirClientes"
+                            class="flex min-h-[60px] w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-left text-gray-900 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a3 3 0 100-6 3 3 0 000 6zM6 18a4 4 0 014-4h4a4 4 0 014 4" /></svg>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-xs text-gray-600 dark:text-gray-400">Cliente</span>
+                                <span class="block truncate font-semibold">{{ clienteActual.nombre ?? 'Selecciona un cliente' }}</span>
+                            </span>
+                            <span v-if="descuentoCliente > 0" class="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-[13px] font-bold text-green-800">−{{ descuentoCliente }}%</span>
+                            <span class="shrink-0 text-sm font-semibold text-blue-700 dark:text-blue-400">Cambiar</span>
+                        </button>
+                    </div>
+
+                    <div class="min-h-[120px] flex-1 overflow-y-auto border-t border-gray-200 dark:border-gray-700">
+                        <div v-if="productoVenta.length === 0" class="flex flex-col items-center gap-2.5 px-6 py-10 text-center text-gray-600 dark:text-gray-400">
+                            <span class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700">
+                                <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            </span>
+                            <p class="font-bold text-gray-900 dark:text-gray-100">Aún no hay productos</p>
+                            <p class="text-sm">Toca un producto del catálogo o escanea su código de barras.</p>
+                        </div>
+
+                        <div v-for="linea in productoVenta" :key="linea.producto.id" class="flex flex-col gap-2.5 border-b border-gray-100 px-5 py-3.5 dark:border-gray-700">
+                            <div class="flex items-start gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-semibold leading-5 text-gray-900 dark:text-gray-100">{{ linea.producto.nombre }}</p>
+                                    <p class="text-[13px] text-gray-600 dark:text-gray-400">{{ formatCurrency(linea.precio_unitario) }} c/u</p>
+                                </div>
+                                <p class="whitespace-nowrap text-[17px] font-bold text-gray-900 dark:text-gray-100">{{ formatCurrency(linea.importe) }}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" @click="cambiarCantidad(linea, -1)" :disabled="Number(linea.cantidad) <= 1" aria-label="Quitar uno"
+                                    class="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-900 disabled:border-gray-200 disabled:text-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+                                </button>
+                                <label class="sr-only" :for="`cantidad-${linea.producto.id}`">Cantidad de {{ linea.producto.nombre }}</label>
+                                <input :id="`cantidad-${linea.producto.id}`" v-model.number="linea.cantidad" @change="updateQuantity(linea)"
+                                    type="number" inputmode="decimal" min="0.01" step="0.01"
+                                    class="h-11 w-16 rounded-lg border-gray-300 text-center text-lg font-bold text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                                <button type="button" @click="cambiarCantidad(linea, 1)" :disabled="Number(linea.cantidad) + 1 > existencia(linea.producto)" aria-label="Agregar uno"
+                                    class="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-900 disabled:border-gray-200 disabled:text-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                                </button>
+                                <span v-if="Number(linea.cantidad) + 1 > existencia(linea.producto)" class="text-xs font-semibold text-amber-800 dark:text-amber-300">Máx. en existencia</span>
+                                <span class="flex-1"></span>
+                                <button type="button" @click="eliminarProducto(linea)" :aria-label="`Eliminar ${linea.producto.nombre}`"
+                                    class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3.5 border-t border-gray-200 px-5 pb-5 pt-4 dark:border-gray-700">
+                        <div role="radiogroup" aria-label="Tipo de venta" class="flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-900">
+                            <button type="button" role="radio" :aria-checked="tipoVenta === 'Contado'" @click="tipoVenta = 'Contado'"
+                                class="h-12 flex-1 rounded-lg text-base font-semibold transition"
+                                :class="tipoVenta === 'Contado' ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-300'">
+                                Contado
+                            </button>
+                            <button type="button" role="radio" :aria-checked="tipoVenta === 'Credito'" @click="tipoVenta = 'Credito'" :disabled="esClientePublico"
+                                class="h-12 flex-1 rounded-lg text-base font-semibold transition disabled:text-gray-400"
+                                :class="tipoVenta === 'Credito' ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-300'">
+                                Crédito
+                            </button>
+                        </div>
+                        <p v-if="esClientePublico" class="-mt-1.5 text-[13px] text-gray-600 dark:text-gray-400">Para vender a crédito, elige un cliente registrado.</p>
+
+                        <div class="flex flex-col gap-1.5 text-[15px]">
+                            <div class="flex justify-between text-gray-600 dark:text-gray-400"><span>Subtotal</span><span>{{ formatCurrency(subtotalVenta) }}</span></div>
+                            <div v-if="descuentoVenta > 0.004" class="flex justify-between text-green-800 dark:text-green-400"><span>Descuento cliente ({{ descuentoCliente }}%)</span><span>−{{ formatCurrency(descuentoVenta) }}</span></div>
+                        </div>
+
+                        <button type="button" @click="abrirCobro" :disabled="productoVenta.length === 0"
+                            class="flex h-16 w-full items-center justify-between gap-3 rounded-xl bg-blue-600 px-5 text-lg font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:bg-gray-300 disabled:text-gray-600">
+                            <span>Cobrar</span>
+                            <span class="text-2xl font-extrabold">{{ formatCurrency(totalVenta) }}</span>
+                        </button>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Barra inferior en pantallas chicas -->
+            <div v-if="!bloqueoActivo" class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-800 lg:hidden">
+                <button type="button" @click="carritoAbierto = true"
+                    class="flex h-[60px] w-full items-center justify-between gap-3 rounded-xl bg-blue-600 px-5 font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+                    <span class="inline-flex items-center gap-2.5">
+                        <span class="inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-full bg-white px-2 text-[15px] font-extrabold text-blue-700">{{ formatQuantity(unidadesVenta) }}</span>
+                        <span class="text-[17px]">Ver venta</span>
+                    </span>
+                    <span class="text-xl font-extrabold">{{ formatCurrency(totalVenta) }}</span>
                 </button>
             </div>
-        </template>
+        </div>
 
-        <hr class="my-6">
-
-        <div v-if="mensajeBloqueoUI" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
-                <p class="font-semibold">Ventas bloqueadas</p>
-                <p class="mt-1 text-sm">{{ mensajeBloqueoUI }}</p>
+        <!-- Elegir cliente -->
+        <div v-if="clientesModalOpen" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="clientesModalOpen = false">
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-clientes" class="flex max-h-[90dvh] w-full flex-col gap-3 rounded-t-2xl bg-white p-5 shadow-2xl dark:bg-gray-800 sm:max-w-lg sm:rounded-2xl">
+                <div class="flex items-center justify-between">
+                    <h2 id="titulo-clientes" class="text-xl font-bold text-gray-900 dark:text-gray-100">Elegir cliente</h2>
+                    <button type="button" @click="clientesModalOpen = false" aria-label="Cerrar" class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <label class="block">
+                    <span class="sr-only">Buscar cliente</span>
+                    <input v-model="busquedaCliente" type="search" autocomplete="off" placeholder="Buscar cliente"
+                        class="h-12 w-full rounded-xl border-2 border-gray-300 px-4 text-base focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+                </label>
+                <div class="-mx-1 flex min-h-0 flex-col gap-2 overflow-y-auto px-1 pb-1">
+                    <button v-for="cliente in clientesFiltrados" :key="cliente.id" type="button" @click="seleccionarCliente(cliente)"
+                        class="flex min-h-[60px] w-full items-center gap-3 rounded-xl border-2 px-3.5 py-2 text-left text-gray-900 dark:text-gray-100"
+                        :class="cliente.id === clienteActual.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-950' : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800'">
+                        <span class="min-w-0 flex-1">
+                            <span class="block font-semibold">{{ cliente.nombre }}</span>
+                            <span class="block text-[13px] text-gray-600 dark:text-gray-400">
+                                {{ cliente.id === clientePublicoDefault ? 'Solo contado' : (Number(cliente.balance ?? 0) > 0 ? `Saldo pendiente ${formatCurrency(cliente.balance)}` : 'Sin adeudo') }}
+                            </span>
+                        </span>
+                        <span v-if="Number(cliente.porcentaje_descuento) > 0" class="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-[13px] font-bold text-green-800">−{{ cliente.porcentaje_descuento }}%</span>
+                    </button>
+                    <p v-if="clientesFiltrados.length === 0" class="py-6 text-center text-gray-600">No hay clientes con ese nombre.</p>
+                </div>
             </div>
         </div>
 
-        <div v-if="!bloqueoActivo" class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grow">
-                <div class="shadow bg-white md:rounded-md p-4 md-col-span-2 mt-5 md:mt-0">
-                    <div style=" text-align: left;">
-                        <h6>Selecciona un cliente</h6>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label>Cliente: </label>
-                            <vue-single-select id="singleTest" placeholder="Seleccione un cliente" v-model="form.cliente"
-                                option-key="id" option-label="nombre" @input="changeClient($event)"
-                                :class="[selectClient ? 'pointer-events-none' : '', 'w-full max-w-full']" :options="clientes">
-                            </vue-single-select>
-                            <label class="block mt-2 text-sm text-gray-700">Porcentaje de descuento: {{ form.porcentaje_descuento }}%</label>
-                        </div>
-                        <div >
-                            <div>
-                                <label>Productos: </label>
-                                <vue-single-select placeholder="Seleccione un producto" v-model="form.producto"
-                                    option-key="barcode" option-label="nombre" @input="handleSelectChange($event)"
-                                    :options="productosFiltrados" class="w-full max-w-full" :disabled="clientSelected">
-                                </vue-single-select>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Cobro -->
+        <div v-if="pagoModalOpen" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="pagoModalOpen = false">
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-cobro" class="flex max-h-[95dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl dark:bg-gray-800 sm:max-w-lg sm:rounded-2xl">
+                <div class="flex items-center justify-between">
+                    <h2 id="titulo-cobro" class="text-xl font-bold text-gray-900 dark:text-gray-100">{{ esCredito ? 'Venta a crédito' : 'Cobro en efectivo' }}</h2>
+                    <button type="button" @click="pagoModalOpen = false" aria-label="Volver a la venta" class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center dark:border-gray-700 dark:bg-gray-900">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Total a pagar · {{ clienteActual.nombre }}</p>
+                    <p class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{{ formatCurrency(totalVenta) }}</p>
+                </div>
 
+                <label v-if="!esCredito" class="flex flex-col gap-1.5">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Efectivo recibido (opcional)</span>
+                    <input v-model="efectivoRecibido" type="text" inputmode="decimal" autocomplete="off" placeholder="$0.00"
+                        class="h-[60px] rounded-xl border-2 border-gray-300 px-4 text-right text-2xl font-bold text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+                </label>
+                <label v-else class="flex flex-col gap-1.5">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Abono inicial (opcional)</span>
+                    <input v-model.number="form.abono" type="number" inputmode="decimal" min="0" step="0.01" placeholder="$0.00"
+                        class="h-[60px] rounded-xl border-2 border-gray-300 px-4 text-right text-2xl font-bold text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+                </label>
+
+                <div class="grid gap-2" :class="montosRapidos.length === 4 ? 'grid-cols-4' : 'grid-cols-3'">
+                    <button v-for="monto in montosRapidos" :key="monto.label" type="button" @click="elegirMontoRapido(monto.value)"
+                        class="h-[52px] rounded-lg border text-base font-semibold"
+                        :class="(esCredito ? Number(form.abono || 0) === monto.value : montoIngresado === monto.value)
+                            ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100'">
+                        {{ monto.label }}
+                    </button>
+                </div>
+
+                <div v-if="esCredito" class="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3.5 text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                    <span class="font-semibold">Saldo a crédito</span>
+                    <span class="text-2xl font-extrabold">{{ formatCurrency(saldoCredito) }}</span>
+                </div>
+                <div v-else-if="cambio !== null" class="flex items-center justify-between rounded-xl px-4 py-3.5"
+                    :class="cambio >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-50 text-red-800'">
+                    <span class="font-semibold">{{ cambio >= 0 ? 'Cambio' : 'Falta' }}</span>
+                    <span class="text-2xl font-extrabold">{{ formatCurrency(Math.abs(cambio)) }}</span>
+                </div>
+                <p v-if="esCredito && Number(form.abono || 0) > totalVenta" class="-mt-2 text-sm font-semibold text-red-700">El abono no puede ser mayor al total.</p>
+
+                <button type="button" @click="finalizeSale" :disabled="!puedeConfirmar"
+                    class="flex h-16 w-full items-center justify-center gap-2 rounded-xl bg-green-700 text-lg font-bold text-white hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:bg-gray-300 disabled:text-gray-600">
+                    <svg v-if="!isCompletingSale" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+                    {{ isCompletingSale ? 'Guardando venta…' : 'Confirmar venta' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Venta registrada -->
+        <div v-if="ventaCompletada" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6">
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-completada" class="flex w-full flex-col items-center gap-3.5 rounded-t-2xl bg-white px-5 pb-5 pt-7 text-center shadow-2xl dark:bg-gray-800 sm:max-w-lg sm:rounded-2xl">
+                <span class="inline-flex h-[72px] w-[72px] items-center justify-center rounded-full bg-green-100 text-green-800">
+                    <svg class="h-9 w-9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+                </span>
+                <h2 id="titulo-completada" class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">
+                    {{ ventaCompletada.local ? 'Venta guardada en este dispositivo' : 'Venta registrada' }}
+                </h2>
+                <p class="text-[15px] text-gray-600 dark:text-gray-400">
+                    Folio {{ ventaCompletada.folio }} · {{ formatCurrency(ventaCompletada.total) }}{{ ventaCompletada.credito ? ` · saldo a crédito ${formatCurrency(ventaCompletada.saldo)}` : '' }}
+                    <span v-if="ventaCompletada.local" class="block">Se sincronizará cuando vuelva la conexión.</span>
+                </p>
+                <div v-if="ventaCompletada.cambio > 0" class="w-full rounded-xl bg-blue-50 p-4 text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                    <p class="text-sm font-semibold">Cambio a entregar</p>
+                    <p class="text-4xl font-extrabold">{{ formatCurrency(ventaCompletada.cambio) }}</p>
+                </div>
+                <div class="grid w-full grid-cols-2 gap-2.5">
+                    <button type="button" @click="reimprimirVentaCompletada"
+                        class="inline-flex h-[60px] items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white text-base font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
+                        Imprimir ticket
+                    </button>
+                    <button type="button" @click="nuevaVenta"
+                        class="h-[60px] rounded-xl bg-blue-600 text-[17px] font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+                        Nueva venta
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existencias en otras sucursales (F2) -->
+        <div v-if="!bloqueoActivo && isModalOpen" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="closeModal">
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-sucursales" class="flex max-h-[90dvh] w-full flex-col gap-3.5 rounded-t-2xl bg-white p-5 shadow-2xl dark:bg-gray-800 sm:max-w-xl sm:rounded-2xl">
+                <div class="flex items-start justify-between gap-3">
                     <div>
-                        <hr class="my-6">
-
-                        <div style="text-align: center;">
-                            <h6>Ticket de venta</h6>
-                        </div>
-                        <br>
-                            <div class="md:hidden grid grid-cols-1 gap-4 w-full mb-4">
-                                <div v-for="producto in productoVenta" :key="producto.producto.id" class="rounded-lg boder p-4 bg-white shadow-lg">
-                                    <div class="text-sm text-gray-500">Nombre del producto</div>
-                                    <div class="font-semibold text-gray-900">{{ producto.producto.nombre }}</div>
-                                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                        <div>
-                                            <div class="text-gray-500">Cantidad</div>
-                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
-                                                class="w-full border rounded-md p-1" />
-                                        </div>
-                                        <div>
-                                            <div class="text-gray-500">Precio unitario</div>
-                                            <div>{{ producto.precio_unitario }}</div>
-                                        </div>
-                                        <div class="col-span-2">
-                                            <div class="text-gray-500">Importe</div>
-                                            <div>{{ producto.importe }}</div>
-                                        </div>
-                                    </div>
-                                    <div class="flex justify-end mt-3">
-                                        <div class="inline-flex rounded-md shadow-sm" role="group">
-                                            <button @click="eliminarProducto(producto)"
-                                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        <div class="relative overflow-x-auto hidden md:block w-full shadow-md sm:rounded-lg">
-                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                <thead class="text-xs uppercase bg-gray-50">
-                                    <tr class="[&>th]:px-4 [&>th]:py-3">
-                                        <th>Nombre del producto</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio unitario</th>
-                                        <th>Importe</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="producto in productoVenta" :value="producto.producto.id"
-                                        :key="producto.producto.id">
-                                        <td class="px-4 py-2"> {{ producto.producto.nombre }} </td>
-                                        <td class="px-4 py-2">
-                                            <input type="number" min="1" step="0.01" v-model.number="producto.cantidad" @input="updateQuantity(producto)"
-                                                class="w-20 border rounded-md p-1" />
-                                        </td>
-                                        <td class="px-4 py-2"> {{ producto.precio_unitario }} </td>
-                                        <td class="px-4 py-2"> {{ producto.importe }} </td>
-                                        <td class="px-4 py-2">
-                                            <div class="inline-flex rounded-md shadow-sm" role="group">
-                                                <button @click="eliminarProducto(producto)"
-                                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                    Eliminar
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <br>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5 ml-auto">
-                            <div>
-                                <label class="block font-medium text-sm text-gray-700">Tipo de venta</label>
-                                <vue-single-select v-model="tipoVentaSeleccionado" :options="tipoVentaOptions" option-key="value" placeholder="Selecione" class="w-full max-w-full" />
-                            </div>
-                            <div v-if="formVenta.tipoVenta === 'Credito'">
-                                <label class="block font-medium text-sm text-gray-700">Abono a cuenta: </label>
-                                <input type="number" step="0.01" v-model="form.abono"
-                                    class="form-input rounded-md shadow-sm w-full max-w-full" />
-                            </div>
-                        </div>
-                        <hr>
-                        </hr>
-                        <div class="w-full flex flex-col md:flex-row justify-between mb-4 mt-4 px-4 gap-4">
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <button @click="finalizeSale()" :disabled="clientSelected || isCompletingSale"
-                                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    {{ isCompletingSale ? 'Guardando...' : 'Terminar venta' }}
-                                </button>
-                                <button @click="reprintLastTicket" :disabled="isReprintingTicket"
-                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded
-                                            hover:bg-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 disabled:opacity-50
-                                            dark:bg-blue-500 dark:border-blue-500 dark:hover:bg-blue-400">
-                                    <span v-if="isReprintingTicket">Reimprimiendo...</span>
-                                    <span v-else>Reimprimir último ticket</span>
-                                </button>
-                            </div>
-                            <label class="font-bold">Total final: $ {{ total }} </label>
-                        </div>
+                        <h2 id="titulo-sucursales" class="text-xl font-bold text-gray-900 dark:text-gray-100">Existencias en otras sucursales</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Consulta antes de prometer un producto al cliente.</p>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal -->
-        <div v-if="!bloqueoActivo && isModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0">
-            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-lg overflow-y-auto max-h-full">
-                <h2 class="text-xl font-semibold mb-4">Busqueda en sucursales</h2>
-
-                <!-- Input de búsqueda -->
-                <input v-model="b" type="text" placeholder="Buscar producto..."
-                    @keyup.escape="closeModal"
-                    class="w-full p-2 border rounded-md focus:ring focus:ring-blue-300" />
-
-                <!-- Tabla de productos -->
-                <div class="mt-4 overflow-x-auto">
-                    <table class="w-full border-collapse border border-gray-200 text-sm sm:text-base">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="border p-2 sm:p-6">Producto</th>
-                                <th class="border p-2 sm:p-6">Marca</th>
-                                <th class="border p-2 sm:p-6">Sucursal</th>
-                                <th class="border p-2 sm:p-6">Cantidad en stock</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="producto in props.productosSucursal" :key="producto.id">
-                                <td class="border p-2 sm:p-6">{{ producto?.nombre }}</td>
-                                <td class="border p-2 sm:p-6">{{ producto?.marca }}</td>
-                                <td class="border p-2 sm:p-6">{{ producto?.sucursal?.nombre }}</td>
-                                <td class="border p-2 sm:p-6 text-center">{{ producto?.cantidad }}</td>
-                            </tr>
-                            <tr v-if="props.productosSucursal.length === 0">
-                                <td colspan="4" class="border p-2 sm:p-6 text-center text-gray-500">
-                                    No se encontraron productos
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Botón para cerrar -->
-                <div class="mt-4 flex justify-end">
-                    <button @click="closeModal"
-                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
-                        Cerrar (ESC)
+                    <button type="button" @click="closeModal" aria-label="Cerrar" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Modal de Búsqueda de Precio (F3) -->
-        <div v-if="!bloqueoActivo && isPriceSearchModalOpen" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4 sm:p-0 z-50">
-            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full sm:w-4xl max-w-4xl overflow-y-auto max-h-full">
-                <h2 class="text-xl font-semibold mb-4 text-gray-800">Buscar Precio y Stock</h2>
-
-                <!-- Input de búsqueda -->
-                <div class="mb-4">
-                    <input 
-                        id="price-search-input"
-                        v-model="priceSearchQuery" 
-                        @input="searchProductPrice"
-                        @keyup.escape="closePriceSearchModal"
-                        type="text" 
-                        placeholder="Buscar por nombre o código de barras..."
-                        class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg" 
-                    />
+                <div v-if="!connectivity.isUsableOnline" class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                    <svg class="mt-0.5 h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                    <p><strong>Necesitas conexión.</strong> Las existencias de otras sucursales se consultan en el servidor; vuelve a intentarlo cuando regrese la conexión.</p>
                 </div>
 
-                <!-- Indicador de búsqueda -->
-                <div v-if="isSearching" class="text-center py-4">
-                    <div class="inline-flex items-center">
-                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Buscando...
-                    </div>
-                </div>
+                <template v-else>
+                    <label class="relative block">
+                        <span class="sr-only">Producto a buscar</span>
+                        <svg class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+                        <input ref="sucursalSearchInput" v-model="b" type="search" autocomplete="off" placeholder="Nombre o código del producto"
+                            class="h-[52px] w-full rounded-xl border-2 border-gray-300 pl-12 pr-4 text-[17px] text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
+                    </label>
 
-                <!-- Resultados de búsqueda -->
-                <div v-if="!isSearching && priceSearchResults.length > 0" class="max-h-96 overflow-y-auto">
-                    <div class="grid gap-4">
-                        <div 
-                            v-for="producto in priceSearchResults" 
-                            :key="producto.id"
-                            class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition-colors"
-                        >
-                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                <!-- Info del producto -->
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-lg text-gray-800">{{ producto.nombre_completo }}</h3>
-                                    <div class="text-sm text-gray-600 mt-1">
-                                        <span class="inline-block mr-4"><strong>Marca:</strong> {{ producto.marca }}</span>
-                                        <span class="inline-block mr-4"><strong>Categoría:</strong> {{ producto.clasificacion }}</span>
-                                        <span v-if="producto.barcode" class="inline-block"><strong>Código:</strong> {{ producto.barcode }}</span>
+                    <div class="-mx-1 flex min-h-0 flex-col gap-3 overflow-y-auto px-1 pb-1">
+                        <p v-if="b.trim().length < 2" class="py-7 text-center text-[15px] text-gray-600 dark:text-gray-400">Escribe al menos 2 letras del producto.</p>
+                        <p v-else-if="buscandoSucursales" class="py-7 text-center text-[15px] text-gray-600 dark:text-gray-400">Buscando en las sucursales…</p>
+                        <p v-else-if="resultadosSucursales.length === 0" class="py-7 text-center text-[15px] text-gray-600 dark:text-gray-400">Ninguna otra sucursal tiene “{{ b }}” en existencia.</p>
+
+                        <template v-else>
+                            <section v-for="resultado in resultadosSucursales" :key="resultado.id" class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div class="flex items-baseline justify-between gap-3 px-3.5 py-3">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-gray-900 dark:text-gray-100">{{ resultado.nombre }}</p>
+                                        <p class="text-[13px] text-gray-600 dark:text-gray-400">{{ [resultado.marca, resultado.tamano].filter(Boolean).join(' · ') }}</p>
+                                    </div>
+                                    <div class="shrink-0 text-right">
+                                        <p class="font-bold text-gray-900 dark:text-gray-100">{{ formatCurrency(resultado.precio) }}</p>
+                                        <p class="text-xs font-semibold text-gray-600 dark:text-gray-400">{{ formatQuantity(resultado.totalOtras) }} en otras</p>
                                     </div>
                                 </div>
-                                
-                                <!-- Precios y Stock -->
-                                <div class="flex flex-col md:flex-row gap-3 md:gap-6 text-center">
-                                    
-                                    <!-- Precio IEPS -->
-                                    <div class="bg-green-100 rounded-lg p-3 min-w-24">
-                                        <p class="text-xs text-green-600 font-medium">PRECIO</p>
-                                        <p class="text-lg font-bold text-green-800">${{ parseFloat(producto.precio_ieps).toFixed(2) }}</p>
-                                    </div>
-                                    
-                                    <!-- Stock -->
-                                    <div class="rounded-lg p-3 min-w-24" :class="producto.stock > 0 ? 'bg-orange-100' : 'bg-red-100'">
-                                        <p class="text-xs font-medium" :class="producto.stock > 0 ? 'text-orange-600' : 'text-red-600'">STOCK</p>
-                                        <p class="text-lg font-bold" :class="producto.stock > 0 ? 'text-orange-800' : 'text-red-800'">
-                                            {{ producto.stock }}
-                                            <span v-if="producto.stock <= 0" class="text-xs">🚫 Sin stock</span>
-                                        </p>
-                                    </div>
+                                <div class="flex min-h-[52px] items-center gap-3 border-t border-gray-100 bg-gray-50 px-3.5 py-2 dark:border-gray-700 dark:bg-gray-900">
+                                    <span class="min-w-0 flex-1 font-semibold text-gray-900 dark:text-gray-100">{{ page.props.sucursalActiva?.nombre ?? 'Esta sucursal' }}</span>
+                                    <span class="text-xs font-bold text-gray-600 dark:text-gray-400">Esta sucursal</span>
+                                    <span class="min-w-[88px] rounded-md px-2.5 py-1 text-center text-[13px] font-bold" :class="estiloExistencia(resultado.existenciaLocal)">
+                                        {{ resultado.existenciaLocal > 0 ? `${formatQuantity(resultado.existenciaLocal)} pzas` : 'Agotado' }}
+                                    </span>
                                 </div>
-                            </div>
-                        </div>
+                                <div v-for="sucursal in resultado.sucursales" :key="sucursal.id" class="flex min-h-[52px] items-center gap-3 border-t border-gray-100 px-3.5 py-2 dark:border-gray-700">
+                                    <svg class="h-[18px] w-[18px] shrink-0 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" /></svg>
+                                    <span class="min-w-0 flex-1 font-semibold text-gray-900 dark:text-gray-100">{{ sucursal.nombre }}</span>
+                                    <span class="min-w-[88px] rounded-md px-2.5 py-1 text-center text-[13px] font-bold" :class="estiloExistencia(sucursal.cantidad)">
+                                        {{ formatQuantity(sucursal.cantidad) }} pzas
+                                    </span>
+                                </div>
+                            </section>
+                        </template>
                     </div>
-                </div>
-
-                <!-- Sin resultados -->
-                <div v-if="!isSearching && priceSearchQuery && priceSearchResults.length === 0" class="text-center py-8">
-                    <div class="text-gray-500">
-                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                        </svg>
-                        <p class="text-lg">No se encontraron productos</p>
-                        <p class="text-sm">Intenta con otro término de búsqueda</p>
-                    </div>
-                </div>
-
-                <!-- Estado inicial -->
-                <div v-if="!priceSearchQuery && !isSearching" class="text-center py-8">
-                    <div class="text-gray-500">
-                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                        <p class="text-lg">Busca productos por nombre o código</p>
-                        <p class="text-sm">Escribe en el campo de búsqueda para ver precios y stock</p>
-                    </div>
-                </div>
-
-                <!-- Botones -->
-                <div class="mt-6 flex justify-center">
-                    <button @click="closePriceSearchModal"
-                        class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:ring-2 focus:ring-gray-500">
-                        Cerrar (ESC)
-                    </button>
-                </div>
+                </template>
             </div>
         </div>
 

@@ -50,10 +50,10 @@ class VentaController extends Controller
 
         $productosSucursalFiltrado = [];
         if ($request->b != null) {
-            $sucursales = Sucursales::where('id_empresa', $sucursalInfo->id_empresa)
+            $otrasSucursales = Sucursales::where('id_empresa', $sucursalInfo->id_empresa)
                 ->where('id', '!=', $sucursal)
-                ->pluck('id')
-                ->toArray();
+                ->orderBy('nombre')
+                ->get(['id', 'nombre']);
 
             $productosSucursal = Producto::where(function ($query) use ($request) {
                 [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('productos.nombre', "%$request->b%");
@@ -64,29 +64,45 @@ class VentaController extends Controller
             })
                 ->join('cat_marcas', 'cat_marcas.id', 'productos.id_marca')
                 ->select('productos.*', 'cat_marcas.nombre as marca')
+                ->orderBy('productos.nombre')
+                ->limit(30)
                 ->get();
 
+            // Una fila por producto y sucursal con existencia, para comparar entre sucursales.
             foreach ($productosSucursal as $product) {
-                $actualStock = AltaInventario::where('id_producto', $product->id)
-                    ->whereIn('id_sucursal', $sucursales)
-                    ->orderBy('created_at', 'desc')->first();
-                if ($actualStock != null) {
-                    $product->sucursal = Sucursales::find($actualStock->id_sucursal);
-                    $product->cantidad = $actualStock !== null ? $actualStock->cantidad_nueva : 0;
-                    if ($product->cantidad > 0) {
-                        array_push($productosSucursalFiltrado, $product);
+                foreach ($otrasSucursales as $otraSucursal) {
+                    $actualStock = AltaInventario::where('id_producto', $product->id)
+                        ->where('id_sucursal', $otraSucursal->id)
+                        ->orderBy('created_at', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->first();
+                    $cantidad = $actualStock !== null ? (float) $actualStock->cantidad_nueva : 0;
+                    if ($cantidad > 0) {
+                        $productosSucursalFiltrado[] = [
+                            'id' => $product->id,
+                            'nombre' => $product->nombre,
+                            'tamano' => $product->tamano,
+                            'barcode' => $product->barcode,
+                            'marca' => $product->marca,
+                            'precio_ieps' => $product->precio_ieps,
+                            'sucursal' => ['id' => $otraSucursal->id, 'nombre' => $otraSucursal->nombre],
+                            'cantidad' => $cantidad,
+                        ];
                     }
                 }
             }
         }
 
         $productos = Producto::where(function ($query) use ($request) {
-            [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('nombre', "%$request->q%");
-            [$barcodeSql, $barcodeValue] = DatabaseHelper::getUnaccentFunction('barcode', "%$request->q%");
+            [$nombreSql, $nombreValue] = DatabaseHelper::getUnaccentFunction('productos.nombre', "%$request->q%");
+            [$barcodeSql, $barcodeValue] = DatabaseHelper::getUnaccentFunction('productos.barcode', "%$request->q%");
 
             $query->whereRaw($nombreSql, [$nombreValue])
                 ->orWhereRaw($barcodeSql, [$barcodeValue]);
         })
+            ->leftJoin('cat_clasificacions', 'cat_clasificacions.id', '=', 'productos.id_clasificacion')
+            ->leftJoin('cat_marcas', 'cat_marcas.id', '=', 'productos.id_marca')
+            ->select('productos.*', 'cat_clasificacions.nombre as clasificacion', 'cat_marcas.nombre as marca')
             ->get();
         $productoFiltrado = [];
 
