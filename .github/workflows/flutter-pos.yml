@@ -1,0 +1,87 @@
+name: Flutter POS
+on:
+  workflow_dispatch:
+  push:
+    paths: ['clients/agrosys_pos/**', '.github/workflows/flutter-pos.yml']
+  pull_request:
+    paths: ['clients/agrosys_pos/**', '.github/workflows/flutter-pos.yml']
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/agrosys_pos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: dart run build_runner build
+      - run: git diff --exit-code -- lib/data/database.g.dart
+      - run: flutter analyze
+      - run: flutter test
+  native-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            device: macos
+          - os: windows-latest
+            device: windows
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: clients/agrosys_pos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter test integration_test/offline_reopen_test.dart -d ${{ matrix.device }}
+      - run: flutter test integration_test/sync_recovery_test.dart -d ${{ matrix.device }}
+      - run: flutter build ${{ matrix.device }} --release
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/agrosys_pos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build apk --debug
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          working-directory: clients/agrosys_pos
+          script: |
+            flutter test integration_test/offline_reopen_test.dart -d emulator-5554
+            flutter test integration_test/sync_recovery_test.dart -d emulator-5554
+  ios-simulator:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: clients/agrosys_pos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build ios --simulator --debug --no-codesign

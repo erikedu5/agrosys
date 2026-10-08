@@ -179,34 +179,20 @@ class VentaController extends Controller
             ]
         );
 
-        $total = (float) $request->total;
-        if (!is_finite($total)) {
-            throw ValidationException::withMessages([
-                'total' => 'El total debe ser un valor numerico valido.',
-            ]);
-        }
-
-        $abonoInput = $request->abono !== null ? (float) $request->abono : 0;
-        if (!is_finite($abonoInput) || $abonoInput < 0) {
-            throw ValidationException::withMessages([
-                'abono' => 'El abono debe ser un monto numerico valido.',
-            ]);
-        }
-
-        $productosSanitizados = collect($request->producto_venta)->map(function ($producto) {
-            $cantidad = (float) ($producto['cantidad'] ?? 0);
-            $importe = (float) ($producto['importe'] ?? 0);
-
-            if (!is_finite($cantidad) || !is_finite($importe)) {
-                throw ValidationException::withMessages([
-                    'producto_venta' => 'Uno de los productos tiene valores no numericos. Verifique cantidades e importes.',
-                ]);
-            }
-
-            $producto['cantidad'] = $cantidad;
-            $producto['importe'] = $importe;
-            return $producto;
-        })->all();
+        $customer = Clientes::whereKey($request->id_cliente)->where('id_sucursal', $sucursal)->where('activo', true)->first();
+        if (!$customer) throw ValidationException::withMessages(['id_cliente' => 'El cliente no está disponible en esta sucursal.']);
+        $amounts = app(\App\Services\Pos\SaleAmounts::class)->validate([
+            'saleType' => $request->tipo_venta,
+            'total' => $request->total,
+            'items' => collect($request->producto_venta)->map(fn ($item) => [
+                'productId' => $item['producto']['id'], 'quantity' => $item['cantidad'],
+                'unitPrice' => $item['precio_unitario'] ?? null, 'total' => $item['importe'],
+            ])->all(),
+            'payments' => [['method' => 'cash', 'amount' => $request->tipo_venta === 'Contado' ? $request->total : ($request->abono ?? '0.00')]],
+        ], $customer, $sucursalInfo, false);
+        $total = \App\Services\Pos\Decimal::format($amounts['total']);
+        $abonoInput = \App\Services\Pos\Decimal::format($amounts['payment']);
+        $productosSanitizados = $request->producto_venta;
 
         // Iniciar logging del evento
         $logger = \App\Services\EventLogger::start('PROCESAR_VENTA', [
@@ -222,7 +208,7 @@ class VentaController extends Controller
             $id_usuario = Auth::user()->id;
             $venta_pagada = false;
             $fecha_pago = null;
-            if ($request->tipo_venta === 'Contado') {
+            if ($amounts['paid']) {
                 $venta_pagada = true;
                 $fecha_pago = date("Y-m-d H:i:s");
             }
@@ -304,10 +290,10 @@ class VentaController extends Controller
                 $abonado = $abonoInput;
                 $abonoVenta = [
                     'cantidad_abonada' => $abonado,
-                    'cuenta_pagada' => false,
+                    'cuenta_pagada' => $amounts['paid'],
                     'id_cliente' => $request->id_cliente,
                     'id_usuario' => Auth::user()->id,
-                    'is_active' => true,
+                    'is_active' => !$amounts['paid'],
                     'id_sucursal' => $sucursal,
                 ];
             }

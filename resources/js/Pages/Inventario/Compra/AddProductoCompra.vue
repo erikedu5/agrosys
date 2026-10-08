@@ -10,6 +10,7 @@ import InputError from '@/Components/InputError.vue';
 import DialogModal from '@/Components/DialogModal.vue';
 import { notify } from '@/utils/notify';
 import { usePage } from '@inertiajs/vue3';
+import { purchaseDraft, purchaseKey } from '@/utils/purchaseDraft';
 
 const props = defineProps({
     compra: Object,
@@ -42,7 +43,14 @@ const statusOptions = [
 
 const productoOptions = ref(props.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })));
 
-const { form, reset } = usePersistedForm('compraForm', {
+const draftScope = `${page.props.auth?.user?.id}:${page.props.sucursalActiva?.id ?? page.props.auth?.user?.id_sucursal}`;
+const draft = purchaseDraft({
+    getItem: key => window.sessionStorage.getItem(key),
+    setItem: (key, value) => window.sessionStorage.setItem(key, value),
+    removeItem: key => window.sessionStorage.removeItem(key),
+}, draftScope);
+const initialData = {
+    idempotency_key: props.compra === undefined ? purchaseKey() : null,
     id: props.compra !== undefined ? props.compra.id : null,
     proveedor: props.compra !== undefined ? props.compra.proveedor : '',
     fecha_compra: props.compra !== undefined ? new Date(props.compra.fecha_compra).toLocaleString('en-US', { timeZone: 'UTC' }) : new Date(),
@@ -61,7 +69,29 @@ const { form, reset } = usePersistedForm('compraForm', {
     },
     precio_compra: 0,
     pagadaInicial: true
+};
+const { form, reset } = usePersistedForm(`compraForm:${draftScope}:${props.compra?.id ?? 'new'}`, {
+    ...initialData,
+    ...(props.compra === undefined ? draft.load() : {}),
 });
+form.defaults(initialData);
+if (props.compra === undefined) {
+    form.idempotency_key ||= purchaseKey();
+    watch(() => form.data(), data => draft.save(data), { deep: true, immediate: true, flush: 'sync' });
+}
+const resetPurchase = () => {
+    reset();
+    if (props.compra === undefined) {
+        form.idempotency_key = purchaseKey();
+        form.defaults('idempotency_key', form.idempotency_key);
+        draft.clear();
+    }
+};
+const discardDraft = () => {
+    if (window.confirm('¿Descartar este borrador? Si ya intentaste enviarlo, revisa primero el listado de compras.')) {
+        resetPurchase();
+    }
+};
 
 const statusSeleccionado = computed({
     get() {
@@ -75,17 +105,18 @@ const statusSeleccionado = computed({
 
 
 const submit = () => {
+    if (form.processing) return;
     if (form.status == 'adeudo' && form.abonos.length == 0) {
         notify('Debe agregar al menos un abono', 'error');
         return;
     }
     if (props.compra == undefined) {
         form.post(route('compra.store'), {
-            onSuccess: reset,
+            onSuccess: resetPurchase,
         });
     } else {
         form.put(route('compra.update', props.compra.id), {
-            onSuccess: reset,
+            onSuccess: resetPurchase,
         });
     }
 }
@@ -404,9 +435,13 @@ const changeStatus = (event) => {
 
                     <hr class="my-6">
 
-                    <div class="flex justify-end">
+                    <div class="flex justify-end gap-3">
+                        <button v-if="props.compra === undefined" type="button" :disabled="form.processing"
+                            class="px-4 py-2 text-sm border rounded-md" @click="discardDraft">
+                            Descartar borrador
+                        </button>
                         <button
-                            :disabled="props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial"
+                            :disabled="form.processing || (props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial)"
                             class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
                                     hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                     focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white

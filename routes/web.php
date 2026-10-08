@@ -23,7 +23,12 @@ use App\Http\Controllers\Subscription\SubscriptionController;
 
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return Inertia::render('Welcome', [
+        'desktopDownloads' => [
+            'macos' => is_file(public_path('downloads/AgroSys-POS-1.0.0-macOS.dmg')),
+            'windows' => is_file(public_path('downloads/AgroSys-POS-Setup.exe')),
+        ],
+    ]);
 });
 
 Route::get('/api/v1/offline/health', [App\Http\Controllers\OfflineController::class, 'health'])

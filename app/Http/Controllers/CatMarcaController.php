@@ -46,7 +46,7 @@ class CatMarcaController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(Request $request, CatMarca $marca)
     {
         $request->validate([
             'nombre' => 'required',
@@ -54,9 +54,8 @@ class CatMarcaController extends Controller
             'nombre' => 'Agregar un nombre de marca.'
         ]);
 
-        $catMarca = CatMarca::find($request->id);
-        $catMarca->nombre = $request->nombre;
-        $catMarca->save();
+        $marca->nombre = $request->nombre;
+        $marca->save();
         return redirect()->route('marca.index');
     }
 

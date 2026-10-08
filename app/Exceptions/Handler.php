@@ -21,6 +21,7 @@ class Handler extends ExceptionHandler
         'current_password',
         'password',
         'password_confirmation',
+        'code', 'recovery_code', 'challenge', 'token', 'offlineLease',
     ];
 
     /**
@@ -63,9 +64,21 @@ class Handler extends ExceptionHandler
             return $this->convertValidationExceptionToResponse($e, $request);
         }
 
+        // Native endpoints always return JSON, including when Accept is omitted.
+        if ($request->is('api/v1/pos/*')) {
+            $e = $this->prepareException($e);
+            return response()->json(['message' => $this->isHttpException($e) ? ($e->getMessage() ?: 'No autorizado.') : 'No fue posible procesar la solicitud.'], $this->isHttpException($e) ? $e->getStatusCode() : ($e instanceof \Illuminate\Auth\AuthenticationException ? 401 : 500), $this->isHttpException($e) ? $e->getHeaders() : []);
+        }
+
+        // Normalize missing models and authorization exceptions before choosing a status.
+        $e = $this->prepareException($e);
         $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
         if ($status >= 400) {
             $this->logHttpError($request, $e, $status);
+        }
+
+        if ($status === 409) {
+            return $this->renderSafeError($request, 409, $e->getMessage());
         }
 
         if ($request->expectsJson() && !($e instanceof ValidationException)) {
@@ -104,14 +117,14 @@ class Handler extends ExceptionHandler
             ], $status);
         }
 
-        $viewStatus = in_array($status, [404, 419, 429, 500, 503]) ? $status : 500;
+        $viewStatus = in_array($status, [404, 409, 419, 429, 500, 503]) ? $status : 500;
 
         return response()->view("errors.{$viewStatus}", [], $viewStatus);
     }
 
     private function renderInertiaError($request, int $status, ?string $message = null)
     {
-        $normalized = in_array($status, [404, 419, 429, 500, 503]) ? $status : 500;
+        $normalized = in_array($status, [404, 409, 419, 429, 500, 503]) ? $status : 500;
 
         return Inertia::render('Error', [
             'status' => $normalized,

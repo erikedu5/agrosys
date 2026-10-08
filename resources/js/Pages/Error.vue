@@ -19,6 +19,7 @@ const props = defineProps({
 
 const titles = {
     404: 'No encontramos esta pagina',
+    409: 'La compra ya fue registrada',
     419: 'Sesion expirada',
     429: 'Demasiadas solicitudes',
     500: 'Ocurrio un problema',
@@ -27,6 +28,7 @@ const titles = {
 
 const messages = {
     404: 'Verifica el enlace o regresa al inicio.',
+    409: 'Los datos enviados difieren de la compra registrada. Revisa el listado antes de registrar otra compra.',
     419: 'Por seguridad tu sesion caduco. Inicia sesion de nuevo.',
     429: 'Detectamos muchas peticiones en poco tiempo. Intenta otra vez en unos segundos.',
     500: 'Ocurrio un error inesperado. No se expone informacion sensible. Intenta mas tarde o contacta al administrador.',
@@ -78,6 +80,10 @@ const goBack = () => {
                 </p>
             </div>
             <div class="flex flex-wrap gap-3">
+                <a v-if="status === 409" :href="route('compra.index')"
+                    class="px-4 py-3 rounded-xl font-semibold bg-emerald-400 text-slate-950">
+                    Revisar compras
+                </a>
                 <a
                     href="/dashboard"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:-translate-y-0.5 transition"

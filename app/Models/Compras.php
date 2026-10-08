@@ -18,7 +18,10 @@ class Compras extends Model
         'total_credito',
         'fecha_credito',
         'total_credito',
-        'id_sucursal'
+        'id_sucursal',
+        'id_empresa',
+        'idempotency_key',
+        'request_hash',
     ];
 
     protected function getCreatedAtAttribute() {

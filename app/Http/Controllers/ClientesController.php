@@ -137,7 +137,7 @@ class ClientesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(Request $request, string $cliente)
     {
         $request->validate([
             'nombre' => ['required'],
@@ -187,8 +187,8 @@ class ClientesController extends Controller
             ]);
         }
 
-        $cliente = Clientes::where('id', $request->id)
-            ->where('activo', true)->first();
+        $cliente = Clientes::where('id_sucursal', SucursalService::getSucursalActiva())
+            ->where('activo', true)->findOrFail($cliente);
 
         $cliente->nombre = $request->nombre;
         $cliente->porcentaje_descuento = $porcentaje;
@@ -220,8 +220,8 @@ class ClientesController extends Controller
      */
     public function destroy(string $idCliente)
     {
-        $cliente = Clientes::where($idCliente)
-            ->where('activo', true)->first();
+        $cliente = Clientes::where('id_sucursal', SucursalService::getSucursalActiva())
+            ->where('activo', true)->findOrFail($idCliente);
         $cliente->activo = false;
         $cliente->save();
         return redirect()->route('cliente.index');

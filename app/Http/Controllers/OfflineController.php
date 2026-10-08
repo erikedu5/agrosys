@@ -38,6 +38,9 @@ class OfflineController extends Controller
         abort_unless(Str::isUuid($deviceId), 422, 'Se requiere un identificador de dispositivo válido.');
         $offlineExpiresAt = now()->addDays(config('offline.valid_days'));
         $device = OfflineDevice::firstOrNew(['id' => $deviceId]);
+        if ($device->exists) {
+            abort_unless($device->client_kind === 'web' && !$device->revoked_at && (int) $device->user_id === (int) $request->user()->id && (int) $device->branch_id === (int) $branchId, 403, 'El dispositivo pertenece a otro contexto o fue revocado.');
+        }
         if (!$device->exists) $device->authorized = !config('offline.require_activation');
         $device->fill(['user_id' => $request->user()->id, 'branch_id' => $branchId, 'last_seen_at' => now(), 'offline_expires_at' => $offlineExpiresAt]);
         $device->save();
@@ -119,7 +122,7 @@ class OfflineController extends Controller
         abort_unless(in_array($request->user()->tipo, ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'], true), 403, 'El usuario no tiene permiso para registrar ventas.');
         $data = $request->validate(['device_id' => ['required', 'uuid'], 'branch_id' => ['required'], 'operations' => ['required', 'array', 'max:50']]);
         $device = OfflineDevice::query()->whereKey($data['device_id'])->where('user_id', $request->user()->id)->where('branch_id', $data['branch_id'])->first();
-        abort_unless($device?->authorized, 403, 'Dispositivo revocado o no autorizado.');
+        abort_unless($device?->authorized && $device->client_kind === 'web' && !$device->revoked_at, 403, 'Dispositivo revocado o no autorizado.');
 
         $results = [];
         foreach ($data['operations'] as $input) {
@@ -170,6 +173,7 @@ class OfflineController extends Controller
     public function operation(Request $request, string $operationId): JsonResponse
     {
         $operation = OfflineOperation::query()->where('operation_id', $operationId)->where('user_id', $request->user()->id)->firstOrFail();
+        abort_unless(!$operation->request_hash, 403, 'Utilice la API nativa para esta operación.');
         return response()->json(['operationId' => $operation->operation_id, 'status' => $operation->status, 'result' => $operation->result, 'errorCode' => $operation->error_code, 'message' => $operation->error_message]);
     }
 
@@ -212,6 +216,7 @@ class OfflineController extends Controller
     {
         $data = $request->validate(['device_id' => ['required', 'uuid']]);
         $device = OfflineDevice::query()->whereKey($data['device_id'])->where('user_id', $request->user()->id)->firstOrFail();
+        abort_unless($device->client_kind === 'web' && !$device->revoked_at, 403);
         $device->update(['last_seen_at' => now()]);
         return response()->json(['authorized' => $device->authorized, 'offlineExpiresAt' => $device->offline_expires_at->toIso8601String()]);
     }

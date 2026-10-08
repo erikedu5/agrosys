@@ -17,3 +17,11 @@ use Illuminate\Support\Facades\Artisan;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+
+Artisan::command('pos:prune', function () {
+    if (!config('pos.enabled')) return;
+    $snapshots = \Illuminate\Support\Facades\DB::table('pos_snapshots')->where('expires_at', '<=', now())->delete();
+    $challenges = \Illuminate\Support\Facades\DB::table('pos_login_challenges')->where('expires_at', '<=', now())->delete();
+    $this->info("Removed {$snapshots} expired snapshots and {$challenges} challenges.");
+})->purpose('Remove expired native POS snapshots and login challenges');
