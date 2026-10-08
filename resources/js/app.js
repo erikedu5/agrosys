@@ -10,6 +10,7 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import VCalendar from 'v-calendar';
 import 'v-calendar/style.css';
 import { notify } from './utils/notify';
+import { setOfflineContext } from '@/Offline/services/context';
 import { useConnectivityStore } from './stores/connectivity';
 import { canVisitOffline } from './Offline/guards/routePolicies';
 import { useSyncStore } from './stores/sync';
@@ -34,6 +35,9 @@ createInertiaApp({
         // pages. Feature flags control offline business capabilities, not the
         // user's visibility of a real outage.
         const connectivityEnabled = Boolean(initialProps.auth?.user && initialProps.sucursalActiva);
+        const updateOfflineContext = (pageProps) => setOfflineContext({ userId: pageProps.auth?.user?.id, branchId: pageProps.sucursalActiva?.id });
+        updateOfflineContext(initialProps);
+        router.on('navigate', (event) => updateOfflineContext(event.detail.page.props));
         const offlineEnabled = Boolean(connectivityEnabled && initialProps.offline?.enabled);
         connectivity.initialize({
             enabled: connectivityEnabled,
