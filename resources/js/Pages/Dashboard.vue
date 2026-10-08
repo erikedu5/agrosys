@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
 import StatTile from '@/Components/Dashboard/StatTile.vue';
@@ -29,7 +29,7 @@ const props = defineProps({
 });
 
 const page = usePage();
-const q = ref('');
+const q = ref(new URLSearchParams(window.location.search).get('q') ?? '');
 const connectivity = useConnectivityStore();
 const localProducts = ref([]);
 const localLoading = ref(false);
@@ -61,6 +61,34 @@ watch(() => connectivity.mode, mode => {
 
 onMounted(() => {
     if (isOfflineCatalog.value) loadLocalProducts();
+});
+
+// Consulta de tratamientos en un modal; se reabre sola al paginar o al llegar con ?q=
+const tratamientosAbierto = ref(false);
+const tratamientosInput = ref(null);
+const abrirTratamientos = () => {
+    tratamientosAbierto.value = true;
+    nextTick(() => tratamientosInput.value?.focus());
+};
+const cerrarTratamientos = () => {
+    tratamientosAbierto.value = false;
+};
+const onKeydown = (e) => {
+    if (e.key === 'Escape' && tratamientosAbierto.value) cerrarTratamientos();
+};
+watch(tratamientosAbierto, (abierto) => {
+    document.body.style.overflow = abierto ? 'hidden' : '';
+});
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('page') || params.get('q')) {
+        tratamientosAbierto.value = true;
+    }
+    window.addEventListener('keydown', onKeydown);
+});
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKeydown);
+    document.body.style.overflow = '';
 });
 
 const formatCurrency = value => Number(value ?? 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
@@ -166,12 +194,19 @@ const itemsAdeudo = computed(() => (m.value?.clientesAdeudo ?? []).map((c) => ({
                     <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ saludo }}{{ nombre ? `, ${nombre}` : '' }}</h1>
                     <p class="text-gray-600 dark:text-gray-400">{{ subtitulo }}</p>
                 </div>
+                <div class="flex flex-wrap items-center gap-3">
+                <button type="button" @click="abrirTratamientos"
+                    class="inline-flex h-12 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+                    Consulta de tratamientos
+                </button>
                 <div v-if="m && perfil !== 'vendedor'" role="radiogroup" aria-label="Periodo" class="flex gap-1 rounded-xl bg-gray-200/70 p-1 dark:bg-gray-800">
                     <button v-for="p in periodos" :key="p.value" type="button" role="radio" :aria-checked="periodo === p.value" @click="cambiarPeriodo(p.value)"
                         class="h-10 rounded-lg px-4 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                         :class="periodo === p.value ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white' : 'text-gray-700 hover:text-gray-900 dark:text-gray-300'">
                         {{ p.label }}
                     </button>
+                </div>
                 </div>
             </div>
 
@@ -260,20 +295,30 @@ const itemsAdeudo = computed(() => (m.value?.clientesAdeudo ?? []).map((c) => ({
                 </template>
             </div>
 
-            <!-- Consulta de tratamientos -->
-            <section class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:p-5">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Consulta de tratamientos</h2>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Busca por producto, ingrediente activo, enfermedad o tipo de flor.</p>
+        </div>
+
+        <!-- Consulta de tratamientos -->
+        <div v-if="tratamientosAbierto" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="cerrarTratamientos">
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-tratamientos" class="flex max-h-[92dvh] w-full max-w-6xl flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-gray-800 sm:rounded-2xl">
+                <div class="flex flex-col gap-3 border-b border-gray-200 p-4 dark:border-gray-700 sm:p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 id="titulo-tratamientos" class="text-lg font-semibold text-gray-900 dark:text-white">Consulta de tratamientos</h2>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Busca por producto, ingrediente activo, enfermedad o tipo de flor.</p>
+                        </div>
+                        <button type="button" @click="cerrarTratamientos" aria-label="Cerrar"
+                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                     </div>
-                    <label class="relative block w-full sm:max-w-sm">
+                    <label class="relative block">
                         <span class="sr-only">Buscar tratamiento</span>
                         <svg class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
-                        <input v-model="q" type="search" autocomplete="off" placeholder="Buscar producto…"
+                        <input ref="tratamientosInput" v-model="q" type="search" autocomplete="off" placeholder="Buscar producto, enfermedad o flor…"
                             class="h-12 w-full rounded-xl border-gray-300 pl-11 text-base focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
                     </label>
                 </div>
+                <div class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
             <div v-if="isOfflineCatalog" class="mb-5 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                 <p class="font-semibold">Catálogo local</p>
                 <p>Los precios y existencias corresponden a la última sincronización. La existencia incluye movimientos pendientes de este dispositivo.</p>
@@ -394,7 +439,8 @@ const itemsAdeudo = computed(() => (m.value?.clientesAdeudo ?? []).map((c) => ({
                 </div>
             </div>
 
-            </section>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>
