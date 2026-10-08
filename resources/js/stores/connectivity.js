@@ -8,13 +8,17 @@ export const useConnectivityStore = defineStore('connectivity', () => {
     const lastSyncAt = ref(null);
     const lastError = ref(null);
     const pendingCount = ref(0);
+    // Motivo del estado sync_error: { type: 'conflicts' | 'session' | 'server', ... }
+    const syncIssue = ref(null);
     let healthTimer = null;
     let initialized = false;
     let recoveryHandler = null;
     let posWarmed = false;
 
-    const isUsableOnline = computed(() => mode.value === 'online');
-    const isLimited = computed(() => mode.value !== 'online');
+    // En sync_error el servidor sí responde: la app se usa en línea con normalidad
+    // y solo la sincronización offline queda pendiente de revisión.
+    const isUsableOnline = computed(() => ['online', 'sync_error'].includes(mode.value));
+    const isLimited = computed(() => !isUsableOnline.value);
 
     async function warmOfflineShell() {
         if (posWarmed || !('caches' in window)) return;
@@ -52,7 +56,9 @@ export const useConnectivityStore = defineStore('connectivity', () => {
     }
 
     async function healthCheck({ syncCatalog = false } = {}) {
-        if (mode.value !== 'online' || syncCatalog) mode.value = 'recovering';
+        // Solo se pasa a "recuperando" al salir de offline; en línea o con un problema
+        // de sincronización la app sigue usable mientras se revisa.
+        if (mode.value === 'offline') mode.value = 'recovering';
         lastError.value = null;
         try {
             const { data: health } = await axios.get('/api/v1/offline/health', { timeout: 5000, headers: { Accept: 'application/json' } });
@@ -71,22 +77,33 @@ export const useConnectivityStore = defineStore('connectivity', () => {
                 pendingCount.value = recovery?.pending ?? pendingCount.value;
                 lastSyncAt.value = recovery?.syncedAt ?? lastSyncAt.value;
                 if (recovery?.conflicts > 0) {
+                    syncIssue.value = { type: 'conflicts', count: recovery.conflicts };
                     mode.value = 'sync_error';
                     return false;
                 }
             }
+            syncIssue.value = null;
             mode.value = 'online';
             return true;
         } catch (error) {
             const status = error?.response?.status;
             lastError.value = error;
-            mode.value = status && ![502, 503, 504].includes(status) ? 'sync_error' : 'offline';
-            if (mode.value === 'offline') redirectToOfflineHome();
+            if (status && ![502, 503, 504].includes(status)) {
+                syncIssue.value = [401, 419].includes(status)
+                    ? { type: 'session' }
+                    : { type: 'server', status, message: error.response?.data?.message ?? null };
+                mode.value = 'sync_error';
+                return false;
+            }
+            syncIssue.value = null;
+            mode.value = 'offline';
+            redirectToOfflineHome();
             return false;
         }
     }
 
     function markOffline() {
+        syncIssue.value = null;
         mode.value = 'offline';
         redirectToOfflineHome();
     }
@@ -106,5 +123,5 @@ export const useConnectivityStore = defineStore('connectivity', () => {
         healthTimer = window.setInterval(() => healthCheck({ syncCatalog: false }), 45000);
     }
 
-    return { mode, lastSyncAt, lastError, pendingCount, isUsableOnline, isLimited, healthCheck, initialize };
+    return { mode, lastSyncAt, lastError, pendingCount, syncIssue, isUsableOnline, isLimited, healthCheck, initialize };
 });

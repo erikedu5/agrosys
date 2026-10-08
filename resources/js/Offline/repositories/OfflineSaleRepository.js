@@ -79,7 +79,8 @@ export class OfflineSaleRepository {
     async cancelUnsynced(saleId) {
         const saleList = await this.listLocalSales();
         const sale = saleList.find(item => item.id === saleId);
-        if (!sale || sale.status !== 'pending_sync' || sale.operation?.status === 'processing') throw new Error('SALE_CANNOT_BE_CANCELLED_LOCALLY');
+        // Una venta en conflicto fue rechazada por el servidor: nunca se registró allá y puede descartarse.
+        if (!sale || !['pending_sync', 'conflict'].includes(sale.status) || sale.operation?.status === 'processing') throw new Error('SALE_CANNOT_BE_CANCELLED_LOCALLY');
         const occurredAt = new Date().toISOString();
         await runTransaction(['sales', 'outbox', 'inventoryMovements', 'stockSnapshots'], 'readwrite', transaction => {
             transaction.objectStore('sales').put({ ...sale, items: undefined, operation: undefined, status: 'cancelled_local', updatedAt: occurredAt });
