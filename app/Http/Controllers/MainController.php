@@ -8,6 +8,7 @@ use App\Models\CatEnfermedades;
 use App\Models\CatTipoFlor;
 use App\Models\Producto;
 use App\Models\SolucionEnfermedad;
+use App\Services\DashboardMetrics;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -82,8 +83,19 @@ class MainController extends Controller
 
         $sucursalInfo = SucursalService::getSucursalActivaCompleta();
 
+        $user = Auth::user();
+        // El shell offline se guarda en caché: no lleva métricas que quedarían viejas.
+        $esShellOffline = $request->hasHeader('X-Offline-Shell');
+
         return Inertia::render('Dashboard', [
             'solucionesByProduct' => $solucionesByProduct,
+            'perfil' => DashboardMetrics::perfilDe($user),
+            'metricas' => fn () => $esShellOffline ? null : (new DashboardMetrics(
+                $user,
+                (int) $sucursalActiva,
+                $empresaActiva,
+                (int) $request->input('periodo', 30),
+            ))->build(),
             'sucursalActiva' => [
                 'id' => $sucursalInfo->id ?? null,
                 'nombre' => SucursalService::getNombreSucursalActiva(),
