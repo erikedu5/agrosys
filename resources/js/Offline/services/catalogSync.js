@@ -1,14 +1,13 @@
 import axios from 'axios';
 import { offlineProductRepository } from '../repositories/OfflineProductRepository';
-import { getOrCreateDeviceId } from './device';
+import { withDeviceId } from './device';
 import { runTransaction } from '../database/db';
 
 export async function downloadInitialCatalog() {
-    const deviceId = await getOrCreateDeviceId();
-    const { data } = await axios.get('/api/v1/offline/bootstrap', {
+    const { data } = await withDeviceId(deviceId => axios.get('/api/v1/offline/bootstrap', {
         headers: { Accept: 'application/json', 'X-Device-ID': deviceId },
         timeout: 20000,
-    });
+    }));
 
     const metadata = {
         schemaVersion: data.schemaVersion,

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 
 class OfflineController extends Controller
@@ -39,7 +40,15 @@ class OfflineController extends Controller
         $offlineExpiresAt = now()->addDays(config('offline.valid_days'));
         $device = OfflineDevice::firstOrNew(['id' => $deviceId]);
         if ($device->exists) {
-            abort_unless($device->client_kind === 'web' && !$device->revoked_at && (int) $device->user_id === (int) $request->user()->id && (int) $device->branch_id === (int) $branchId, 403, 'El dispositivo pertenece a otro contexto o fue revocado.');
+            abort_unless($device->client_kind === 'web' && !$device->revoked_at, 403, 'El dispositivo fue revocado.');
+            // El navegador usa un identificador por usuario y sucursal; si llega uno registrado
+            // para otro contexto, el cliente genera uno nuevo y reintenta.
+            if ((int) $device->user_id !== (int) $request->user()->id || (int) $device->branch_id !== (int) $branchId) {
+                throw new HttpResponseException(response()->json([
+                    'code' => 'DEVICE_CONTEXT_MISMATCH',
+                    'message' => 'El dispositivo está registrado para otro usuario o sucursal.',
+                ], 409));
+            }
         }
         if (!$device->exists) $device->authorized = !config('offline.require_activation');
         $device->fill(['user_id' => $request->user()->id, 'branch_id' => $branchId, 'last_seen_at' => now(), 'offline_expires_at' => $offlineExpiresAt]);
