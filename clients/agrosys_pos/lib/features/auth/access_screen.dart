@@ -106,8 +106,9 @@ class _AccessScreenState extends State<AccessScreen> {
                                     ],
                                   ),
                                 );
-                                if (confirmed == true && context.mounted)
+                                if (confirmed == true && context.mounted) {
                                   await c.signOut();
+                                }
                               },
                         child: const Text('Cerrar sesión y volver a entrar'),
                       ),
