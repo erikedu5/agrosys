@@ -7,13 +7,75 @@ import 'package:agrosys_pos/core/session_vault.dart';
 import 'package:agrosys_pos/data/database.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fixtures.dart';
 
+class _UnavailableKeychain extends MemorySecretStore {
+  _UnavailableKeychain() {
+    values['active_session'] = 'private-token';
+  }
+  @override
+  Future<String?> read(String key) async => throw PlatformException(
+    code: 'Unexpected security result code',
+    message: 'private-token',
+    details: -25293,
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('incompatible restored server can sign out without deleting context data', () async {
+    final store = MemorySecretStore();
+    final vault = SessionVault(store);
+    await vault.save(fixtureSession());
+    store.values['device_saved'] = 'original-device';
+    var opened = false;
+    final c = AppController(
+      enableAutomaticSync: false,
+      vault: vault,
+      apiFactory: (_) => throw const FormatException('La versión de producción requiere HTTPS.'),
+      openDatabase: (_) async {
+        opened = true;
+        return PosDatabase(NativeDatabase.memory(), fixtureSession().contextId);
+      },
+    );
+    await c.initialize();
+    expect(c.storageFailure, isTrue);
+    expect(c.startupSessionFailure, isTrue);
+    expect(c.error, contains('HTTPS'));
+    expect(opened, isFalse);
+    expect(await vault.load(), isNotNull);
+    await c.signOut();
+    expect(c.storageFailure, isFalse);
+    expect(c.startupSessionFailure, isFalse);
+    expect(c.session, isNull);
+    expect(c.apiUrl, AppController.configuredApiUrl);
+    expect(await vault.load(), isNull);
+    expect(store.values['device_saved'], 'original-device');
+    expect(opened, isFalse);
+    c.dispose();
+  });
+  test(
+    'Keychain failure reports only status and preserves credentials',
+    () async {
+      final store = _UnavailableKeychain();
+      final c = AppController(
+        enableAutomaticSync: false,
+        vault: SessionVault(store),
+      );
+      await c.initialize();
+      expect(c.storageFailure, isTrue);
+      expect(c.canConsult, isFalse);
+      expect(c.error, contains('llavero'));
+      expect(c.error, contains('-25293'));
+      expect(c.error, isNot(contains('private-token')));
+      expect(store.values['active_session'], 'private-token');
+      c.dispose();
+    },
+  );
   test('AC-01/02 tokens are secured; passwords never persisted; device identity survives logout', () async {
     final store = MemorySecretStore();
     final vault = SessionVault(store);

@@ -78,6 +78,39 @@ class _AccessScreenState extends State<AccessScreen> {
                       const Text(
                         'No borres los datos de la aplicación. Cierra y abre para reintentar; si continúa, solicita soporte.',
                       ),
+                    if (c.storageFailure && c.startupSessionFailure)
+                      TextButton(
+                        onPressed: c.busy
+                            ? null
+                            : () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (dialogContext) => AlertDialog(
+                                    title: const Text(
+                                      'Volver a iniciar sesión',
+                                    ),
+                                    content: const Text(
+                                      'Se cerrará la sesión guardada. Las ventas, pagos y pendientes locales se conservan en su contexto original y no se envían a otro servidor. Para recuperarlos debes volver a entrar al servidor y sucursal originales.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(dialogContext, false),
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(dialogContext, true),
+                                        child: const Text('Cerrar sesión'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true && context.mounted)
+                                  await c.signOut();
+                              },
+                        child: const Text('Cerrar sesión y volver a entrar'),
+                      ),
                     if (!c.storageFailure && c.session != null) ...[
                       Text(
                         '${c.session!.userName} · ${c.session!.branch.name}',

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'models.dart';
 import 'pos_api.dart';
@@ -34,10 +35,12 @@ class AppController extends ChangeNotifier {
   List<Branch> branches = [];
   Map<String, dynamic>? _credentials;
   String? _challenge;
-  String apiUrl = const String.fromEnvironment(
+  static const configuredApiUrl = String.fromEnvironment(
     'POS_API_URL',
     defaultValue: 'http://localhost:8000/api/v1/pos',
   );
+  String apiUrl = configuredApiUrl;
+  bool startupSessionFailure = false;
   String? error;
   bool busy = false, online = false, starting = true, storageFailure = false;
   int downloadedPages = 0, generation = 0;
@@ -104,19 +107,41 @@ class AppController extends ChangeNotifier {
   bool get needsActivation => session != null && !canConsult;
 
   Future<void> initialize() async {
+    var stage = 'keychain';
     try {
       session = await vault.load();
       if (session != null) {
+        stage = 'server';
         apiUrl = normalizeApiUrl(session!.apiUrl);
         _api = apiFactory(apiUrl);
+        stage = 'session';
         if (session!.lease != null) {
           await vault.verifyLease(session!, session!.lease!);
         }
+        stage = 'database';
         await _openRepository();
       }
     } catch (e) {
+      final securityStatus = e is PlatformException && e.details is int
+          ? e.details
+          : 'n/a';
+      debugPrint(
+        'POS startup failure: stage=$stage type=${e.runtimeType} securityStatus=$securityStatus',
+      );
       storageFailure = true;
-      error = 'No se pudo abrir el almacenamiento seguro o local. Los datos se conservaron. Reintenta o solicita soporte.';
+      startupSessionFailure = stage == 'server' || stage == 'session';
+      if (stage == 'keychain' && e is PlatformException) {
+        final code = e.details is int ? ' (${e.details})' : '';
+        error =
+            'No se pudo acceder al llavero de macOS/iOS$code. Desbloquea el llavero y permite el acceso a AgroSys cuando el sistema lo solicite. Después cierra y abre la app. Los datos se conservaron.';
+      } else if (stage == 'server' && e is FormatException) {
+        error =
+            '${e.message} La sesión guardada usa un servidor incompatible con esta versión. Puedes cerrar esa sesión y entrar de nuevo; las ventas locales se conservarán.';
+      } else if (stage == 'session') {
+        error = 'No se pudo validar la sesión o su autorización guardada. Los datos se conservaron. Solicita soporte antes de modificar el almacenamiento.';
+      } else {
+        error = 'No se pudo abrir el almacenamiento local. Los datos se conservaron. Reintenta o solicita soporte.';
+      }
     } finally {
       starting = false;
       _expiryTimer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -446,6 +471,9 @@ class AppController extends ChangeNotifier {
     try {
       await repo?.setLocked(true);
       await vault.lock();
+      storageFailure = false;
+      startupSessionFailure = false;
+      apiUrl = configuredApiUrl;
     } catch (_) {
       storageFailure = true;
       error = 'Se bloqueó el acceso, pero no se pudo guardar el cierre de sesión. Conserva los datos y solicita soporte.';

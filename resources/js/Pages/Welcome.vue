@@ -7,7 +7,7 @@ defineProps({
     canRegister: Boolean,
     desktopDownloads: {
         type: Object,
-        default: () => ({ macos: false, windows: false }),
+        default: () => ({ macos: true, windows: false }),
     },
 });
 
@@ -32,7 +32,13 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                             <span class="font-bold text-2xl text-white tracking-tight drop-shadow-md">Agrosys</span>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-8">
+                    <div class="flex items-center gap-3 sm:gap-8">
+                        <a href="#downloads" class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-bold text-white hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M5 17v4h14v-4" />
+                            </svg>
+                            <span>Descargas</span>
+                        </a>
                         <Link :href="route('login')" class="inline-flex min-h-11 items-center px-4 py-2 sm:px-6 rounded-lg bg-white text-green-700 font-bold hover:bg-gray-100 transition duration-300 ease-in-out shadow-md">
                             Ingresar
                         </Link>
