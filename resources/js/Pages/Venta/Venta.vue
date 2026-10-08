@@ -184,8 +184,8 @@ const loadLocalProducts = async (query = '') => {
     }
 };
 
-watch(() => connectivity.mode, (mode) => {
-    if (mode !== 'online') loadLocalProducts();
+watch(() => connectivity.isUsableOnline, (enLinea) => {
+    if (!enLinea) loadLocalProducts();
 });
 
 const busqueda = ref('');
@@ -786,7 +786,7 @@ onUnmounted(() => {
                             <span class="font-semibold text-gray-900 dark:text-gray-100 sm:font-normal sm:text-gray-600 sm:dark:text-gray-400">{{ page.props.sucursalActiva?.nombre ?? 'Sucursal activa' }}</span>
                         </p>
                     </div>
-                    <span v-if="connectivity.mode === 'online'" class="inline-flex h-8 shrink-0 items-center gap-2 rounded-full bg-green-100 px-3 text-xs font-bold text-green-800">
+                    <span v-if="connectivity.isUsableOnline" class="inline-flex h-8 shrink-0 items-center gap-2 rounded-full bg-green-100 px-3 text-xs font-bold text-green-800">
                         <span class="h-2 w-2 rounded-full bg-green-600" aria-hidden="true"></span>En línea
                     </span>
                     <span v-else class="inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-bold text-amber-900">
@@ -827,7 +827,7 @@ onUnmounted(() => {
 
                 <!-- Catálogo -->
                 <main class="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 lg:pb-8 [&>*]:shrink-0">
-                    <div v-if="connectivity.mode !== 'online'" class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                    <div v-if="!connectivity.isUsableOnline" class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
                         <svg class="mt-0.5 h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
                         <p><strong>Catálogo local.</strong> Puedes seguir vendiendo con los productos guardados en este dispositivo; las existencias son estimadas.</p>
                     </div>

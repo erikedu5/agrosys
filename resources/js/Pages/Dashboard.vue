@@ -55,8 +55,8 @@ watch(q, (value) => {
     router.get(route('dashboard', { q: value, periodo: periodo.value }), {}, { preserveState: true, preserveScroll: true, only: ['solucionesByProduct'] });
 });
 
-watch(() => connectivity.mode, mode => {
-    if (mode !== 'online') loadLocalProducts(q.value);
+watch(() => connectivity.isUsableOnline, enLinea => {
+    if (!enLinea) loadLocalProducts(q.value);
 });
 
 onMounted(() => {

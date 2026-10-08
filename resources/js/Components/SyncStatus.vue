@@ -23,8 +23,16 @@ async function retry() {
     catch { notify('No fue posible sincronizar. Las operaciones permanecen guardadas.', 'error'); }
 }
 async function cancelSale(sale) {
-    if (!window.confirm(`¿Cancelar la venta local ${sale.localFolio}?`)) return;
-    try { await offlineSaleRepository.cancelUnsynced(sale.id); await refresh(); notify('Venta local cancelada; la existencia estimada fue compensada.', 'success'); }
+    const pregunta = sale.status === 'conflict'
+        ? `El servidor no aceptó la venta ${sale.localFolio}, así que no quedó registrada. ¿Descartarla de este dispositivo? Si el cliente sí pagó, vuelve a capturarla en línea.`
+        : `¿Cancelar la venta local ${sale.localFolio}?`;
+    if (!window.confirm(pregunta)) return;
+    try {
+        await offlineSaleRepository.cancelUnsynced(sale.id);
+        await refresh();
+        notify(sale.status === 'conflict' ? 'Venta descartada de este dispositivo.' : 'Venta local cancelada; la existencia estimada fue compensada.', 'success');
+        if (connectivity.mode === 'sync_error') await connectivity.healthCheck();
+    }
     catch { notify('Esta venta ya no puede cancelarse localmente.', 'error'); }
 }
 function reprint(sale) {
@@ -32,8 +40,9 @@ function reprint(sale) {
     if (!payload) return;
     printProvisionalTicket({ ...payload, items: payload.items ?? [], occurredAt: sale.occurredAt, deviceId: sale.deviceId, total: sale.total }, { localFolio: sale.localFolio }, payload.ticket ?? { branchName: 'Sucursal local' });
 }
-onMounted(() => { refresh(); timer = window.setInterval(refresh, 15000); });
-onUnmounted(() => window.clearInterval(timer));
+const openPanel = () => { open.value = true; refresh(); };
+onMounted(() => { refresh(); timer = window.setInterval(refresh, 15000); window.addEventListener('agrosys:open-sync', openPanel); });
+onUnmounted(() => { window.clearInterval(timer); window.removeEventListener('agrosys:open-sync', openPanel); });
 </script>
 
 <template>
@@ -49,7 +58,7 @@ onUnmounted(() => window.clearInterval(timer));
                 <div class="flex flex-wrap justify-between gap-2"><div><strong>{{ sale.localFolio }}</strong><div class="text-xs text-gray-500">{{ new Date(sale.occurredAt).toLocaleString('es-MX') }}</div></div><span class="rounded bg-gray-100 px-2 py-1 text-xs">{{ sale.status }}</span></div>
                 <p class="mt-2">Total: ${{ Number(sale.total).toFixed(2) }}</p>
                 <p v-if="sale.operation?.lastErrorMessage" class="mt-1 text-sm text-red-700">{{ sale.operation.lastErrorMessage }}</p>
-                <div class="mt-3 flex gap-2"><button @click="reprint(sale)" class="rounded border px-3 py-1 text-sm">Reimprimir</button><button v-if="sale.status === 'pending_sync'" @click="cancelSale(sale)" class="rounded border border-red-300 px-3 py-1 text-sm text-red-700">Cancelar local</button></div>
+                <div class="mt-3 flex gap-2"><button @click="reprint(sale)" class="rounded border px-3 py-1 text-sm">Reimprimir</button><button v-if="sale.status === 'pending_sync'" @click="cancelSale(sale)" class="rounded border border-red-300 px-3 py-1 text-sm text-red-700">Cancelar local</button><button v-if="sale.status === 'conflict'" @click="cancelSale(sale)" class="rounded border border-red-300 px-3 py-1 text-sm text-red-700">Descartar</button></div>
             </article>
         </section>
     </div>
