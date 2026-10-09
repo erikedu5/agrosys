@@ -6,7 +6,8 @@ import 'models.dart';
 class ApiFailure implements Exception {
   final int? status;
   final String message;
-  ApiFailure(this.status, this.message);
+  final Map<String, List<String>> errors;
+  ApiFailure(this.status, this.message, {this.errors = const {}});
   bool get blocksAccess => status == 401 || status == 402 || status == 403;
   bool get isConnectionFailure => status == null;
   @override
@@ -91,6 +92,15 @@ class PosApi {
                 : status >= 500
                 ? 'El servidor no pudo completar la solicitud. Reintenta.'
                 : serverMessage ?? 'La solicitud no pudo completarse.'),
+        errors: response is Map && response['errors'] is Map
+            ? {
+                for (final e in (response['errors'] as Map).entries)
+                  e.key.toString():
+                      (e.value is List ? e.value as List : [e.value])
+                          .map((v) => v.toString())
+                          .toList(),
+              }
+            : const {},
       );
     } on FormatException {
       rethrow;

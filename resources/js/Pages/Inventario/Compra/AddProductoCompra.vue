@@ -59,6 +59,7 @@ const initialData = {
     productos: props.compra !== undefined ? props.compra.productos.map(p => ({ ...p, barcode: p.barcode ?? '' })) : [],
     abonos: props.compra !== undefined ? props.compra.abonos : [],
     total_credito: props.compra !== undefined ? props.compra.total_credito : 0.0,
+    expected_debt: props.compra !== undefined ? props.compra.total_credito : null,
     fecha_credito: props.compra !== undefined ? props.compra.fecha_credito : null,
     producto: '',
     abono: '',

@@ -144,6 +144,7 @@ class MemorySecretStore implements SecretStore {
 class FixtureApi extends PosApi {
   bool disconnected = false;
   bool salesEnabled = false;
+  List<String>? permissions;
   int? deniedStatus;
   bool requiresTwoFactor = false;
   final calls = <String>[];
@@ -193,17 +194,21 @@ class FixtureApi extends PosApi {
         'offlineLease': await signedLease(
           fixtureSession(device: device),
           pair: key,
-          permissions: salesEnabled
-              ? [
-                  'catalog.read',
-                  'product.search',
-                  'stock.read_estimated',
-                  'account.read_estimated',
-                  'sale.create',
-                  'sale.credit',
-                  'sale.print_local_ticket',
-                ]
-              : null,
+          permissions:
+              permissions ??
+              (salesEnabled
+                  ? [
+                      'catalog.read',
+                      'product.search',
+                      'stock.read_estimated',
+                      'account.read_estimated',
+                      'sale.create',
+                      'sale.credit',
+                      'sale.print_local_ticket',
+                      'customer.read',
+                      'sale.history',
+                    ]
+                  : null),
         ),
       };
     }

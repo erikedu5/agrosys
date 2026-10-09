@@ -88,6 +88,7 @@ class CatalogRepository {
       product.priceCents,
       (stock?.quantityUnits ?? 0) + delta.read<int>('delta'),
       product.revision,
+      classification: product.classification,
     );
   }
 
@@ -118,16 +119,32 @@ class CatalogRepository {
   Future<String?> defaultCustomer() async =>
       (await db.select(db.syncMetadata).getSingle()).defaultCustomerId;
 
-  Future<List<ProductView>> products(String query) async {
+  Future<List<String>> productCategories() async {
+    final rows = await db
+        .customSelect(
+          "SELECT DISTINCT classification FROM local_products WHERE active=1 AND classification<>''",
+          readsFrom: {db.localProducts},
+        )
+        .get();
+    return rows.map((r) => r.read<String>('classification')).toList()
+      ..sort((a, b) => normalizedName(a).compareTo(normalizedName(b)));
+  }
+
+  Future<List<ProductView>> products(
+    String query, {
+    String? classification,
+  }) async {
     final rows = await db
         .customSelect(
           r'''SELECT p.*, COALESCE(s.quantity_units,0) + COALESCE((SELECT SUM(e.stock_delta) FROM local_effects e WHERE e.entity_id=p.server_id AND e.kind='stock' AND e.reflected=0),0) AS estimated_quantity
       FROM local_products p LEFT JOIN stock_snapshots s ON s.product_id=p.server_id
-      WHERE p.active=1 AND (p.search_name LIKE ? ESCAPE '\' OR p.server_id=? OR p.barcode=?) ORDER BY p.search_name LIMIT 200''',
+      WHERE p.active=1 AND (p.search_name LIKE ? ESCAPE '\' OR p.server_id=? OR p.barcode=?) AND (? IS NULL OR p.classification=?) ORDER BY p.search_name LIMIT 200''',
           variables: [
             Variable(searchPattern(query)),
             Variable(query.trim()),
             Variable(query.trim()),
+            Variable<String>(classification),
+            Variable<String>(classification),
           ],
           readsFrom: {db.localProducts, db.stockSnapshots, db.localEffects},
         )
@@ -142,6 +159,7 @@ class CatalogRepository {
             r.read<int>('price_cents'),
             r.read<int>('estimated_quantity'),
             r.read<String>('revision'),
+            classification: r.read<String>('classification'),
           ),
         )
         .toList();
@@ -300,6 +318,9 @@ class CatalogRepository {
                 searchName: normalizedName(product['name'] as String),
                 barcode: product['barcode'] as String,
                 size: product['size'] as String? ?? '',
+                classification: Value(
+                  product['classification'] as String? ?? '',
+                ),
                 priceCents: decimalUnits(product['price']),
                 active: product['active'] as bool,
                 revision: download.revision!,

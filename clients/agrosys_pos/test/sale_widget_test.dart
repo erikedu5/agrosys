@@ -16,7 +16,19 @@ void main() {
       testWidgets(
         'AC-04/15 responsive $type checkout, ticket and history ${size.width}',
         (tester) async {
-          final api = FixtureApi()..salesEnabled = true;
+          final api = FixtureApi(
+            pages: [
+              snapshot(
+                products: [
+                  {...product(), 'classification': 'Semillas'},
+                  {
+                    ...product(id: '11', name: 'Abono'),
+                    'classification': 'Fertilizantes',
+                  },
+                ],
+              ),
+            ],
+          )..salesEnabled = true;
           final controller = AppController(
             enableAutomaticSync: false,
             vault: SessionVault(MemorySecretStore()),
@@ -54,6 +66,18 @@ void main() {
             await navigate(tester, 'Venta');
             await settle();
             expect(find.text('Punto de venta'), findsOneWidget);
+            await tester.tap(find.widgetWithText(ChoiceChip, 'Fertilizantes'));
+            await settle();
+            expect(find.byTooltip('Agregar Semillas de maíz'), findsNothing);
+            expect(find.byTooltip('Agregar Abono'), findsOneWidget);
+            await tester.ensureVisible(
+              find.widgetWithText(ChoiceChip, 'Semillas'),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.widgetWithText(ChoiceChip, 'Semillas'));
+            await settle();
+            expect(find.byTooltip('Agregar Abono'), findsNothing);
+
             await tester.tap(find.byTooltip('Agregar Semillas de maíz'));
             await settle();
             await tester.tap(find.byTooltip('Agregar Semillas de maíz'));
@@ -116,7 +140,7 @@ void main() {
             await tester.runAsync(() async {
               expect((await controller.sales!.history()).length, 1);
               expect(
-                (await controller.repository!.products(''))
+                (await controller.repository!.products('10'))
                     .single
                     .estimatedQuantity,
                 800,

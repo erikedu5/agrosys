@@ -347,6 +347,8 @@ void main() {
     ]) {
       raw.execute('DROP TABLE $table');
     }
+    raw.execute('DROP TABLE inventory_requests');
+    raw.execute('ALTER TABLE local_products DROP COLUMN classification');
     raw.execute('PRAGMA user_version=2');
     raw.close();
     await open();

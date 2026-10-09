@@ -92,10 +92,10 @@ class ControllerErrorRegressionTest extends TestCase
         $this->postJson(route('compra.store'), $this->purchasePayload())->assertOk();
 
         $this->assertDatabaseCount('compras', 1);
-        $this->assertDatabaseHas('alta_inventarios', [
-            'id_producto' => $this->product->id, 'id_sucursal' => $this->branch->id,
-            'cantidad_actual' => 0, 'cantidad_nueva' => 5,
-        ]);
+        $stock = \App\Models\AltaInventario::where('id_producto', $this->product->id)
+            ->where('id_sucursal', $this->branch->id)->sole();
+        $this->assertEquals(0, $stock->cantidad_actual);
+        $this->assertEquals(5, $stock->cantidad_nueva);
     }
 
     public function test_invalid_purchase_inputs_return_validation_errors_without_writes(): void

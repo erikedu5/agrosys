@@ -982,6 +982,9 @@
                     "offlineExpiresAt": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "offlineLease": {
+                      "$ref": "#/components/schemas/Lease"
                     }
                   },
                   "required": [
@@ -1088,7 +1091,23 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Context"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "lease_id": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
@@ -1733,6 +1752,3031 @@
             }
           }
         }
+      }
+    },
+    "/inventory/{productId}/movements": {
+      "post": {
+        "operationId": "posInventoryMovements",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "page": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed inventory movements, scoped to the authorized company and branch. Requires inventory.movements.read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "movements",
+                    "page",
+                    "hasMore"
+                  ],
+                  "properties": {
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    },
+                    "movements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "type",
+                          "before",
+                          "change",
+                          "after",
+                          "user",
+                          "date"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "before": {
+                            "type": "string"
+                          },
+                          "change": {
+                            "type": "string"
+                          },
+                          "after": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/options": {
+      "post": {
+        "operationId": "posInventoryOptions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "categories",
+                    "brands",
+                    "manageCosts"
+                  ],
+                  "properties": {
+                    "manageCosts": {
+                      "type": "boolean"
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "brands": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        }
+      }
+    },
+    "/inventory/products": {
+      "post": {
+        "operationId": "posInventoryCreate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InventoryProductInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        }
+      }
+    },
+    "/inventory/{productId}/detail": {
+      "post": {
+        "operationId": "posInventoryDetail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "product"
+                  ],
+                  "properties": {
+                    "product": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "version",
+                        "nombre",
+                        "tamano",
+                        "id_clasificacion",
+                        "id_marca",
+                        "precio_ieps"
+                      ],
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "minLength": 64,
+                          "maxLength": 64
+                        },
+                        "nombre": {
+                          "type": "string",
+                          "maxLength": 255
+                        },
+                        "tamano": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "id_clasificacion": {
+                          "type": "string"
+                        },
+                        "id_marca": {
+                          "type": "string"
+                        },
+                        "barcode": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 255
+                        },
+                        "ingrediente_activo": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 255
+                        },
+                        "precio_ieps": {
+                          "type": "string",
+                          "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                        },
+                        "precio_unitario": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "ieps": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/inventory/{productId}/update": {
+      "post": {
+        "operationId": "posInventoryUpdate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InventoryProductInput"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "version"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/inventory/{productId}/prices": {
+      "post": {
+        "operationId": "posInventoryPrices",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                      },
+                      "precio_ieps": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "precio_unitario": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "ieps": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "operation_id",
+                      "version",
+                      "precio_ieps"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/inventory/{productId}/add": {
+      "post": {
+        "operationId": "posInventoryAdd",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "cantidad"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "cantidad": {
+                        "type": "string",
+                        "pattern": "^\\d{1,6}(?:\\.\\d{1,2})?$"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/inventory/{productId}/preview": {
+      "post": {
+        "operationId": "posInventoryPreview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "action"
+                    ],
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "reset",
+                          "delete"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryDestructivePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "description": "Restricted to adminEmpresa and superAdmin. Online confirmation uses a fresh product and stock revision. Deletion preserves history and rejects positive stock in any company branch; reset affects only the selected branch. Replays return the original result even after deletion or new stock movements."
+      }
+    },
+    "/inventory/{productId}/reset": {
+      "post": {
+        "operationId": "posInventoryReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InventoryDestructiveInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "description": "Restricted to adminEmpresa and superAdmin. Online confirmation uses a fresh product and stock revision. Deletion preserves history and rejects positive stock in any company branch; reset affects only the selected branch. Replays return the original result even after deletion or new stock movements."
+      }
+    },
+    "/inventory/{productId}/delete": {
+      "post": {
+        "operationId": "posInventoryDelete",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InventoryDestructiveInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "description": "Restricted to adminEmpresa and superAdmin. Online confirmation uses a fresh product and stock revision. Deletion preserves history and rejects positive stock in any company branch; reset affects only the selected branch. Replays return the original result even after deletion or new stock movements."
+      }
+    },
+    "/purchases/list": {
+      "post": {
+        "operationId": "stockPurchases",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {
+                      "q": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "page": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "page",
+                    "hasMore"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PurchaseSummary"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots."
+      }
+    },
+    "/purchases/{id}/detail": {
+      "post": {
+        "operationId": "stockPurchaseDetail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {}
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "purchase"
+                  ],
+                  "properties": {
+                    "purchase": {
+                      "$ref": "#/components/schemas/PurchaseDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/purchases/create": {
+      "post": {
+        "operationId": "stockPurchaseCreate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "supplier",
+                      "date",
+                      "payment",
+                      "items"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "supplier": {
+                        "type": "string",
+                        "maxLength": 255
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "payment": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "productId",
+                            "quantity",
+                            "cost"
+                          ],
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "pattern": "^[1-9][0-9]*$"
+                            },
+                            "quantity": {
+                              "type": "string",
+                              "pattern": "^\\d{1,6}(?:\\.\\d{1,2})?$"
+                            },
+                            "cost": {
+                              "type": "string",
+                              "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockWorkflowResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots."
+      }
+    },
+    "/purchases/{id}/payment": {
+      "post": {
+        "operationId": "stockPurchasePayment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "amount",
+                      "expected_debt"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "expected_debt": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockWorkflowResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/transfers/list": {
+      "post": {
+        "operationId": "stockTransfers",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {
+                      "q": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "page": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "page",
+                    "hasMore"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TransferSummary"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots."
+      }
+    },
+    "/transfers/destinations": {
+      "post": {
+        "operationId": "stockDestinations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {}
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "destinations"
+                  ],
+                  "properties": {
+                    "destinations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[1-9][0-9]*$"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots."
+      }
+    },
+    "/transfers/{id}/detail": {
+      "post": {
+        "operationId": "stockTransferDetail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [],
+                    "properties": {}
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "transfer"
+                  ],
+                  "properties": {
+                    "transfer": {
+                      "$ref": "#/components/schemas/TransferDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/transfers/create": {
+      "post": {
+        "operationId": "stockTransferCreate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "destination_id",
+                      "items"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "destination_id": {
+                        "type": "string",
+                        "pattern": "^[1-9][0-9]*$"
+                      },
+                      "notes": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "items": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 100,
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "productId",
+                            "quantity"
+                          ],
+                          "properties": {
+                            "productId": {
+                              "type": "string",
+                              "pattern": "^[1-9][0-9]*$"
+                            },
+                            "quantity": {
+                              "type": "string",
+                              "pattern": "^\\d{1,6}(?:\\.\\d{1,2})?$"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockWorkflowResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots."
+      }
+    },
+    "/transfers/{id}/receive": {
+      "post": {
+        "operationId": "stockTransferReceive",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "confirmed"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "confirmed": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockWorkflowResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "description": "Online only. Purchases follow web roles vendedor/admin/adminEmpresa/superAdmin; transfers follow inventario/admin/adminEmpresa/superAdmin. Current device and branch context enforced. Reuse exact operation_id and payload on ambiguous replies. Purchases compute totals server-side; payment uses current expected_debt. Transfer creation does not move stock; destination reception is atomic and idempotent, with FIFO lots.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
       }
     }
   },
@@ -2443,6 +5487,432 @@
               "expiresAt",
               "user",
               "branches"
+            ]
+          }
+        ]
+      },
+      "InventoryProductInput": {
+        "type": "object",
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "nombre": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "tamano": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "id_clasificacion": {
+            "type": "string"
+          },
+          "id_marca": {
+            "type": "string"
+          },
+          "barcode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255
+          },
+          "ingrediente_activo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 255
+          },
+          "precio_ieps": {
+            "type": "string",
+            "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+          },
+          "precio_unitario": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ieps": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "operation_id",
+          "nombre",
+          "tamano",
+          "id_clasificacion",
+          "id_marca",
+          "precio_ieps"
+        ]
+      },
+      "InventoryWriteResult": {
+        "type": "object",
+        "required": [
+          "operationId",
+          "status",
+          "productId"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "const": "confirmed"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "movementId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          }
+        }
+      },
+      "InventoryDestructiveInput": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "version",
+          "stock_revision",
+          "confirmed"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "stock_revision": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "confirmed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "InventoryDestructivePreview": {
+        "type": "object",
+        "required": [
+          "productId",
+          "name",
+          "size",
+          "version",
+          "stockRevision",
+          "quantity",
+          "branchesWithStock"
+        ],
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "stockRevision": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          },
+          "branchesWithStock": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "quantity"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "PurchaseSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "supplier",
+          "date",
+          "dueDate",
+          "status",
+          "total",
+          "debt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+          },
+          "debt": {
+            "type": "string",
+            "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+          }
+        }
+      },
+      "TransferSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "folio",
+          "status",
+          "originId",
+          "origin",
+          "destinationId",
+          "destination",
+          "date",
+          "receivedAt",
+          "notes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "originId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "destinationId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "receivedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "PurchaseDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PurchaseSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "items",
+              "payments"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "productId",
+                    "name",
+                    "size",
+                    "quantity",
+                    "cost"
+                  ],
+                  "properties": {
+                    "productId": {
+                      "type": "string",
+                      "pattern": "^[1-9][0-9]*$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "string",
+                      "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                    },
+                    "cost": {
+                      "type": "string",
+                      "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                    }
+                  }
+                }
+              },
+              "payments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "amount",
+                    "date"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[1-9][0-9]*$"
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                    },
+                    "date": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "TransferDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransferSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "items"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "productId",
+                    "name",
+                    "size",
+                    "quantity"
+                  ],
+                  "properties": {
+                    "productId": {
+                      "type": "string",
+                      "pattern": "^[1-9][0-9]*$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "string",
+                      "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "StockWorkflowResult": {
+        "type": "object",
+        "required": [
+          "operationId",
+          "status"
+        ],
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed"
+            ]
+          },
+          "purchaseId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "transferId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "purchaseId"
+            ]
+          },
+          {
+            "required": [
+              "transferId"
             ]
           }
         ]

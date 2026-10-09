@@ -1,5 +1,15 @@
 # Agrosys POS — cliente Flutter
 
+Versión actual: **2.0.0+6**. Incluye ventas con filtro por categoría, inventario,
+compras y transferencias con menús según los permisos del usuario.
+La gestión de inventario, compras y transferencias requiere conexión.
+
+El paquete macOS universal (Intel y Apple Silicon) se entrega como
+`dist/AgroSys-POS-2.0.0-macOS.dmg`, con checksum SHA-256. La landing utiliza
+`public/downloads/AgroSys-POS-2.0.0-macOS.dmg` del repositorio principal.
+Compilar con `--dart-define-from-file=config/production.json`.
+La firma actual es ad hoc; el paquete no está notarizado.
+
 Entrega de fases 2–4: autenticación/2FA, consulta local, ventas de contado/crédito,
 ticket, historial y sincronización recuperable con el servidor. Ventas e IDs se
 guardan primero en SQLite/Outbox; su envío conserva el contenido original.

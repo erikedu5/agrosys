@@ -8,6 +8,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 part 'database.g.dart';
 
 class LocalProducts extends Table {
+  TextColumn get classification => text().withDefault(const Constant(''))();
   TextColumn get serverId => text()();
   TextColumn get name => text()();
   TextColumn get searchName => text()();
@@ -80,6 +81,18 @@ class DownloadPages extends Table {
   TextColumn get payload => text()();
   @override
   Set<Column> get primaryKey => {ordinal};
+}
+
+// Durable online requests are retried explicitly with their original identity.
+class InventoryRequests extends Table {
+  TextColumn get operationId => text()();
+  TextColumn get path => text()();
+  TextColumn get permission => text()();
+  TextColumn get payload => text()();
+  TextColumn get status => text().withDefault(const Constant('pending'))();
+  TextColumn get result => text().nullable()();
+  @override
+  Set<Column> get primaryKey => {operationId};
 }
 
 // Phase 3 writes these effects in the same transaction as sales/outbox.
@@ -213,6 +226,7 @@ class SyncWorkers extends Table {
     DeviceSequence,
     ReceiptAttempts,
     SyncWorkers,
+    InventoryRequests,
   ],
 )
 class PosDatabase extends _$PosDatabase {
@@ -240,17 +254,21 @@ class PosDatabase extends _$PosDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
-      if (from < 1 || from > 3 || to != 4) {
+      if (from < 1 || from > 5 || to != 6) {
         throw StateError(
           'Migración no soportada. Conserva la base y solicita soporte.',
         );
+      }
+      if (from < 6) await m.createTable(inventoryRequests);
+      if (from < 5) {
+        await m.addColumn(localProducts, localProducts.classification);
       }
       if (from == 1) {
         await m.createTable(downloads);
@@ -264,11 +282,11 @@ class PosDatabase extends _$PosDatabase {
         await m.createTable(outbox);
         await m.createTable(deviceSequence);
         await m.createTable(receiptAttempts);
-      } else {
+      } else if (from < 4) {
         await m.addColumn(outbox, outbox.serverResult);
         await m.addColumn(outbox, outbox.errorCode);
       }
-      await m.createTable(syncWorkers);
+      if (from < 4) await m.createTable(syncWorkers);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

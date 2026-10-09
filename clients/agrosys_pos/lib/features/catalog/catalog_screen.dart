@@ -8,6 +8,8 @@ import '../../core/models.dart';
 import '../../ui/web_theme.dart';
 import '../sales/sale_screen.dart';
 import '../sales/history_screen.dart';
+import '../inventory/inventory_screen.dart';
+import '../inventory/stock_workflow_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   final AppController controller;
@@ -36,6 +38,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   void didUpdateWidget(CatalogScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!_allowed(_section)) {
+      _section = 0;
+      _query.clear();
+    }
     if (_generation != widget.controller.generation) _load();
   }
 
@@ -53,7 +59,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
     try {
       final repo = widget.controller.repository!;
       final products = await repo.products(_query.text);
-      final customers = await repo.customers(_query.text);
+      final customers = widget.controller.canReadCustomers
+          ? await repo.customers(_query.text)
+          : <CustomerView>[];
       if (!mounted || request != _searchRequest) return;
       setState(() {
         _products = products;
@@ -77,7 +85,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _debounce = Timer(const Duration(milliseconds: 150), _load);
   }
 
+  bool _allowed(int section) => switch (section) {
+    1 => widget.controller.canReadCustomers,
+    2 => widget.controller.canSell,
+    3 => widget.controller.canReadHistory,
+    5 => widget.controller.canReadInventory,
+    6 => widget.controller.hasPermission('purchase.read'),
+    7 => widget.controller.hasPermission('transfer.read'),
+    _ => true,
+  };
+
   void _navigate(int section) {
+    if (!_allowed(section)) return;
     setState(() {
       _section = section;
       _query.clear();
@@ -88,6 +107,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
+    if (!_allowed(_section)) _section = 0;
     final wide = MediaQuery.sizeOf(context).width >= 840;
     return CallbackShortcuts(
       bindings: {
@@ -165,11 +185,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
             if (wide && _menuOpen) const VerticalDivider(width: 1),
             Expanded(
               child: IndexedStack(
-                index: _section == 2
-                    ? 1
-                    : _section == 3
-                    ? 2
-                    : 0,
+                index: switch (_section) {
+                  2 => 1,
+                  3 => 2,
+                  5 => 3,
+                  6 => 4,
+                  7 => 5,
+                  _ => 0,
+                },
                 children: [
                   Padding(
                     padding: EdgeInsets.all(wide ? 28 : 16),
@@ -251,8 +274,44 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       ],
                     ),
                   ),
-                  SaleScreen(controller: c, active: _section == 2),
-                  HistoryScreen(controller: c),
+                  if (c.canSell)
+                    SaleScreen(
+                      key: ValueKey('sale-${c.session!.contextId}'),
+                      controller: c,
+                      active: _section == 2,
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (c.canReadHistory)
+                    HistoryScreen(
+                      key: ValueKey('history-${c.session!.contextId}'),
+                      controller: c,
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (c.canReadInventory && _section == 5)
+                    InventoryScreen(
+                      key: ValueKey('inventory-${c.session!.contextId}'),
+                      controller: c,
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (c.hasPermission('purchase.read') && _section == 6)
+                    StockWorkflowScreen(
+                      key: ValueKey('purchases-${c.session!.contextId}'),
+                      controller: c,
+                      kind: 'purchases',
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (c.hasPermission('transfer.read') && _section == 7)
+                    StockWorkflowScreen(
+                      key: ValueKey('transfers-${c.session!.contextId}'),
+                      controller: c,
+                      kind: 'transfers',
+                    )
+                  else
+                    const SizedBox.shrink(),
                 ],
               ),
             ),
@@ -284,43 +343,47 @@ class _CatalogScreenState extends State<CatalogScreen> {
           children: [
             for (final item in const [
               (0, 'Productos', Icons.inventory_2_outlined),
+              (5, 'Inventario', Icons.warehouse_outlined),
+              (6, 'Compras', Icons.shopping_bag_outlined),
+              (7, 'Transferencias', Icons.swap_horiz),
               (2, 'Venta', Icons.point_of_sale),
               (1, 'Clientes', Icons.people_outline),
               (3, 'Historial', Icons.receipt_long_outlined),
               (4, 'Cuenta', Icons.person_outline),
             ])
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: _section == item.$1
-                      ? const Color(0xffeff6ff)
-                      : Colors.white,
-                  side: BorderSide(
-                    color: _section == item.$1
-                        ? WebTheme.blue
-                        : WebTheme.border,
-                    width: 2,
+              if (_allowed(item.$1))
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: _section == item.$1
+                        ? const Color(0xffeff6ff)
+                        : Colors.white,
+                    side: BorderSide(
+                      color: _section == item.$1
+                          ? WebTheme.blue
+                          : WebTheme.border,
+                      width: 2,
+                    ),
+                  ),
+                  onPressed: () {
+                    _navigate(item.$1);
+                    close?.call();
+                  },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(item.$3, color: WebTheme.blue, size: 28),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.$2,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onPressed: () {
-                  _navigate(item.$1);
-                  close?.call();
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(item.$3, color: WebTheme.blue, size: 28),
-                    const SizedBox(height: 10),
-                    Text(
-                      item.$2,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
         const SizedBox(height: 20),

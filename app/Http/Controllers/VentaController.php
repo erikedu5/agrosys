@@ -241,30 +241,14 @@ class VentaController extends Controller
                     'total_productos' => round($producto_venta['importe'], 2),
                 ]);
 
-                //Reduccion de stock;
-                $stockStatus = AltaInventario::where('id_producto', $producto_venta['producto']['id'])
-                    ->where('id_sucursal', $sucursalInfo->id)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-
-                $cantidadBase = $stockStatus?->cantidad_nueva ?? 0;
-
-                if ($cantidadBase < $producto_venta['cantidad']) {
-                    $logger->warning('Stock insuficiente, venta con stock negativo', [
-                        'producto_id' => $producto_venta['producto']['id'],
-                        'stock_actual' => $cantidadBase,
-                        'cantidad_vendida' => $producto_venta['cantidad'],
-                    ]);
+                $altaInventario = app(\App\Services\InventoryManagement::class)->moveStock(
+                    $request->user(), $sucursalInfo, (int) $producto_venta['producto']['id'],
+                    -\App\Services\Pos\Decimal::units($producto_venta['cantidad'], 'cantidad'), AltaInventario::EVENTO_VENTA
+                );
+                $cantidadBase = $altaInventario->cantidad_actual;
+                if ($altaInventario->cantidad_nueva < 0) {
+                    $logger->warning('Stock insuficiente, venta con stock negativo', ['producto_id' => $producto_venta['producto']['id'], 'stock_actual' => $cantidadBase]);
                 }
-
-                $altaInventario = new AltaInventario();
-                $altaInventario->cantidad_actual = $cantidadBase;
-                $altaInventario->cantidad_nueva = $cantidadBase - $producto_venta['cantidad'];
-                $altaInventario->id_usuario = Auth::user()->id;
-                $altaInventario->id_producto = $producto_venta['producto']['id'];
-                $altaInventario->id_sucursal = $sucursalInfo->id;
-                $altaInventario->tipo_evento = AltaInventario::EVENTO_VENTA;
-                $altaInventario->save();
 
                 $logger->step("Producto {$index} procesado", [
                     'producto_id' => $producto_venta['producto']['id'],

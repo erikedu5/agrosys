@@ -78,13 +78,22 @@ class PosDeviceController extends Controller
         return response()->json(['authorized' => false]);
     }
 
-    public function heartbeat(Request $request, PosAccess $access)
+    public function heartbeat(Request $request, PosAccess $access, OfflineLease $leases)
     {
-        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1']);
+        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1', 'lease_id' => 'nullable|uuid']);
         $device = $access->device($request, strtolower($data['device_id']), $data['branch_id']);
+        $branch = $access->branch($request->user(), $data['branch_id']);
         $device->last_seen_at = now();
         $device->save();
+        $stored = DB::table('pos_offline_leases')->where('id', $data['lease_id'] ?? '')
+            ->where('device_id', $device->id)->where('user_id', $request->user()->id)
+            ->where('branch_id', $branch->id)->first();
+        $claims = $stored ? json_decode($stored->claims, true, flags: JSON_THROW_ON_ERROR) : null;
+        $result = ['authorized' => true, 'offlineExpiresAt' => $device->offline_expires_at->toIso8601String()];
+        if ($claims && ($claims['permissions'] ?? []) !== $access->permissions($request->user(), $branch)) {
+            $result['offlineLease'] = $leases->issue($request->user(), $branch, $device, $access);
+        }
 
-        return response()->json(['authorized' => true, 'offlineExpiresAt' => $device->offline_expires_at->toIso8601String()]);
+        return response()->json($result);
     }
 }

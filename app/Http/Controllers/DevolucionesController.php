@@ -178,6 +178,10 @@ class DevolucionesController extends Controller
                     'devolucion_id' => $Devoluciones->id,
                 ]);
 
+                $productIds = collect($detallesValidos)->pluck('id_producto')->unique()->sort()->values();
+                $lockedProducts = Producto::whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get();
+                abort_unless($lockedProducts->count() === $productIds->count(), 422, 'Un producto ya no está disponible para devolver existencias.');
+
                 foreach ($detallesValidos as $index => $det) {
                     DevolucionesDetalle::create([
                         'id_devolucion' => $Devoluciones->id,
@@ -189,7 +193,7 @@ class DevolucionesController extends Controller
                     // Regresar al inventario
                     $ultima = AltaInventario::where('id_producto', $det['id_producto'])
                         ->where('id_sucursal', SucursalService::getSucursalActiva())
-                        ->orderByDesc('id')
+                        ->orderByDesc('id')->lockForUpdate()
                         ->first();
 
                     $actual = $ultima ? (float) $ultima->cantidad_nueva : 0;

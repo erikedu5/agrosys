@@ -11,14 +11,9 @@ use App\Models\Producto;
 use App\Services\SucursalService;
 use App\Services\PurchaseIdempotency;
 use App\Models\Sucursales;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use App\Models\AltaInventario;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class ComprasController extends Controller
 {
@@ -88,111 +83,14 @@ class ComprasController extends Controller
         if ($existing = PurchaseIdempotency::find($branch->id_empresa, $key, $hash)) {
             return $this->purchaseResponse($request, $existing);
         }
-
-        // Iniciar logging del evento
-        $logger = \App\Services\EventLogger::start('PROCESAR_COMPRA', [
-            'proveedor' => $request->proveedor,
-            'total_compra' => $request->total_compra,
-            'num_productos' => count($request->productos),
-            'status' => $request->status,
-            'sucursal_id' => SucursalService::getSucursalActiva(),
-        ]);
-
+        $logger = \App\Services\EventLogger::start('PROCESAR_COMPRA', ['proveedor' => $data['proveedor'],
+            'total_compra' => $data['total_compra'], 'num_productos' => count($data['productos']), 'sucursal_id' => $branch->id]);
         try {
-            try {
-                $compra = DB::transaction(function () use ($request, $logger, $branch, $key, $hash) {
-                    $fecha_compra = Carbon::parse($request->fecha_compra)->format('Y-m-d H:i:s');
-                    $fecha_credito = Carbon::parse($fecha_compra)->addDays(30);
-                    $compra = Compras::create([
-                        'proveedor' => $request->proveedor,
-                        'fecha_compra' => $fecha_compra,
-                        'total_compra' => $request->total_compra,
-                        'status' => $request->status,
-                        'fecha_credito' => $fecha_credito,
-                        'total_credito' => $request->total_credito,
-                        'id_sucursal' => $branch->id,
-                        'id_empresa' => $branch->id_empresa,
-                        'idempotency_key' => $key,
-                        'request_hash' => $hash,
-                    ]);
-
-                    $logger->step('Compra creada', [
-                        'compra_id' => $compra->id,
-                        'fecha' => $fecha_compra,
-                        'total' => $request->total_compra,
-                    ]);
-
-                    foreach ($request->productos as $index => $producto) {
-                        ComprasProductos::create([
-                            'id_compra' => $compra->id,
-                            'id_producto' => $producto['id'],
-                            'cantidad' => $producto['cantidad'],
-                            'cantidad_disponible' => $producto['cantidad'],
-                            'precio' => $producto['precio_compra']
-                        ]);
-
-                        $altaInventarioSaved = AltaInventario::where('id_producto', $producto['id'])
-                            ->where('id_sucursal', SucursalService::getSucursalActiva())
-                            ->orderBy('created_at', 'desc')->first();
-
-                        $cantidadActual = $altaInventarioSaved?->cantidad_nueva ?? 0;
-                        $altaInventario = new AltaInventario();
-                        $altaInventario->cantidad_actual = $cantidadActual;
-                        $altaInventario->cantidad_nueva = $cantidadActual + $producto['cantidad'];
-                        $altaInventario->id_usuario = Auth::user()->id;
-                        $altaInventario->id_producto = $producto['id'];
-                        $altaInventario->id_sucursal = SucursalService::getSucursalActiva();
-                        $altaInventario->tipo_evento = AltaInventario::EVENTO_ALTA;
-                        Log::info($altaInventario);
-                        $altaInventario->save();
-
-                        $logger->step("Producto {$index} procesado", [
-                            'producto_id' => $producto['id'],
-                            'cantidad' => $producto['cantidad'],
-                            'precio' => $producto['precio_compra'],
-                            'stock_anterior' => $cantidadActual,
-                            'stock_nuevo' => $altaInventario->cantidad_nueva,
-                        ]);
-                    }
-
-                    foreach ($request->input('abonos', []) as $abono) {
-                        $abono = ComprasAbonos::create([
-                            'id_compra' => $compra->id,
-                            'cantidad_abonada' => $abono['cantidad_abonada']
-                        ]);
-                    }
-
-                    $logger->step('Abonos registrados', [
-                        'num_abonos' => count($request->input('abonos', [])),
-                    ]);
-
-                    return $compra;
-                });
-
-            } catch (UniqueConstraintViolationException $e) {
-                // A concurrent request may have committed while this insert waited.
-                $compra = PurchaseIdempotency::find($branch->id_empresa, $key, $hash);
-                if (!$compra) {
-                    throw $e;
-                }
-            }
-
-            $logger->success([
-                'compra_id' => $compra->id,
-                'total' => $compra->total_compra,
-            ]);
-
-            return $this->purchaseResponse($request, $compra);
-
-        } catch (\Exception $e) {
-            $logger->error($e, [
-                'proveedor' => $request->proveedor,
-                'productos' => array_map(fn($p) => [
-                    'id' => $p['id'],
-                    'cantidad' => $p['cantidad']
-                ], $request->productos),
-            ]);
-
+            $purchase = app(\App\Services\PurchaseManagement::class)->record($request->user(), $branch, $data);
+            $logger->success(['compra_id' => $purchase->id, 'total' => $purchase->total_compra]);
+            return $this->purchaseResponse($request, $purchase);
+        } catch (\Throwable $e) {
+            $logger->error($e);
             throw $e;
         }
     }
@@ -266,27 +164,14 @@ class ComprasController extends Controller
             'status' => 'required|in:pagada,pagado,adeudo,retrasada',
             'productos' => 'required|array|min:1',
             'total_credito' => 'required|numeric|min:0|max:99999999.99',
+            'expected_debt' => 'sometimes|numeric|min:0|max:99999999.99',
             'abonos' => 'sometimes|array',
+            'abonos.*.id' => 'sometimes|integer',
             'abonos.*.cantidad_abonada' => 'required|numeric|min:0.01|max:99999999.99',
         ]);
 
-        $compra = Compras::where('id_sucursal', SucursalService::getSucursalActiva())->findOrFail($compra);
-        DB::transaction(function () use ($request, $compra) {
-            $compra->total_credito = $request->total_credito;
-            if ($request->total_credito == 0) {
-                $compra->status = 'pagado';
-            }
-            $compra->save();
-
-            foreach ($request->input('abonos', []) as $abono) {
-                if (!isset($abono['id'])) {
-                    $abono = ComprasAbonos::create([
-                        'id_compra' => $compra->id,
-                        'cantidad_abonada' => $abono['cantidad_abonada']
-                    ]);
-                }
-            }
-        });
+        app(\App\Services\PurchaseManagement::class)->webPayments(
+            Sucursales::findOrFail(SucursalService::getSucursalActiva()), (int) $compra, $request->all());
 
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
             ->where('id_sucursal', SucursalService::getSucursalActiva())

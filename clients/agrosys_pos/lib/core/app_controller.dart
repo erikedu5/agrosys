@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:drift/drift.dart' show Value;
+import 'package:uuid/uuid.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -90,6 +94,260 @@ class AppController extends ChangeNotifier {
       : SalesRepository(repository!, session!);
   bool get canSell =>
       canConsult && session!.permissions.contains('sale.create');
+  bool hasPermission(String permission) =>
+      canConsult && session!.permissions.contains(permission);
+  bool get canReadInventory => hasPermission('inventory.read');
+  bool get canReadCustomers => hasPermission('customer.read');
+  bool get canReadHistory => hasPermission('sale.history');
+  Future<Map<String, dynamic>> inventoryMovements(
+    String productId, {
+    int page = 1,
+  }) async {
+    if (!hasPermission('inventory.movements.read')) {
+      throw ApiFailure(403, 'No tienes permiso para consultar movimientos.');
+    }
+    final checked = session!;
+    try {
+      final result = await _api!.request(
+        'inventory/$productId/movements',
+        token: checked.token,
+        body: {...checked.requestContext, 'page': page},
+      );
+      if (session?.contextId != checked.contextId ||
+          session?.token != checked.token ||
+          !hasPermission('inventory.movements.read')) {
+        throw ApiFailure(403, 'La sesión cambió. Abre de nuevo el inventario.');
+      }
+      return result;
+    } on ApiFailure catch (e) {
+      if (session?.contextId == checked.contextId &&
+          session?.token == checked.token) {
+        await _apiFailure(e);
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  bool _inventoryWriting = false;
+  bool canWriteInventory(String permission) =>
+      online && !busy && !syncBusy && hasPermission(permission);
+
+  Future<Map<String, dynamic>> inventoryFormData({String? productId}) async {
+    if (!online || !canReadInventory) {
+      throw ApiFailure(null, 'Conéctate para gestionar inventario.');
+    }
+    final checked = session!;
+    final options = await _api!.request(
+      'inventory/options',
+      token: checked.token,
+      body: checked.requestContext,
+    );
+    final detail = productId == null
+        ? null
+        : await _api!.request(
+            'inventory/$productId/detail',
+            token: checked.token,
+            body: checked.requestContext,
+          );
+    if (session?.contextId != checked.contextId ||
+        session?.token != checked.token ||
+        !canReadInventory) {
+      throw ApiFailure(403, 'La sesión cambió. Abre de nuevo el inventario.');
+    }
+    return {...options, ...?detail};
+  }
+
+  Future<Map<String, dynamic>> inventoryDestructivePreview(
+    String productId,
+    String action,
+  ) async {
+    final permission = action == 'delete'
+        ? 'product.delete'
+        : 'inventory.reset';
+    if (!canWriteInventory(permission)) {
+      throw ApiFailure(
+        403,
+        'Conéctate con un usuario autorizado para continuar.',
+      );
+    }
+    final checked = session!;
+    try {
+      final result = await _api!.request(
+        'inventory/$productId/preview',
+        token: checked.token,
+        body: {...checked.requestContext, 'action': action},
+      );
+      if (session?.contextId != checked.contextId ||
+          session?.token != checked.token ||
+          !hasPermission(permission)) {
+        throw ApiFailure(403, 'La sesión cambió. Abre de nuevo el inventario.');
+      }
+      return result;
+    } on ApiFailure catch (e) {
+      if (session?.contextId == checked.contextId &&
+          session?.token == checked.token) {
+        await _apiFailure(e);
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> stockWorkflowData(
+    String path,
+    String permission, {
+    Map<String, dynamic> body = const {},
+  }) async {
+    if (!online || !hasPermission(permission)) {
+      throw ApiFailure(
+        403,
+        'Conéctate con un usuario autorizado para consultar este módulo.',
+      );
+    }
+    final checked = session!;
+    try {
+      final result = await _api!.request(
+        path,
+        token: checked.token,
+        body: {...body, ...checked.requestContext},
+      );
+      if (session?.contextId != checked.contextId ||
+          session?.token != checked.token ||
+          !hasPermission(permission)) {
+        throw ApiFailure(403, 'La sesión cambió. Abre de nuevo el módulo.');
+      }
+      return result;
+    } on ApiFailure catch (e) {
+      if (session?.contextId == checked.contextId &&
+          session?.token == checked.token) {
+        await _apiFailure(e);
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> prepareInventoryRequest(
+    String path,
+    String permission,
+    Map<String, dynamic> payload,
+  ) async {
+    if (!canWriteInventory(permission)) {
+      throw ApiFailure(
+        403,
+        'No puedes realizar esta operación en este momento.',
+      );
+    }
+    final id = const Uuid().v4();
+    await repository!.db
+        .into(repository!.db.inventoryRequests)
+        .insert(
+          InventoryRequestsCompanion.insert(
+            operationId: id,
+            path: path,
+            permission: permission,
+            payload: jsonEncode({...payload, 'operation_id': id}),
+          ),
+        );
+    return id;
+  }
+
+  Future<Map<String, dynamic>> retryInventoryRequest(String id) async {
+    final repo = repository;
+    if (repo == null) throw ApiFailure(403, 'La sesión no está disponible.');
+    final row = await (repo.db.select(
+      repo.db.inventoryRequests,
+    )..where((t) => t.operationId.equals(id))).getSingle();
+    if (repo != repository) {
+      throw ApiFailure(403, 'La sesión cambió. Abre de nuevo el inventario.');
+    }
+    if (!canWriteInventory(row.permission)) {
+      throw ApiFailure(
+        403,
+        'Se requiere conexión y autorización para guardar inventario.',
+      );
+    }
+    if (row.status == 'rejected') {
+      throw ApiFailure(
+        409,
+        'La solicitud fue rechazada. Recarga el producto y corrige los datos.',
+      );
+    }
+    if (row.result != null) return object(jsonDecode(row.result!));
+    final checked = session!;
+    busy = true;
+    _inventoryWriting = true;
+    notifyListeners();
+    try {
+      await _stopSync();
+      final result = await _api!.request(
+        row.path,
+        token: checked.token,
+        body: {...object(jsonDecode(row.payload)), ...checked.requestContext},
+      );
+      if (session?.contextId != checked.contextId ||
+          session?.token != checked.token ||
+          repository != repo) {
+        throw ApiFailure(
+          403,
+          'La sesión cambió. Revisa la solicitud en su sucursal original.',
+        );
+      }
+      final resourceField = row.path.startsWith('purchases/')
+          ? 'purchaseId'
+          : row.path.startsWith('transfers/')
+          ? 'transferId'
+          : 'productId';
+      if (result['operationId'] != id ||
+          result['status'] != 'confirmed' ||
+          result[resourceField] is! String ||
+          (result[resourceField] as String).isEmpty) {
+        throw ApiFailure(
+          500,
+          'No llegó una confirmación válida. Reintenta la misma solicitud.',
+        );
+      }
+      await (repo.db.update(
+        repo.db.inventoryRequests,
+      )..where((t) => t.operationId.equals(id))).write(
+        InventoryRequestsCompanion(
+          status: const Value('confirmed'),
+          result: Value(jsonEncode(result)),
+        ),
+      );
+      String? syncWarning;
+      try {
+        final info = await repo.info();
+        await repo.startDownload(
+          incremental: info.cursor != null,
+          cursor: info.cursor,
+        );
+        await _sync!.synchronize();
+        await _refreshInfo();
+      } catch (_) {
+        syncWarning = 'Guardado en el servidor. Sincroniza el catálogo para ver las existencias y precios actualizados.';
+      }
+      return {...result, 'syncWarning': ?syncWarning};
+    } on ApiFailure catch (e) {
+      if ([404, 409, 422].contains(e.status)) {
+        await (repo.db.update(repo.db.inventoryRequests)
+              ..where((t) => t.operationId.equals(id)))
+            .write(const InventoryRequestsCompanion(status: Value('rejected')));
+      }
+      if (session?.contextId == checked.contextId &&
+          session?.token == checked.token) {
+        await _apiFailure(e);
+      }
+      rethrow;
+    } finally {
+      busy = false;
+      _inventoryWriting = false;
+      generation++;
+      notifyListeners();
+    }
+  }
+
   Future<StoredReceipt?> completeSale(SaleRequest request) async {
     StoredReceipt? result;
     await _action(() async {
@@ -286,6 +544,7 @@ class AppController extends ChangeNotifier {
   Future<void> _runSync({bool full = false, required bool manual}) {
     if (_syncRun != null) return _syncRun!;
     if (_disposed ||
+        _inventoryWriting ||
         storageFailure ||
         session == null ||
         repository == null ||
@@ -384,15 +643,32 @@ class AppController extends ChangeNotifier {
           _disposed) {
         return;
       }
-      await api.request(
+      final heartbeat = await api.request(
         'device/heartbeat',
         token: checked.token,
-        body: checked.requestContext,
+        body: {
+          ...checked.requestContext,
+          'lease_id': checked.lease == null
+              ? null
+              : object(checked.lease!['claims'])['leaseId'],
+        },
       );
       if (session?.contextId != checked.contextId ||
           session?.token != checked.token ||
           _disposed) {
         return;
+      }
+      if (heartbeat['offlineLease'] != null) {
+        final lease = object(heartbeat['offlineLease']);
+        await vault.verifyLease(checked, lease);
+        if (session?.contextId != checked.contextId ||
+            session?.token != checked.token ||
+            _disposed) {
+          return;
+        }
+        session = session!.copyWith(lease: lease);
+        await vault.save(session!);
+        generation++;
       }
       online = true;
       _scheduleSync();

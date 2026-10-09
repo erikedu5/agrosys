@@ -7,7 +7,7 @@ defineProps({
     canRegister: Boolean,
     desktopDownloads: {
         type: Object,
-        default: () => ({ macos: true, windows: false }),
+        default: () => ({ macos: false, windows: false }),
     },
 });
 
@@ -83,17 +83,27 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
         <section id="downloads" class="border-b border-green-100 bg-green-50 py-16">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="max-w-2xl">
-                    <h2 class="text-3xl font-extrabold text-green-800">AgroSys POS en tu computadora</h2>
+                    <h2 class="text-3xl font-extrabold text-green-800">AgroSys POS 2.0 en tu computadora</h2>
                     <p class="mt-4 text-lg text-gray-600">
-                        Consulta productos y clientes, y registra ventas de contado o crédito desde la app.
-                        Activa tu dispositivo y descarga la información con Internet para trabajar sin conexión.
+                        Registra ventas de contado o crédito y consulta tu catálogo sin conexión después de activar tu dispositivo.
+                        La versión 2.0 incorpora inventario, compras y transferencias con conexión a Internet.
                     </p>
+                </div>
+                <div class="mt-6 rounded-xl border border-green-200 bg-white p-5">
+                    <h3 class="font-bold text-green-800">Novedades de la versión 2.0</h3>
+                    <ul class="mt-3 grid list-disc gap-2 pl-5 text-gray-700 sm:grid-cols-2">
+                        <li>Ventas con filtro por categoría.</li>
+                        <li>Inventario, existencias y cardex.</li>
+                        <li>Registro de compras y abonos.</li>
+                        <li>Transferencias entre sucursales.</li>
+                    </ul>
+                    <p class="mt-3 text-sm text-gray-600">Los menús y acciones disponibles dependen del rol de tu usuario. La gestión de inventario, compras y transferencias requiere conexión.</p>
                 </div>
                 <div class="mt-8 grid gap-6 sm:grid-cols-2">
                     <div class="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
                         <h3 class="text-xl font-bold text-gray-900">macOS</h3>
-                        <p class="mt-2 text-gray-600">Versión 1.0.0 · Intel y Apple Silicon</p>
-                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-1.0.0-macOS.dmg" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para macOS</a>
+                        <p class="mt-2 text-gray-600">Versión 2.0.0 · Intel y Apple Silicon</p>
+                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-2.0.0-macOS.dmg" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para macOS</a>
                         <button v-else disabled class="mt-5 min-h-11 rounded-lg bg-gray-100 px-6 py-3 font-bold text-gray-500">Próximamente para macOS</button>
                         <p class="mt-3 text-sm text-gray-500">Abre el DMG y arrastra AgroSys POS a Applications. Esta versión de prueba no está notarizada; macOS puede bloquear su apertura.</p>
                     </div>

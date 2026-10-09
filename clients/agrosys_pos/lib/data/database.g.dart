@@ -9,6 +9,18 @@ class $LocalProductsTable extends LocalProducts
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $LocalProductsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _classificationMeta = const VerificationMeta(
+    'classification',
+  );
+  @override
+  late final GeneratedColumn<String> classification = GeneratedColumn<String>(
+    'classification',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _serverIdMeta = const VerificationMeta(
     'serverId',
   );
@@ -96,6 +108,7 @@ class $LocalProductsTable extends LocalProducts
   );
   @override
   List<GeneratedColumn> get $columns => [
+    classification,
     serverId,
     name,
     searchName,
@@ -117,6 +130,15 @@ class $LocalProductsTable extends LocalProducts
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('classification')) {
+      context.handle(
+        _classificationMeta,
+        classification.isAcceptableOrUnknown(
+          data['classification']!,
+          _classificationMeta,
+        ),
+      );
+    }
     if (data.containsKey('server_id')) {
       context.handle(
         _serverIdMeta,
@@ -190,6 +212,10 @@ class $LocalProductsTable extends LocalProducts
   LocalProduct map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return LocalProduct(
+      classification: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}classification'],
+      )!,
       serverId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}server_id'],
@@ -232,6 +258,7 @@ class $LocalProductsTable extends LocalProducts
 }
 
 class LocalProduct extends DataClass implements Insertable<LocalProduct> {
+  final String classification;
   final String serverId;
   final String name;
   final String searchName;
@@ -241,6 +268,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   final bool active;
   final String revision;
   const LocalProduct({
+    required this.classification,
     required this.serverId,
     required this.name,
     required this.searchName,
@@ -253,6 +281,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['classification'] = Variable<String>(classification);
     map['server_id'] = Variable<String>(serverId);
     map['name'] = Variable<String>(name);
     map['search_name'] = Variable<String>(searchName);
@@ -266,6 +295,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
 
   LocalProductsCompanion toCompanion(bool nullToAbsent) {
     return LocalProductsCompanion(
+      classification: Value(classification),
       serverId: Value(serverId),
       name: Value(name),
       searchName: Value(searchName),
@@ -283,6 +313,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return LocalProduct(
+      classification: serializer.fromJson<String>(json['classification']),
       serverId: serializer.fromJson<String>(json['serverId']),
       name: serializer.fromJson<String>(json['name']),
       searchName: serializer.fromJson<String>(json['searchName']),
@@ -297,6 +328,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'classification': serializer.toJson<String>(classification),
       'serverId': serializer.toJson<String>(serverId),
       'name': serializer.toJson<String>(name),
       'searchName': serializer.toJson<String>(searchName),
@@ -309,6 +341,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   }
 
   LocalProduct copyWith({
+    String? classification,
     String? serverId,
     String? name,
     String? searchName,
@@ -318,6 +351,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     bool? active,
     String? revision,
   }) => LocalProduct(
+    classification: classification ?? this.classification,
     serverId: serverId ?? this.serverId,
     name: name ?? this.name,
     searchName: searchName ?? this.searchName,
@@ -329,6 +363,9 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   );
   LocalProduct copyWithCompanion(LocalProductsCompanion data) {
     return LocalProduct(
+      classification: data.classification.present
+          ? data.classification.value
+          : this.classification,
       serverId: data.serverId.present ? data.serverId.value : this.serverId,
       name: data.name.present ? data.name.value : this.name,
       searchName: data.searchName.present
@@ -347,6 +384,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   @override
   String toString() {
     return (StringBuffer('LocalProduct(')
+          ..write('classification: $classification, ')
           ..write('serverId: $serverId, ')
           ..write('name: $name, ')
           ..write('searchName: $searchName, ')
@@ -361,6 +399,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
 
   @override
   int get hashCode => Object.hash(
+    classification,
     serverId,
     name,
     searchName,
@@ -374,6 +413,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LocalProduct &&
+          other.classification == this.classification &&
           other.serverId == this.serverId &&
           other.name == this.name &&
           other.searchName == this.searchName &&
@@ -385,6 +425,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
 }
 
 class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
+  final Value<String> classification;
   final Value<String> serverId;
   final Value<String> name;
   final Value<String> searchName;
@@ -395,6 +436,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   final Value<String> revision;
   final Value<int> rowid;
   const LocalProductsCompanion({
+    this.classification = const Value.absent(),
     this.serverId = const Value.absent(),
     this.name = const Value.absent(),
     this.searchName = const Value.absent(),
@@ -406,6 +448,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     this.rowid = const Value.absent(),
   });
   LocalProductsCompanion.insert({
+    this.classification = const Value.absent(),
     required String serverId,
     required String name,
     required String searchName,
@@ -424,6 +467,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
        active = Value(active),
        revision = Value(revision);
   static Insertable<LocalProduct> custom({
+    Expression<String>? classification,
     Expression<String>? serverId,
     Expression<String>? name,
     Expression<String>? searchName,
@@ -435,6 +479,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (classification != null) 'classification': classification,
       if (serverId != null) 'server_id': serverId,
       if (name != null) 'name': name,
       if (searchName != null) 'search_name': searchName,
@@ -448,6 +493,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   }
 
   LocalProductsCompanion copyWith({
+    Value<String>? classification,
     Value<String>? serverId,
     Value<String>? name,
     Value<String>? searchName,
@@ -459,6 +505,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Value<int>? rowid,
   }) {
     return LocalProductsCompanion(
+      classification: classification ?? this.classification,
       serverId: serverId ?? this.serverId,
       name: name ?? this.name,
       searchName: searchName ?? this.searchName,
@@ -474,6 +521,9 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (classification.present) {
+      map['classification'] = Variable<String>(classification.value);
+    }
     if (serverId.present) {
       map['server_id'] = Variable<String>(serverId.value);
     }
@@ -507,6 +557,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   @override
   String toString() {
     return (StringBuffer('LocalProductsCompanion(')
+          ..write('classification: $classification, ')
           ..write('serverId: $serverId, ')
           ..write('name: $name, ')
           ..write('searchName: $searchName, ')
@@ -7326,6 +7377,422 @@ class SyncWorkersCompanion extends UpdateCompanion<SyncWorker> {
   }
 }
 
+class $InventoryRequestsTable extends InventoryRequests
+    with TableInfo<$InventoryRequestsTable, InventoryRequest> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InventoryRequestsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _operationIdMeta = const VerificationMeta(
+    'operationId',
+  );
+  @override
+  late final GeneratedColumn<String> operationId = GeneratedColumn<String>(
+    'operation_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _permissionMeta = const VerificationMeta(
+    'permission',
+  );
+  @override
+  late final GeneratedColumn<String> permission = GeneratedColumn<String>(
+    'permission',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _resultMeta = const VerificationMeta('result');
+  @override
+  late final GeneratedColumn<String> result = GeneratedColumn<String>(
+    'result',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    operationId,
+    path,
+    permission,
+    payload,
+    status,
+    result,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'inventory_requests';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<InventoryRequest> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('operation_id')) {
+      context.handle(
+        _operationIdMeta,
+        operationId.isAcceptableOrUnknown(
+          data['operation_id']!,
+          _operationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_operationIdMeta);
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('permission')) {
+      context.handle(
+        _permissionMeta,
+        permission.isAcceptableOrUnknown(data['permission']!, _permissionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_permissionMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('result')) {
+      context.handle(
+        _resultMeta,
+        result.isAcceptableOrUnknown(data['result']!, _resultMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {operationId};
+  @override
+  InventoryRequest map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InventoryRequest(
+      operationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operation_id'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      permission: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}permission'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      result: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result'],
+      ),
+    );
+  }
+
+  @override
+  $InventoryRequestsTable createAlias(String alias) {
+    return $InventoryRequestsTable(attachedDatabase, alias);
+  }
+}
+
+class InventoryRequest extends DataClass
+    implements Insertable<InventoryRequest> {
+  final String operationId;
+  final String path;
+  final String permission;
+  final String payload;
+  final String status;
+  final String? result;
+  const InventoryRequest({
+    required this.operationId,
+    required this.path,
+    required this.permission,
+    required this.payload,
+    required this.status,
+    this.result,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['operation_id'] = Variable<String>(operationId);
+    map['path'] = Variable<String>(path);
+    map['permission'] = Variable<String>(permission);
+    map['payload'] = Variable<String>(payload);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || result != null) {
+      map['result'] = Variable<String>(result);
+    }
+    return map;
+  }
+
+  InventoryRequestsCompanion toCompanion(bool nullToAbsent) {
+    return InventoryRequestsCompanion(
+      operationId: Value(operationId),
+      path: Value(path),
+      permission: Value(permission),
+      payload: Value(payload),
+      status: Value(status),
+      result: result == null && nullToAbsent
+          ? const Value.absent()
+          : Value(result),
+    );
+  }
+
+  factory InventoryRequest.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InventoryRequest(
+      operationId: serializer.fromJson<String>(json['operationId']),
+      path: serializer.fromJson<String>(json['path']),
+      permission: serializer.fromJson<String>(json['permission']),
+      payload: serializer.fromJson<String>(json['payload']),
+      status: serializer.fromJson<String>(json['status']),
+      result: serializer.fromJson<String?>(json['result']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'operationId': serializer.toJson<String>(operationId),
+      'path': serializer.toJson<String>(path),
+      'permission': serializer.toJson<String>(permission),
+      'payload': serializer.toJson<String>(payload),
+      'status': serializer.toJson<String>(status),
+      'result': serializer.toJson<String?>(result),
+    };
+  }
+
+  InventoryRequest copyWith({
+    String? operationId,
+    String? path,
+    String? permission,
+    String? payload,
+    String? status,
+    Value<String?> result = const Value.absent(),
+  }) => InventoryRequest(
+    operationId: operationId ?? this.operationId,
+    path: path ?? this.path,
+    permission: permission ?? this.permission,
+    payload: payload ?? this.payload,
+    status: status ?? this.status,
+    result: result.present ? result.value : this.result,
+  );
+  InventoryRequest copyWithCompanion(InventoryRequestsCompanion data) {
+    return InventoryRequest(
+      operationId: data.operationId.present
+          ? data.operationId.value
+          : this.operationId,
+      path: data.path.present ? data.path.value : this.path,
+      permission: data.permission.present
+          ? data.permission.value
+          : this.permission,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      status: data.status.present ? data.status.value : this.status,
+      result: data.result.present ? data.result.value : this.result,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InventoryRequest(')
+          ..write('operationId: $operationId, ')
+          ..write('path: $path, ')
+          ..write('permission: $permission, ')
+          ..write('payload: $payload, ')
+          ..write('status: $status, ')
+          ..write('result: $result')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(operationId, path, permission, payload, status, result);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InventoryRequest &&
+          other.operationId == this.operationId &&
+          other.path == this.path &&
+          other.permission == this.permission &&
+          other.payload == this.payload &&
+          other.status == this.status &&
+          other.result == this.result);
+}
+
+class InventoryRequestsCompanion extends UpdateCompanion<InventoryRequest> {
+  final Value<String> operationId;
+  final Value<String> path;
+  final Value<String> permission;
+  final Value<String> payload;
+  final Value<String> status;
+  final Value<String?> result;
+  final Value<int> rowid;
+  const InventoryRequestsCompanion({
+    this.operationId = const Value.absent(),
+    this.path = const Value.absent(),
+    this.permission = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.status = const Value.absent(),
+    this.result = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InventoryRequestsCompanion.insert({
+    required String operationId,
+    required String path,
+    required String permission,
+    required String payload,
+    this.status = const Value.absent(),
+    this.result = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : operationId = Value(operationId),
+       path = Value(path),
+       permission = Value(permission),
+       payload = Value(payload);
+  static Insertable<InventoryRequest> custom({
+    Expression<String>? operationId,
+    Expression<String>? path,
+    Expression<String>? permission,
+    Expression<String>? payload,
+    Expression<String>? status,
+    Expression<String>? result,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (operationId != null) 'operation_id': operationId,
+      if (path != null) 'path': path,
+      if (permission != null) 'permission': permission,
+      if (payload != null) 'payload': payload,
+      if (status != null) 'status': status,
+      if (result != null) 'result': result,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InventoryRequestsCompanion copyWith({
+    Value<String>? operationId,
+    Value<String>? path,
+    Value<String>? permission,
+    Value<String>? payload,
+    Value<String>? status,
+    Value<String?>? result,
+    Value<int>? rowid,
+  }) {
+    return InventoryRequestsCompanion(
+      operationId: operationId ?? this.operationId,
+      path: path ?? this.path,
+      permission: permission ?? this.permission,
+      payload: payload ?? this.payload,
+      status: status ?? this.status,
+      result: result ?? this.result,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (operationId.present) {
+      map['operation_id'] = Variable<String>(operationId.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (permission.present) {
+      map['permission'] = Variable<String>(permission.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (result.present) {
+      map['result'] = Variable<String>(result.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InventoryRequestsCompanion(')
+          ..write('operationId: $operationId, ')
+          ..write('path: $path, ')
+          ..write('permission: $permission, ')
+          ..write('payload: $payload, ')
+          ..write('status: $status, ')
+          ..write('result: $result, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PosDatabase extends GeneratedDatabase {
   _$PosDatabase(QueryExecutor e) : super(e);
   $PosDatabaseManager get managers => $PosDatabaseManager(this);
@@ -7348,6 +7815,8 @@ abstract class _$PosDatabase extends GeneratedDatabase {
     this,
   );
   late final $SyncWorkersTable syncWorkers = $SyncWorkersTable(this);
+  late final $InventoryRequestsTable inventoryRequests =
+      $InventoryRequestsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7368,11 +7837,13 @@ abstract class _$PosDatabase extends GeneratedDatabase {
     deviceSequence,
     receiptAttempts,
     syncWorkers,
+    inventoryRequests,
   ];
 }
 
 typedef $$LocalProductsTableCreateCompanionBuilder =
     LocalProductsCompanion Function({
+      Value<String> classification,
       required String serverId,
       required String name,
       required String searchName,
@@ -7385,6 +7856,7 @@ typedef $$LocalProductsTableCreateCompanionBuilder =
     });
 typedef $$LocalProductsTableUpdateCompanionBuilder =
     LocalProductsCompanion Function({
+      Value<String> classification,
       Value<String> serverId,
       Value<String> name,
       Value<String> searchName,
@@ -7405,6 +7877,11 @@ class $$LocalProductsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get classification => $composableBuilder(
+    column: $table.classification,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get serverId => $composableBuilder(
     column: $table.serverId,
     builder: (column) => ColumnFilters(column),
@@ -7455,6 +7932,11 @@ class $$LocalProductsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get classification => $composableBuilder(
+    column: $table.classification,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serverId => $composableBuilder(
     column: $table.serverId,
     builder: (column) => ColumnOrderings(column),
@@ -7505,6 +7987,11 @@ class $$LocalProductsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get classification => $composableBuilder(
+    column: $table.classification,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get serverId =>
       $composableBuilder(column: $table.serverId, builder: (column) => column);
 
@@ -7565,6 +8052,7 @@ class $$LocalProductsTableTableManager
               $$LocalProductsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String> classification = const Value.absent(),
                 Value<String> serverId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> searchName = const Value.absent(),
@@ -7575,6 +8063,7 @@ class $$LocalProductsTableTableManager
                 Value<String> revision = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalProductsCompanion(
+                classification: classification,
                 serverId: serverId,
                 name: name,
                 searchName: searchName,
@@ -7587,6 +8076,7 @@ class $$LocalProductsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String> classification = const Value.absent(),
                 required String serverId,
                 required String name,
                 required String searchName,
@@ -7597,6 +8087,7 @@ class $$LocalProductsTableTableManager
                 required String revision,
                 Value<int> rowid = const Value.absent(),
               }) => LocalProductsCompanion.insert(
+                classification: classification,
                 serverId: serverId,
                 name: name,
                 searchName: searchName,
@@ -12061,6 +12552,251 @@ typedef $$SyncWorkersTableProcessedTableManager =
       SyncWorker,
       PrefetchHooks Function()
     >;
+typedef $$InventoryRequestsTableCreateCompanionBuilder =
+    InventoryRequestsCompanion Function({
+      required String operationId,
+      required String path,
+      required String permission,
+      required String payload,
+      Value<String> status,
+      Value<String?> result,
+      Value<int> rowid,
+    });
+typedef $$InventoryRequestsTableUpdateCompanionBuilder =
+    InventoryRequestsCompanion Function({
+      Value<String> operationId,
+      Value<String> path,
+      Value<String> permission,
+      Value<String> payload,
+      Value<String> status,
+      Value<String?> result,
+      Value<int> rowid,
+    });
+
+class $$InventoryRequestsTableFilterComposer
+    extends Composer<_$PosDatabase, $InventoryRequestsTable> {
+  $$InventoryRequestsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get operationId => $composableBuilder(
+    column: $table.operationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get permission => $composableBuilder(
+    column: $table.permission,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$InventoryRequestsTableOrderingComposer
+    extends Composer<_$PosDatabase, $InventoryRequestsTable> {
+  $$InventoryRequestsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get operationId => $composableBuilder(
+    column: $table.operationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get permission => $composableBuilder(
+    column: $table.permission,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get result => $composableBuilder(
+    column: $table.result,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$InventoryRequestsTableAnnotationComposer
+    extends Composer<_$PosDatabase, $InventoryRequestsTable> {
+  $$InventoryRequestsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get operationId => $composableBuilder(
+    column: $table.operationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get permission => $composableBuilder(
+    column: $table.permission,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get result =>
+      $composableBuilder(column: $table.result, builder: (column) => column);
+}
+
+class $$InventoryRequestsTableTableManager
+    extends
+        RootTableManager<
+          _$PosDatabase,
+          $InventoryRequestsTable,
+          InventoryRequest,
+          $$InventoryRequestsTableFilterComposer,
+          $$InventoryRequestsTableOrderingComposer,
+          $$InventoryRequestsTableAnnotationComposer,
+          $$InventoryRequestsTableCreateCompanionBuilder,
+          $$InventoryRequestsTableUpdateCompanionBuilder,
+          (
+            InventoryRequest,
+            BaseReferences<
+              _$PosDatabase,
+              $InventoryRequestsTable,
+              InventoryRequest
+            >,
+          ),
+          InventoryRequest,
+          PrefetchHooks Function()
+        > {
+  $$InventoryRequestsTableTableManager(
+    _$PosDatabase db,
+    $InventoryRequestsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InventoryRequestsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InventoryRequestsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InventoryRequestsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> operationId = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> permission = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> result = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InventoryRequestsCompanion(
+                operationId: operationId,
+                path: path,
+                permission: permission,
+                payload: payload,
+                status: status,
+                result: result,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String operationId,
+                required String path,
+                required String permission,
+                required String payload,
+                Value<String> status = const Value.absent(),
+                Value<String?> result = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => InventoryRequestsCompanion.insert(
+                operationId: operationId,
+                path: path,
+                permission: permission,
+                payload: payload,
+                status: status,
+                result: result,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$InventoryRequestsTable, InventoryRequest>(table),
+                  BaseReferences<
+                    _$PosDatabase,
+                    $InventoryRequestsTable,
+                    InventoryRequest
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$InventoryRequestsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$PosDatabase,
+      $InventoryRequestsTable,
+      InventoryRequest,
+      $$InventoryRequestsTableFilterComposer,
+      $$InventoryRequestsTableOrderingComposer,
+      $$InventoryRequestsTableAnnotationComposer,
+      $$InventoryRequestsTableCreateCompanionBuilder,
+      $$InventoryRequestsTableUpdateCompanionBuilder,
+      (
+        InventoryRequest,
+        BaseReferences<
+          _$PosDatabase,
+          $InventoryRequestsTable,
+          InventoryRequest
+        >,
+      ),
+      InventoryRequest,
+      PrefetchHooks Function()
+    >;
 
 class $PosDatabaseManager {
   final _$PosDatabase _db;
@@ -12095,4 +12831,6 @@ class $PosDatabaseManager {
       $$ReceiptAttemptsTableTableManager(_db, _db.receiptAttempts);
   $$SyncWorkersTableTableManager get syncWorkers =>
       $$SyncWorkersTableTableManager(_db, _db.syncWorkers);
+  $$InventoryRequestsTableTableManager get inventoryRequests =>
+      $$InventoryRequestsTableTableManager(_db, _db.inventoryRequests);
 }

@@ -52,6 +52,27 @@ class PosAccess
     public function permissions(User $user, Sucursales $branch): array
     {
         $permissions = ['catalog.read', 'product.search', 'stock.read_estimated', 'account.read_estimated', 'sync.view', 'sync.retry'];
+        if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
+            $permissions = [...$permissions, 'customer.read', 'sale.history'];
+        }
+        if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
+            $permissions = [...$permissions, 'purchase.read'];
+            if (! $branch->empresa->ventas_bloqueadas || $user->tipo === 'superAdmin') {
+                $permissions = [...$permissions, 'purchase.create', 'purchase.payment'];
+            }
+        }
+        if (in_array($user->tipo, ['inventario', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
+            $permissions = [...$permissions, 'inventory.read', 'inventory.movements.read', 'transfer.read'];
+            if (! $branch->empresa->ventas_bloqueadas || $user->tipo === 'superAdmin') {
+                $permissions = [...$permissions, 'product.create', 'product.update', 'product.prices.update', 'inventory.add', 'transfer.create', 'transfer.receive'];
+                if (in_array($user->tipo, ['adminEmpresa', 'superAdmin'], true)) {
+                    $permissions = [...$permissions, 'product.delete', 'inventory.reset'];
+                }
+                if (app(\App\Services\InventoryManagement::class)->canManageCosts($user, $branch)) {
+                    $permissions = [...$permissions, 'product.costs.manage'];
+                }
+            }
+        }
         if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true) && ! $branch->empresa->ventas_bloqueadas) {
             $permissions = [...$permissions, 'sale.create', 'sale.credit', 'sale.print_local_ticket'];
         }

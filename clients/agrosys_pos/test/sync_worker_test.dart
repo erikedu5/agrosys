@@ -285,6 +285,8 @@ void main() {
     raw.execute('DROP TABLE sync_workers');
     raw.execute('ALTER TABLE outbox DROP COLUMN server_result');
     raw.execute('ALTER TABLE outbox DROP COLUMN error_code');
+    raw.execute('DROP TABLE inventory_requests');
+    raw.execute('ALTER TABLE local_products DROP COLUMN classification');
     raw.execute('PRAGMA user_version=3');
     raw.close();
     await open();

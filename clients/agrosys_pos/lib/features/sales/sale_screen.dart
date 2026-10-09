@@ -27,6 +27,8 @@ class _SaleScreenState extends State<SaleScreen> {
   VoidCallback? _refreshCart, _refreshPayment;
   final _cart = <String, int>{};
   List<ProductView> _products = [];
+  List<String> _categories = [];
+  String? _category;
   CustomerView? _customer;
   SaleQuote? _quote;
   String _type = 'Contado', _saleId = const Uuid().v4();
@@ -74,7 +76,12 @@ class _SaleScreenState extends State<SaleScreen> {
     _generation = widget.controller.generation;
     try {
       final repo = widget.controller.repository!;
-      final products = await repo.products(_search.text);
+      final categories = await repo.productCategories();
+      final category = categories.contains(_category) ? _category : null;
+      final products = await repo.products(
+        _search.text,
+        classification: category,
+      );
       final defaultId = await repo.defaultCustomer();
       final selectedId = _customer?.id ?? defaultId;
       final customer = selectedId == null
@@ -89,6 +96,8 @@ class _SaleScreenState extends State<SaleScreen> {
       if (!mounted || request != _request) return;
       setState(() {
         _products = products;
+        _categories = categories;
+        _category = category;
         _customer = customer;
         _quote = quote;
         _loading = false;
@@ -148,7 +157,9 @@ class _SaleScreenState extends State<SaleScreen> {
 
   Future<void> _scan(String value) async {
     await _load();
-    final exact = _products
+    final products = await widget.controller.repository!.products(value);
+    if (!mounted) return;
+    final exact = products
         .where((p) => p.barcode == value.trim() || p.id == value.trim())
         .toList();
     if (exact.length == 1) await _add(exact.single);
@@ -746,6 +757,30 @@ class _SaleScreenState extends State<SaleScreen> {
                   prefixIcon: Icon(Icons.search),
                 ),
               ),
+              if (_categories.length > 1) ...[
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final category in <String?>[null, ..._categories])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(category ?? 'Todas'),
+                            selected: _category == category,
+                            onSelected: _editable
+                                ? (_) {
+                                    setState(() => _category = category);
+                                    _load();
+                                  }
+                                : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Text(
                 '${_products.length} productos · Toca para agregar',

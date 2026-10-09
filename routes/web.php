@@ -25,7 +25,7 @@ use App\Http\Controllers\Subscription\SubscriptionController;
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'desktopDownloads' => [
-            'macos' => is_file(public_path('downloads/AgroSys-POS-1.0.0-macOS.dmg')),
+            'macos' => is_file(public_path('downloads/AgroSys-POS-2.0.0-macOS.dmg')),
             'windows' => is_file(public_path('downloads/AgroSys-POS-Setup.exe')),
         ],
     ]);
@@ -129,7 +129,7 @@ Route::post('/inventario/addInventario', [App\Http\Controllers\ProductoControlle
 
 Route::post('/inventario/{producto}/reset', [App\Http\Controllers\ProductoController::class, 'resetInventario'])
     ->name('inventario.reset')
-    ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa', 'sucursal.selection'])
+    ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa-superAdmin', 'sucursal.selection'])
     ->whereNumber('producto');
 
 Route::put('/inventario/{producto}/precios', [App\Http\Controllers\ProductoController::class, 'updatePrecios'])

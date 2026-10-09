@@ -31,6 +31,37 @@ void main() {
     await db.close();
     await directory.delete(recursive: true);
   });
+  test('category filtering combines search and survives reopening', () async {
+    await repo.startDownload(incremental: false);
+    await repo.stage(
+      snapshot(
+        products: [
+          {...product(), 'classification': 'Semillas'},
+          {
+            ...product(id: '11', name: 'Abono'),
+            'classification': 'Fertilizantes',
+          },
+          product(id: '12', name: 'Sin categoría'),
+          {...product(id: '13', active: false), 'classification': 'Oculta'},
+        ],
+      ),
+    );
+    await repo.commitDownload();
+    await db.close();
+    db = PosDatabase(
+      NativeDatabase(File('${directory.path}/context.sqlite')),
+      fixtureSession().contextId,
+    );
+    repo = CatalogRepository(db, fixtureSession());
+    expect(await repo.productCategories(), ['Fertilizantes', 'Semillas']);
+    expect(
+      (await repo.products('maiz', classification: 'Semillas')).single.id,
+      '10',
+    );
+    expect(await repo.products('abono', classification: 'Semillas'), isEmpty);
+    expect((await repo.products('')).length, 3);
+    expect((await repo.productById('10'))!.classification, 'Semillas');
+  });
   test('AC-10 corrected clock requires verified revalidation before offline access', () async {
     final now = DateTime.now().toUtc();
     expect(await repo.observeClock(now.add(const Duration(hours: 2))), isTrue);
@@ -261,6 +292,8 @@ void main() {
     legacy.execute(
       "INSERT INTO pending_probe VALUES ('stable-id','immutable-payload')",
     );
+    legacy.execute('DROP TABLE inventory_requests');
+    legacy.execute('ALTER TABLE local_products DROP COLUMN classification');
     legacy.execute('PRAGMA user_version=1');
     legacy.close();
     db = PosDatabase(NativeDatabase(File(file)), fixtureSession().contextId);

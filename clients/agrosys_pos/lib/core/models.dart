@@ -112,6 +112,7 @@ class Session {
 
 class ProductView {
   final String id, name, barcode, size, revision;
+  final String classification;
   final int priceCents, estimatedQuantity;
   ProductView(
     this.id,
@@ -120,8 +121,9 @@ class ProductView {
     this.size,
     this.priceCents,
     this.estimatedQuantity,
-    this.revision,
-  );
+    this.revision, {
+    this.classification = '',
+  });
 }
 
 class CustomerView {
