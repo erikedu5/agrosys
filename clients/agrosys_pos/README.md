@@ -5,9 +5,11 @@ espera ante límites de solicitudes, ventas con filtro por categoría, inventari
 compras y transferencias con menús según los permisos del usuario.
 La gestión de inventario, compras y transferencias requiere conexión.
 
-El paquete macOS universal (Intel y Apple Silicon) se entrega como
-`dist/AgroSys-POS-2.1.0-macOS.dmg`, con checksum SHA-256. La landing utiliza
+El paquete macOS universal (Intel y Apple Silicon) actualmente disponible es
+`dist/AgroSys-POS-2.1.0-macOS.dmg` (build 7), con checksum SHA-256. La landing utiliza
 `public/downloads/AgroSys-POS-2.1.0-macOS.dmg` del repositorio principal.
+Requiere macOS 12 o posterior. Compilación release verificada con análisis sin
+incidencias y 117 pruebas Flutter aprobadas.
 Compilar con `--dart-define-from-file=config/production.json`.
 La firma actual es ad hoc; el paquete no está notarizado.
 
