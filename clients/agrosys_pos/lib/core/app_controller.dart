@@ -525,6 +525,62 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> activate() => _action(_activateAndDownload);
+  Future<void> loadBranches() => _action(() async {
+    final response = await _api!.request(
+      'branches', token: session!.token, method: 'GET',
+    );
+    branches = (response['branches'] as List)
+        .map((raw) => Branch.fromJson(object(raw))).toList();
+    online = true;
+  });
+
+  Future<void> changeBranch(Branch branch) => _action(() async {
+    final old = session!;
+    if (branch.id == old.branch.id) return;
+    if (!branches.any((allowed) => allowed.id == branch.id &&
+        allowed.companyId == branch.companyId)) {
+      throw const FormatException('Selecciona una sucursal autorizada.');
+    }
+    await _stopSync();
+    final device = await vault.deviceFor(apiUrl, old.userId, branch.id);
+    final Map<String, dynamic> response;
+    try {
+      response = await _api!.exchange(old.token, {
+        'device_id': device, 'branch_id': branch.id,
+      });
+    } on ApiFailure catch (failure) {
+      if (failure.status == 403) {
+        _scheduleSync();
+        throw FormatException(failure.message);
+      }
+      rethrow;
+    }
+    // The exchanged token replaces the old one. Each branch keeps its own DB.
+    session = Session(
+      apiUrl: apiUrl, userId: old.userId, userName: old.userName,
+      deviceId: device, token: response['token'] as String, branch: branch,
+      tokenExpiresAt: DateTime.parse(response['expiresAt'] as String),
+    );
+    syncInfo = null;
+    notifyListeners();
+    await vault.save(session!);
+    await _openRepository();
+    if (response['offlineLease'] != null) {
+      final lease = object(response['offlineLease']);
+      await vault.verifyLease(session!, lease);
+      session = session!.copyWith(lease: lease, blocked: false);
+      await vault.save(session!);
+      await repository!.markRevalidated();
+      await _openRepository();
+      await _sync!.synchronize();
+      await _refreshInfo();
+      online = true;
+      _scheduleSync();
+    } else {
+      await _activateAndDownload();
+    }
+  });
+
   Future<void> renew() => _action(() async {
     await _stopSync();
     final result = await _api!.renew(session!);

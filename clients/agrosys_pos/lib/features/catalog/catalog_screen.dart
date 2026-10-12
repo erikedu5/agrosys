@@ -104,6 +104,59 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _load();
   }
 
+  Future<void> _changeBranch() async {
+    final c = widget.controller;
+    await c.loadBranches();
+    if (!mounted) return;
+    if (c.error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(c.error!)));
+      return;
+    }
+    final selected = await showDialog<Branch>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Cambiar sucursal'),
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Text(
+              'Las ventas y pendientes se conservan en su sucursal original.',
+            ),
+          ),
+          for (final branch in c.branches)
+            SimpleDialogOption(
+              onPressed: branch.id == c.session!.branch.id
+                  ? null
+                  : () => Navigator.pop(context, branch),
+              child: Row(
+                children: [
+                  Icon(
+                    branch.id == c.session!.branch.id
+                        ? Icons.check
+                        : Icons.store_outlined,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(branch.name)),
+                ],
+              ),
+            ),
+          if (c.branches.length < 2)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('No tienes otras sucursales autorizadas.'),
+            ),
+        ],
+      ),
+    );
+    if (selected == null || !mounted) return;
+    await c.changeBranch(selected);
+    if (mounted && c.error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(c.error!)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
@@ -131,6 +184,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
           title: const BrandLogo(width: 95),
           actions: [
+            IconButton(
+              tooltip: 'Cambiar sucursal',
+              onPressed: c.busy || c.syncBusy ? null : _changeBranch,
+              icon: const Icon(Icons.store_outlined),
+            ),
             if (wide)
               Padding(
                 padding: const EdgeInsets.only(right: 16),

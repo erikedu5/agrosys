@@ -95,7 +95,19 @@ class PosAuthController extends Controller
             if ($device) {
                 abort_unless((int) $device->user_id === (int) $request->user()->id && (int) $device->branch_id === (int) $branch->id && $device->client_kind === 'pos' && ! $device->revoked_at, 403, 'Dispositivo de otro contexto o revocado.');
             }
+            $activation = null;
+            $source = \App\Models\OfflineDevice::find($token->pos_device_id);
+            if ($source && (string) $source->branch_id !== (string) $branch->id) {
+                $access->device($request, $source->id, $source->branch_id);
+                // Activate within this transaction before consuming the current session.
+                $activation = app(PosDeviceController::class)->activateContext(
+                    $request->user(), $branch, $id, $access, app(\App\Services\Pos\OfflineLease::class)
+                );
+            }
             $response = $this->issue($request->user(), $id, 'Agrosys POS', $access);
+            if ($activation) {
+                $response->setData([...$response->getData(true), ...$activation]);
+            }
             $token->delete();
 
             return $response;

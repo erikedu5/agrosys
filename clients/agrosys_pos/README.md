@@ -1,12 +1,13 @@
 # Agrosys POS — cliente Flutter
 
-Versión actual: **2.0.0+6**. Incluye ventas con filtro por categoría, inventario,
+Versión actual: **2.1.0+7**. Incluye cambio de sucursal durante la sesión,
+espera ante límites de solicitudes, ventas con filtro por categoría, inventario,
 compras y transferencias con menús según los permisos del usuario.
 La gestión de inventario, compras y transferencias requiere conexión.
 
 El paquete macOS universal (Intel y Apple Silicon) se entrega como
-`dist/AgroSys-POS-2.0.0-macOS.dmg`, con checksum SHA-256. La landing utiliza
-`public/downloads/AgroSys-POS-2.0.0-macOS.dmg` del repositorio principal.
+`dist/AgroSys-POS-2.1.0-macOS.dmg`, con checksum SHA-256. La landing utiliza
+`public/downloads/AgroSys-POS-2.1.0-macOS.dmg` del repositorio principal.
 Compilar con `--dart-define-from-file=config/production.json`.
 La firma actual es ad hoc; el paquete no está notarizado.
 
@@ -177,6 +178,39 @@ aún requiere ejecución en un host compatible. Evidencia detallada en
 CI en `.github/workflows/flutter-pos.yml`: calidad, pruebas nativas de escritorio,
 Android y build de simulador iOS. La existencia del workflow no demuestra que
 haya corrido: no se publicó ni ejecutó remotamente durante esta implementación.
+
+### Descargar la compilación de Windows en GitHub
+
+En **Actions → Flutter POS → Run workflow**, selecciona la rama que contiene
+estos cambios. El job Windows ejecuta las pruebas nativas y compila release con
+`config/production.json`. Al terminar, la ejecución incluye el artefacto
+`AgroSys-POS-<versión>-Windows-x64`, disponible durante 30 días, con
+`AgroSys-POS-Setup.exe`, un ZIP portable y sus checksums SHA-256.
+También se genera en los push y pull requests del cliente.
+
+Ejecuta `AgroSys-POS-Setup.exe` para instalar en Windows 10 o posterior x64.
+El asistente en español instala para el usuario actual, crea un acceso en el
+menú Inicio y ofrece uno opcional en el escritorio. Incluye las DLL de Visual
+C++, permite actualizar la misma instalación y registra el desinstalador.
+El workflow compila `packaging/windows.iss` con Inno Setup y verifica una
+instalación y desinstalación silenciosas. El instalador aún no tiene firma digital.
+
+Para usar la alternativa portable, extrae el ZIP completo y ejecuta
+`agrosys_pos.exe` conservando las DLL y la carpeta `data` junto al ejecutable.
+El workflow guarda los paquetes como artefactos de Actions. En push o ejecución
+manual sobre la rama predeterminada, tras aprobar calidad y los jobs de
+escritorio, `publish-windows-download` copia el instalador y su checksum a
+`public/downloads/` y hace commit y push a esa misma rama con `GITHUB_TOKEN`.
+Los pull requests y otras ramas sólo generan artefactos. Si la rama avanzó
+desde el commit compilado, omite la publicación para no guardar un instalador
+obsoleto. El commit de descarga no vuelve a disparar este workflow.
+
+La landing habilita la descarga cuando existe
+`public/downloads/AgroSys-POS-Setup.exe` en el servidor. El despliegue debe
+recoger el commit generado para que el archivo esté disponible en producción.
+GitHub debe permitir escritura con Actions y las reglas de la rama deben
+permitir el push del bot; si lo bloquean, el job falla y conserva el artefacto.
+El instalador debe pesar menos de 100 MiB para guardarse directamente en Git.
 
 Preparación de fase 5: interfaz alineada con la web y ticket térmico de 80 mm
 mediante el diálogo de impresión del sistema. Para Nextep USB en escritorio,

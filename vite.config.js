@@ -18,6 +18,10 @@ export default defineConfig({
         }),
     ],
     server: {
+        watch: {
+            // Flutter build output and plugin symlinks are unrelated to the web app.
+            ignored: ['**/clients/**', '**/public/storage/**', '**/storage/logs/**'],
+        },
         cors: {
             origin: process.env.VITE_APP_URL ?? "http://localhost:8000",
         },

@@ -8,6 +8,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fixtures.dart';
 
 void main() {
+  test('rate limit honors retry-after without sending repeated requests', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final api = PosApi('http://127.0.0.1:${server.port}/api/v1/pos');
+    var requests = 0;
+    server.listen((request) async {
+      requests++;
+      await request.drain<void>();
+      request.response.statusCode = 429;
+      request.response.headers.set('Retry-After', '30');
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode({'message': 'Too many requests'}));
+      await request.response.close();
+    });
+    try {
+      for (var i = 0; i < 2; i++) {
+        await expectLater(api.page(fixtureSession(), incremental: false),
+          throwsA(isA<ApiFailure>().having((e) => e.status, 'status', 429)
+            .having((e) => e.message, 'wait time', contains('30 segundos'))));
+      }
+      expect(requests, 1);
+    } finally {
+      api.close();
+      await server.close(force: true);
+    }
+  });
   test(
     'login distinguishes unavailable native API from rejected credentials',
     () async {

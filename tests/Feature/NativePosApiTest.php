@@ -111,6 +111,14 @@ class NativePosApiTest extends TestCase
         $this->postJson('/api/v1/pos/auth/login', $this->credentials())->assertStatus(429);
     }
 
+    public function test_catalog_download_can_exceed_sixty_requests_per_minute(): void
+    {
+        $this->activate();
+        for ($i = 0; $i < 65; $i++) {
+            $this->api('GET', 'branches')->assertOk();
+        }
+    }
+
     public function test_second_factor_challenge_cannot_be_reused(): void
     {
         $this->user->forceFill(['two_factor_secret' => Crypt::encrypt('secret'), 'two_factor_confirmed_at' => now()])->save();
@@ -567,6 +575,34 @@ class NativePosApiTest extends TestCase
         $other = Sucursales::factory()->create(['id_empresa' => $this->branch->id_empresa]);
         $this->api('POST', 'auth/context', ['device_id' => $this->device, 'branch_id' => $other->id])->assertForbidden();
     }
+    public function test_branch_switch_activates_destination_before_replacing_token(): void
+    {
+        $this->user->update(['tipo' => 'adminEmpresa']);
+        $this->activate();
+        $old = $this->token;
+        $other = Sucursales::factory()->create(['id_empresa' => $this->branch->id_empresa]);
+        $destinationDevice = (string) Str::uuid();
+        $context = ['device_id' => $destinationDevice, 'branch_id' => (string) $other->id];
+        $response = $this->api('POST', 'auth/context', $context)->assertOk()
+            ->assertJsonPath('offlineLease.claims.branchId', (string) $other->id)
+            ->assertJsonPath('offlineLease.claims.deviceId', $destinationDevice);
+        $this->token = $response->json('token');
+        $this->api('POST', 'bootstrap', $context)->assertOk();
+        $this->token = $old;
+        $this->api('GET', 'branches')->assertUnauthorized();
+    }
+
+    public function test_rejected_branch_activation_preserves_original_session(): void
+    {
+        $this->user->update(['tipo' => 'adminEmpresa']);
+        $this->activate();
+        $other = Sucursales::factory()->create(['id_empresa' => $this->branch->id_empresa]);
+        config(['offline.require_activation' => true]);
+        $this->api('POST', 'auth/context', ['device_id' => (string) Str::uuid(), 'branch_id' => $other->id])
+            ->assertForbidden()->assertJsonPath('message', 'El dispositivo requiere autorización manual.');
+        $this->api('POST', 'bootstrap', $this->context())->assertOk();
+    }
+
     private function destructiveInput(string $action): array
     {
         $preview = $this->api('POST', 'inventory/'.$this->product->id.'/preview', [...$this->context(), 'action' => $action])->assertOk()->json();

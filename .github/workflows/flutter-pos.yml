@@ -46,7 +46,136 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - run: flutter test integration_test/offline_reopen_test.dart -d ${{ matrix.device }}
       - run: flutter test integration_test/sync_recovery_test.dart -d ${{ matrix.device }}
-      - run: flutter build ${{ matrix.device }} --release
+      - run: flutter build ${{ matrix.device }} --release --dart-define-from-file=config/production.json
+      - name: Package Windows release
+        if: matrix.device == 'windows'
+        id: windows-package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versionLine = Get-Content pubspec.yaml | Where-Object { $_ -match '^version:\s*(\S+)\s*$' }
+          if (-not $versionLine) { throw 'Missing version in pubspec.yaml' }
+          $version = ($versionLine -replace '^version:\s*', '').Trim()
+          $bundle = 'build/windows/x64/runner/Release'
+          foreach ($required in @('agrosys_pos.exe', 'flutter_windows.dll', 'data')) {
+            if (-not (Test-Path "$bundle/$required")) { throw "Missing Windows bundle file: $required" }
+          }
+          # Ship the redistributable CRT beside the executable for per-user installs.
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $vs) { throw 'Visual Studio C++ installation not found' }
+          $crt = Get-ChildItem "$vs/VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT" -Directory |
+            Sort-Object { [version]$_.Parent.Parent.Name } -Descending | Select-Object -First 1
+          if (-not $crt) { throw 'Redistributable x64 CRT not found' }
+          Copy-Item "$($crt.FullName)/*.dll" $bundle -Force
+          foreach ($required in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+            if (-not (Test-Path "$bundle/$required")) { throw "Missing CRT: $required" }
+          }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $name = "AgroSys-POS-$version-Windows-x64"
+          $archive = "dist/$name.zip"
+          Compress-Archive -Path "$bundle/*" -DestinationPath $archive -Force
+          $hash = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name.zip" | Set-Content "dist/$name.zip.sha256" -Encoding ascii
+          "name=$name" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Build Windows installer
+        if: matrix.device == 'windows'
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ steps.windows-package.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $iscc = "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --version=6.5.4 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+          if (-not (Test-Path $iscc)) { throw 'ISCC.exe not found' }
+          & $iscc "/DAppVersion=$env:APP_VERSION" packaging/windows.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          $installer = 'dist/AgroSys-POS-Setup.exe'
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  AgroSys-POS-Setup.exe" | Set-Content "$installer.sha256" -Encoding ascii
+      - name: Verify Windows installer
+        if: matrix.device == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $target = Join-Path $env:RUNNER_TEMP 'AgroSys-POS-install-check'
+          $setup = Start-Process -FilePath (Resolve-Path 'dist/AgroSys-POS-Setup.exe') -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=`"$target`"") -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Install failed: $($setup.ExitCode)" }
+          foreach ($required in @('agrosys_pos.exe', 'flutter_windows.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'data/flutter_assets', 'unins000.exe')) {
+            if (-not (Test-Path "$target/$required")) { throw "Installed file missing: $required" }
+          }
+          $uninstall = Start-Process -FilePath "$target/unins000.exe" -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstall failed: $($uninstall.ExitCode)" }
+          if (Test-Path "$target/agrosys_pos.exe") { throw 'Uninstall did not remove executable' }
+      - name: Upload Windows release
+        if: matrix.device == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.windows-package.outputs.name }}
+          path: |
+            clients/agrosys_pos/dist/*-Windows-x64.zip
+            clients/agrosys_pos/dist/*-Windows-x64.zip.sha256
+            clients/agrosys_pos/dist/AgroSys-POS-Setup.exe
+            clients/agrosys_pos/dist/AgroSys-POS-Setup.exe.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+  publish-windows-download:
+    needs: [quality, native-desktop]
+    if: >-
+      github.event_name != 'pull_request' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: windows-download-publication
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Download verified Windows package
+        uses: actions/download-artifact@v4
+        with:
+          pattern: AgroSys-POS-*-Windows-x64
+          path: windows-package
+          merge-multiple: true
+      - name: Save installer in public downloads
+        env:
+          BUILD_COMMIT: ${{ github.sha }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Never publish a binary built from an older branch revision.
+          if [ "$(git rev-parse HEAD)" != "$BUILD_COMMIT" ]; then
+            echo "Branch advanced since this build; skipping stale installer."
+            exit 0
+          fi
+          cd windows-package
+          sha256sum --check AgroSys-POS-Setup.exe.sha256
+          cd ..
+          # GitHub rejects individual Git files above 100 MiB.
+          if [ "$(stat -c %s windows-package/AgroSys-POS-Setup.exe)" -ge 104857600 ]; then
+            echo "Installer exceeds GitHub's Git file size limit."
+            exit 1
+          fi
+          mkdir -p public/downloads
+          cp windows-package/AgroSys-POS-Setup.exe public/downloads/
+          cp windows-package/AgroSys-POS-Setup.exe.sha256 public/downloads/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- public/downloads/AgroSys-POS-Setup.exe public/downloads/AgroSys-POS-Setup.exe.sha256
+          if git diff --cached --quiet; then
+            echo "Installer already up to date."
+            exit 0
+          fi
+          git commit -m 'build: update Windows POS installer'
+          git push origin "HEAD:$TARGET_BRANCH"
   android:
     runs-on: ubuntu-latest
     defaults:

@@ -1,7 +1,7 @@
 ; Run ISCC from Windows after flutter build windows --release.
 #define AppRoot AddBackslash(SourcePath) + ".."
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #error AppVersion is required: invoke ISCC with /DAppVersion=<pubspec version>
 #endif
 
 [Setup]
@@ -25,6 +25,9 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
+
+[Languages]
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; Flags: unchecked

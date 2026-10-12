@@ -36,6 +36,7 @@ String normalizeApiUrl(
 
 class PosApi {
   final Dio dio;
+  DateTime? _retryAt;
   PosApi(String apiUrl, {Dio? client})
     : dio =
           client ??
@@ -56,6 +57,11 @@ class PosApi {
     String? token,
     String method = 'POST',
   }) async {
+    final retryAt = _retryAt;
+    if (retryAt != null && DateTime.now().isBefore(retryAt)) {
+      final seconds = (retryAt.difference(DateTime.now()).inMilliseconds / 1000).ceil();
+      throw ApiFailure(429, 'Demasiados intentos. Reintenta en $seconds segundos.');
+    }
     try {
       final response = await dio.request<Object?>(
         path,
@@ -68,6 +74,11 @@ class PosApi {
       return object(response.data);
     } on DioException catch (e) {
       final status = e.response?.statusCode;
+      if (status == 429) {
+        final header = e.response?.headers.value('retry-after');
+        final seconds = int.tryParse(header ?? '') ?? 60;
+        _retryAt = DateTime.now().add(Duration(seconds: seconds > 0 ? seconds : 1));
+      }
       final messages = {
         401: path == 'auth/login'
             ? 'No se pudo autenticar. Revisa tu correo y contraseña.'
@@ -78,7 +89,9 @@ class PosApi {
             ? 'El servidor no tiene disponible la API de AgroSys POS. Contacta al administrador para habilitarla.'
             : 'El recurso solicitado no está disponible en el servidor.',
         410: 'La descarga venció; se reiniciará conservando datos locales.',
-        429: 'Demasiados intentos. Espera antes de reintentar.',
+        429: status == 429
+            ? 'Demasiados intentos. Reintenta en ${(_retryAt!.difference(DateTime.now()).inMilliseconds / 1000).ceil()} segundos.'
+            : 'Demasiados intentos. Espera antes de reintentar.',
       };
       final response = e.response?.data;
       final serverMessage = response is Map && response['message'] is String
@@ -86,7 +99,7 @@ class PosApi {
           : null;
       throw ApiFailure(
         status,
-        messages[status] ??
+        (status == 403 && serverMessage != null ? serverMessage : messages[status]) ??
             (status == null
                 ? 'No fue posible conectar. Puedes consultar el catálogo descargado.'
                 : status >= 500

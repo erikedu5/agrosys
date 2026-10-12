@@ -24,30 +24,35 @@ class PosDeviceController extends Controller
         $id = strtolower($data['device_id']);
         abort_unless($request->user()->currentAccessToken()->pos_device_id === $id, 403, 'Token de otro dispositivo.');
         $branch = $access->branch($request->user(), $data['branch_id']);
+        return response()->json($this->activateContext($request->user(), $branch, $id, $access, $leases));
+    }
+
+    public function activateContext(\App\Models\User $user, Sucursales $branch, string $id, PosAccess $access, OfflineLease $leases): array
+    {
         try {
-            $result = DB::transaction(function () use ($request, $access, $leases, $branch, $id) {
+            $result = DB::transaction(function () use ($user, $access, $leases, $branch, $id) {
                 Sucursales::whereKey($branch->id)->lockForUpdate()->firstOrFail();
                 $device = OfflineDevice::lockForUpdate()->find($id);
                 if ($device) {
-                    abort_unless((int) $device->user_id === (int) $request->user()->id && (int) $device->branch_id === (int) $branch->id && $device->client_kind === 'pos', 403, 'Dispositivo de otro contexto.');
+                    abort_unless((int) $device->user_id === (int) $user->id && (int) $device->branch_id === (int) $branch->id && $device->client_kind === 'pos', 403, 'Dispositivo de otro contexto.');
                     abort_if($device->revoked_at, 403, 'Dispositivo revocado.');
                 } else {
                     $limit = $branch->empresa->dispositivosPorSucursalPermitidos();
                     abort_if($limit !== null && OfflineDevice::where('branch_id', $branch->id)->where('authorized', true)->count() >= $limit, 403, 'Límite de dispositivos alcanzado.');
-                    $device = OfflineDevice::create(['id' => $id, 'user_id' => $request->user()->id, 'branch_id' => $branch->id, 'client_kind' => 'pos', 'authorized' => ! config('offline.require_activation'), 'offline_expires_at' => now()]);
+                    $device = OfflineDevice::create(['id' => $id, 'user_id' => $user->id, 'branch_id' => $branch->id, 'client_kind' => 'pos', 'authorized' => ! config('offline.require_activation'), 'offline_expires_at' => now()]);
                 }
                 if (! $device->authorized) {
                     return null;
                 }
 
-                return ['authorized' => true, 'offlineLease' => $leases->issue($request->user(), $branch, $device, $access)];
+                return ['authorized' => true, 'offlineLease' => $leases->issue($user, $branch, $device, $access)];
             }, 3);
         } catch (UniqueConstraintViolationException $e) {
             abort(409, 'El dispositivo fue registrado simultáneamente. Reintenta la activación con el mismo identificador.');
         }
         abort_unless($result, 403, 'El dispositivo requiere autorización manual.');
 
-        return response()->json($result);
+        return $result;
     }
 
     public function renew(Request $request, PosAccess $access, OfflineLease $leases)
