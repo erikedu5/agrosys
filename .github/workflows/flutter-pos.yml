@@ -178,6 +178,7 @@ jobs:
           git push origin "HEAD:$TARGET_BRANCH"
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: clients/agrosys_pos
@@ -193,14 +194,28 @@ jobs:
           cache: true
       - run: flutter pub get --enforce-lockfile
       - run: flutter build apk --debug
+      - name: Enable emulator hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 36
           arch: x86_64
+          disable-linux-hw-accel: false
+          disable-animations: true
           working-directory: clients/agrosys_pos
-          script: |
-            flutter test integration_test/offline_reopen_test.dart -d emulator-5554
-            flutter test integration_test/sync_recovery_test.dart -d emulator-5554
+          script: bash tool/ci_android_integration.sh
+      - name: Upload Android integration logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-integration-logs
+          path: clients/agrosys_pos/build/ci-logs/
+          if-no-files-found: ignore
+          retention-days: 14
   ios-simulator:
     runs-on: macos-latest
     defaults:
