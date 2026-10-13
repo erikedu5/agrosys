@@ -85,6 +85,14 @@ const goBack = () => {
                     Revisar compras
                 </a>
                 <a
+                    v-if="status === 419"
+                    href="/login"
+                    class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:-translate-y-0.5 transition"
+                >
+                    Iniciar sesión de nuevo
+                </a>
+                <a
+                    v-else
                     href="/dashboard"
                     class="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:-translate-y-0.5 transition"
                     @click.prevent="goHome"

@@ -70,6 +70,12 @@ class Handler extends ExceptionHandler
             return response()->json(['message' => $this->isHttpException($e) ? ($e->getMessage() ?: 'No autorizado.') : 'No fue posible procesar la solicitud.'], $this->isHttpException($e) ? $e->getStatusCode() : ($e instanceof \Illuminate\Auth\AuthenticationException ? 401 : 500), $this->isHttpException($e) ? $e->getHeaders() : []);
         }
 
+        // Let Laravel redirect expired browser sessions to login and return
+        // 401 for JSON clients rather than treating authentication as a 500.
+        if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+            return parent::render($request, $e);
+        }
+
         // Normalize missing models and authorization exceptions before choosing a status.
         $e = $this->prepareException($e);
         $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
