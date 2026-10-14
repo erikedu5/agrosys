@@ -1,0 +1,1367 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Agrosys API",
+        "description": "Documentación de la API para sucursales, productos y pedidos.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Servidor base (usa APP_URL en tu entorno)"
+        }
+    ],
+    "paths": {
+        "/api/pedidos": {
+            "post": {
+                "tags": [
+                    "Pedidos"
+                ],
+                "summary": "Crear pedidos por lote",
+                "description": "Crea uno o más pedidos internos para una sucursal.",
+                "operationId": "36884e796fd6f470919017f7ca543cd0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Pedido"
+                            },
+                            "example": {
+                                "sucursal_id": 1,
+                                "productos": [
+                                    {
+                                        "producto_id": 10,
+                                        "cantidad": 3
+                                    },
+                                    {
+                                        "producto_id": 12,
+                                        "cantidad": 1
+                                    }
+                                ],
+                                "nombre_solicitante": "Juan Perez",
+                                "numero_solicitante": "555-123-4567"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Creado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Pedido"
+                                    }
+                                },
+                                "example": [
+                                    {
+                                        "id": 1001,
+                                        "id_sucursal": 1,
+                                        "id_producto": 10,
+                                        "cantidad": 3,
+                                        "nombre_solicitante": "Juan Perez",
+                                        "numero_solicitante": "555-123-4567",
+                                        "completado": false
+                                    },
+                                    {
+                                        "id": 1002,
+                                        "id_sucursal": 1,
+                                        "id_producto": 12,
+                                        "cantidad": 1,
+                                        "nombre_solicitante": "Juan Perez",
+                                        "numero_solicitante": "555-123-4567",
+                                        "completado": false
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validación fallida",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/sucursales/{sucursal}/productos": {
+            "get": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Productos con stock por sucursal",
+                "description": "Lista productos disponibles en una sucursal con su cantidad actual.",
+                "operationId": "95b2fa0bf05b9532b6ff8011681b3982",
+                "parameters": [
+                    {
+                        "name": "sucursal",
+                        "in": "path",
+                        "description": "ID de la sucursal",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "busqueda",
+                        "in": "query",
+                        "description": "Filtro por nombre de producto",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Producto"
+                                    }
+                                },
+                                "example": [
+                                    {
+                                        "id": 10,
+                                        "nombre": "Herbicida X",
+                                        "precio_unitario": 120.5,
+                                        "ieps": 8,
+                                        "precio_ieps": 9.64,
+                                        "tamano": "1L",
+                                        "ingrediente_activo": "Glifosato",
+                                        "cantidad": 15
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sucursales": {
+            "get": {
+                "tags": [
+                    "Sucursales"
+                ],
+                "summary": "Listar sucursales",
+                "description": "Retorna listado de sucursales con su empresa relacionada.",
+                "operationId": "7806b044c6498dd6c433ab7b8d8aba91",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Sucursal"
+                                    }
+                                },
+                                "example": [
+                                    {
+                                        "id": 2,
+                                        "nombre": "Sucursal Centro",
+                                        "direccion": "Av. Siempre Viva 742",
+                                        "telefono": "5559876543",
+                                        "email": "centro@agro.com",
+                                        "es_matriz": false,
+                                        "id_empresa": 1,
+                                        "empresa": {
+                                            "id": 1,
+                                            "nombre": "Agro del Valle",
+                                            "rfc": "XAXX010101000"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Login",
+                "operationId": "133266a99421d1360a64c2082acc975b",
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Login</body></html>"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Dashboard",
+                "operationId": "41ee3c98352de49bb113f4369d67b329",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Búsqueda de soluciones/productos",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "laravel_session",
+                        "in": "cookie",
+                        "description": "Cookie de sesión de Laravel",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "eyJpdiI6I..."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Dashboard</body></html>"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/inventario": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Inventario - listado",
+                "operationId": "e3323b3e5c3a569fe0ad6e3d3b334b0d",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Búsqueda por nombre o ingrediente activo",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Inventario</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Inventario - crear",
+                "operationId": "9e81a7179b9737421bd040c5fa92d810",
+                "responses": {
+                    "302": {
+                        "description": "Redirección"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/inventario/addInventario": {
+            "post": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Inventario - alta de existencias",
+                "operationId": "5229572b76b6ec4f0a40160060c16275",
+                "responses": {
+                    "302": {
+                        "description": "Redirección"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/venta": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Ventas - listado",
+                "operationId": "6c0de32c559e6c72c02547a24cee5299",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Búsqueda de productos en sucursal actual",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "b",
+                        "in": "query",
+                        "description": "Búsqueda de productos en otras sucursales de la misma empresa",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Ventas</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Ventas - crear",
+                "operationId": "7298e3753b06eaa7f2acb0054b200126",
+                "responses": {
+                    "302": {
+                        "description": "Redirección"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/ticket/{venta}": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Ventas - ticket",
+                "operationId": "3a1120a7d3411a0415d51abea59b0dd1",
+                "parameters": [
+                    {
+                        "name": "venta",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (PDF)",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/cliente": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Clientes - listado",
+                "operationId": "39cdb893f328ff0fd8f80ecddf5ac710",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Clientes</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/empresa": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Empresas - listado",
+                "operationId": "06dfa16f6d7651159336b9a2b888bbad",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Empresas</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/usuario": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Usuarios - listado",
+                "operationId": "d4ce06bb394a8c5f19cd17ecae584750",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Usuarios</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/sucursal": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Sucursales - listado",
+                "operationId": "0bb1b6569a4daf721e02e22942ceaa2b",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Número de página (paginación)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Sucursales</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/solucion": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Soluciones - listado",
+                "operationId": "f55864e059bdcbf97feb81c857b14f66",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Soluciones</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/clasificacion": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Clasificaciones - listado",
+                "operationId": "a1506a662a033ee7bcd6de7ade645b49",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Clasificaciones</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/enfermedad": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Enfermedades - listado",
+                "operationId": "f37e2fee44409ff32c1a6fb9805f9933",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Enfermedades</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/tipoFlor": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Tipos de flor - listado",
+                "operationId": "5802731cccb215874531c13f9e088187",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Tipos de flor</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/marca": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Marcas - listado",
+                "operationId": "0eec34b0d44199dd2f5eb5137b5658b4",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "<!doctype html><html><body>Marcas</body></html>"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/reporte": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Reportes - panel",
+                "operationId": "2e2fbbc79aa1b8b993104c8ac5fe07d7",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/reporte/venta": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Reportes - ventas (PDF)",
+                "operationId": "0b7811fbd6170146bfa22085873e15a0",
+                "parameters": [
+                    {
+                        "name": "fechaInicio",
+                        "in": "query",
+                        "description": "Fecha inicio (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "fechaFin",
+                        "in": "query",
+                        "description": "Fecha fin (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "id_sucursal",
+                        "in": "query",
+                        "description": "Solo Admin matriz: sucursal a consultar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (PDF)",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/reporte/inventario": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Reportes - inventario (PDF)",
+                "operationId": "dcf022e74bf1b1a5227f3d589d956998",
+                "parameters": [
+                    {
+                        "name": "id_clasificacion",
+                        "in": "query",
+                        "description": "Filtrar por clasificación",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "id_marca",
+                        "in": "query",
+                        "description": "Filtrar por marca",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "id_sucursal",
+                        "in": "query",
+                        "description": "Solo Admin matriz: sucursal a consultar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (PDF)",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/reporte/ventaPorProductoMarca": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Reportes - ventas por producto/marca (PDF)",
+                "description": "Requiere al menos uno: id_producto o id_marca.",
+                "operationId": "d0d3f153f2f3804cbb3f293ae79ecb80",
+                "parameters": [
+                    {
+                        "name": "fechaInicio",
+                        "in": "query",
+                        "description": "Fecha inicio (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "fechaFin",
+                        "in": "query",
+                        "description": "Fecha fin (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "id_producto",
+                        "in": "query",
+                        "description": "Filtrar por producto (alternativo a id_marca)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "id_marca",
+                        "in": "query",
+                        "description": "Filtrar por marca (alternativo a id_producto)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "id_sucursal",
+                        "in": "query",
+                        "description": "Solo Admin matriz: sucursal a consultar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK (PDF)",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/compra": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Compras - listado",
+                "operationId": "5e11e648ddef03ccbf0259af11aaa722",
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/facturas/index": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Facturas - índice",
+                "operationId": "303a1798e1d0f8a1237ab22529d59d0e",
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/facturas/update": {
+            "put": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Facturas - actualizar",
+                "operationId": "ab3d0ac4d86d7288ad8f625a5625e88b",
+                "responses": {
+                    "302": {
+                        "description": "Redirección"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/pedidos/index": {
+            "get": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Pedidos - listado",
+                "operationId": "2144c579a68fd0de0665b0649e2f4e3b",
+                "responses": {
+                    "200": {
+                        "description": "OK (HTML)"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        },
+        "/pedidos/{pedido}/completar": {
+            "put": {
+                "tags": [
+                    "Web"
+                ],
+                "summary": "Pedidos - completar",
+                "operationId": "05f57d5bfa9d3b9ea3a1afdd9d4b1747",
+                "parameters": [
+                    {
+                        "name": "pedido",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirección"
+                    }
+                },
+                "security": [
+                    {
+                        "SessionAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Empresa": {
+                "properties": {
+                    "id": {
+                        "description": "Esquemas OpenAPI (agrupados para facilitar el autoload).",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nombre": {
+                        "type": "string",
+                        "example": "Agro del Valle"
+                    },
+                    "direccion": {
+                        "type": "string",
+                        "example": "Calle 123, CDMX"
+                    },
+                    "telefono": {
+                        "type": "string",
+                        "example": "5551234567"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "contacto@agro.com"
+                    },
+                    "rfc": {
+                        "type": "string",
+                        "example": "XAXX010101000"
+                    },
+                    "aviso": {
+                        "type": "string",
+                        "example": "Aviso de privacidad..."
+                    },
+                    "numero_sucursales": {
+                        "type": "integer",
+                        "example": 3
+                    }
+                },
+                "type": "object"
+            },
+            "Sucursal": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "nombre": {
+                        "type": "string",
+                        "example": "Sucursal Centro"
+                    },
+                    "direccion": {
+                        "type": "string",
+                        "example": "Av. Siempre Viva 742"
+                    },
+                    "telefono": {
+                        "type": "string",
+                        "example": "5559876543"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "centro@agro.com"
+                    },
+                    "es_matriz": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "id_empresa": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "empresa": {
+                        "$ref": "#/components/schemas/Empresa"
+                    }
+                },
+                "type": "object"
+            },
+            "Producto": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "nombre": {
+                        "type": "string",
+                        "example": "Herbicida X"
+                    },
+                    "id_clasificacion": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "id_marca": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "precio_unitario": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120.5
+                    },
+                    "ieps": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 8
+                    },
+                    "precio_ieps": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 9.64
+                    },
+                    "tamano": {
+                        "type": "string",
+                        "example": "1L"
+                    },
+                    "ingrediente_activo": {
+                        "type": "string",
+                        "example": "Glifosato"
+                    },
+                    "cantidad": {
+                        "description": "Stock actual en la sucursal (derivado de inventario)",
+                        "type": "number",
+                        "example": 15
+                    }
+                },
+                "type": "object"
+            },
+            "Pedido": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1001
+                    },
+                    "id_sucursal": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "id_producto": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "cantidad": {
+                        "type": "number",
+                        "example": 3
+                    },
+                    "nombre_solicitante": {
+                        "type": "string",
+                        "example": "Juan Pérez"
+                    },
+                    "numero_solicitante": {
+                        "type": "string",
+                        "example": "555-123-4567"
+                    },
+                    "completado": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Unauthorized"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "description": "Clave para acceder a endpoints protegidos por api.key",
+                "name": "X-API-KEY",
+                "in": "header"
+            },
+            "SessionAuth": {
+                "type": "apiKey",
+                "description": "Sesión de Laravel para rutas web protegidas",
+                "name": "laravel_session",
+                "in": "cookie"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Sucursales",
+            "description": "Operaciones para sucursales y sus productos"
+        },
+        {
+            "name": "Pedidos",
+            "description": "Gestión de pedidos internos"
+        },
+        {
+            "name": "Web",
+            "description": "Rutas web que devuelven HTML/Inertia"
+        }
+    ]
+}

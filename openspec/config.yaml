@@ -1,0 +1,17 @@
+schema: spec-driven
+context: |
+  AgroSys: Laravel 11, Inertia, Vue 3, MySQL, Sanctum y soporte PWA offline existente.
+  Cliente nuevo propuesto: Flutter para Windows, macOS, iOS y Android.
+  El usuario solicitó plan primero y autorizó después implementar fase 1 backend.
+  Flutter y piloto siguen pendientes; documentos no equivalen a implementación.
+  MVP confirmado: consulta, ventas de contado y crédito a clientes existentes.
+  Reutilizar servicios centrales; mantener compatibilidad de la PWA.
+  No perder ni duplicar ventas, pagos, adeudos o movimientos de inventario.
+  Escribir documentos en español; conservar marcadores normativos OpenSpec.
+rules:
+  specs:
+    - Cada requisito SHALL tener escenarios WHEN/THEN verificables.
+    - Distinguir comportamiento existente, propuesto y decisiones pendientes.
+  tasks:
+    - Mantener tareas sin marcar hasta implementar y verificar.
+    - Vincular tareas y pruebas a las capacidades y criterios de aceptación.

@@ -1,0 +1,40 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('productos', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre')->unique();
+            $table->unsignedBigInteger('id_clasificacion');
+            $table->unsignedBigInteger('id_marca');
+            $table->foreign('id_clasificacion')->references('id')->on('cat_clasificacions');
+            $table->foreign('id_marca')->references('id')->on('cat_marcas');
+            $table->decimal('cantidad', 10,2);
+            $table->decimal('precio_unitario', 10,2);
+            $table->decimal('precio_ieps', 10,2);
+            $table->unsignedBigInteger('ieps');
+            $table->string('tamano');
+            $table->unsignedBigInteger('id_usuario');
+            $table->foreign('id_usuario')->references('id')->on('users');
+            $table->string('ingrediente_activo');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('productos');
+    }
+};
