@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart'
+    show Value, BooleanExpressionOperators, StringExpressionOperators;
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,9 @@ class AppController extends ChangeNotifier {
        apiFactory = apiFactory ?? ((url) => PosApi(url));
   Session? session;
   CatalogRepository? repository;
+  String? cashSessionId;
+  bool get hasOpenCash => cashSessionId != null;
+  bool get canCompleteSale => canSell && hasOpenCash;
   PosApi? _api;
   CatalogSync? _sync;
   SignInStep signInStep = SignInStep.credentials;
@@ -46,6 +50,7 @@ class AppController extends ChangeNotifier {
   String apiUrl = configuredApiUrl;
   bool startupSessionFailure = false;
   String? error;
+  bool deviceSessionConfirmationRequired = false;
   bool busy = false, online = false, starting = true, storageFailure = false;
   int downloadedPages = 0, generation = 0;
   SyncInfo? syncInfo;
@@ -228,6 +233,63 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> cachedCash() async {
+    final repo = repository;
+    if (repo == null) return {'current': null, 'history': [], 'movements': []};
+    final row = await repo.db
+        .customSelect('SELECT payload FROM cash_local_state WHERE id = 1')
+        .getSingleOrNull();
+    return row == null
+        ? {'current': null, 'history': [], 'movements': []}
+        : object(jsonDecode(row.read<String>('payload')));
+  }
+
+  Future<Map<String, dynamic>> refreshCash() async {
+    final repo = repository;
+    final data = await stockWorkflowData('cash/status', 'cash.manage');
+    if (repo == null || repository != repo) {
+      throw ApiFailure(403, 'La sesión cambió. Abre de nuevo la caja.');
+    }
+    await _saveCash(repo, data);
+    notifyListeners();
+    return data;
+  }
+
+  Future<void> _saveCash(
+    CatalogRepository repo,
+    Map<String, dynamic> data,
+  ) async {
+    await repo.db.customStatement(
+      'INSERT OR REPLACE INTO cash_local_state (id, payload) VALUES (1, ?)',
+      [jsonEncode(data)],
+    );
+    if (repository == repo) {
+      final current = data['current'];
+      cashSessionId = current is Map && current['closedAt'] == null
+          ? current['id'] as String?
+          : null;
+    }
+  }
+
+  Future<void> assertCashCanClose() async {
+    final repo = repository;
+    if (repo == null || !online || syncBusy) {
+      throw ApiFailure(
+        409,
+        'Conéctate y espera a que termine la sincronización.',
+      );
+    }
+    final unresolved = await (repo.db.select(
+      repo.db.outbox,
+    )..where((t) => t.status.equals('confirmed').not())).get();
+    if (unresolved.isNotEmpty) {
+      throw ApiFailure(
+        409,
+        'Sincroniza y resuelve las ventas pendientes antes del corte.',
+      );
+    }
+  }
+
   Future<String> prepareInventoryRequest(
     String path,
     String permission,
@@ -281,6 +343,7 @@ class AppController extends ChangeNotifier {
     notifyListeners();
     try {
       await _stopSync();
+      if (row.path == 'cash/close') await assertCashCanClose();
       final result = await _api!.request(
         row.path,
         token: checked.token,
@@ -294,7 +357,9 @@ class AppController extends ChangeNotifier {
           'La sesión cambió. Revisa la solicitud en su sucursal original.',
         );
       }
-      final resourceField = row.path.startsWith('purchases/')
+      final resourceField = row.path.startsWith('cash/')
+          ? 'sessionId'
+          : row.path.startsWith('purchases/')
           ? 'purchaseId'
           : row.path.startsWith('transfers/')
           ? 'transferId'
@@ -308,14 +373,53 @@ class AppController extends ChangeNotifier {
           'No llegó una confirmación válida. Reintenta la misma solicitud.',
         );
       }
-      await (repo.db.update(
-        repo.db.inventoryRequests,
-      )..where((t) => t.operationId.equals(id))).write(
-        InventoryRequestsCompanion(
-          status: const Value('confirmed'),
-          result: Value(jsonEncode(result)),
-        ),
-      );
+      if (row.path.startsWith('cash/')) {
+        if (result['session'] is! Map) {
+          throw ApiFailure(
+            500,
+            'No llegó una confirmación válida de caja. Reintenta la misma solicitud.',
+          );
+        }
+        final cut = object(result['session']);
+        if (cut['id'] != result['sessionId'] ||
+            cut['opening'] is! String ||
+            cut['expected'] is! String) {
+          throw ApiFailure(
+            500,
+            'No llegó una confirmación válida de caja. Reintenta la misma solicitud.',
+          );
+        }
+        decimalUnits(cut['opening']);
+        decimalUnits(cut['expected'], signed: true);
+      }
+      await repo.db.transaction(() async {
+        await (repo.db.update(
+          repo.db.inventoryRequests,
+        )..where((t) => t.operationId.equals(id))).write(
+          InventoryRequestsCompanion(
+            status: const Value('confirmed'),
+            result: Value(jsonEncode(result)),
+          ),
+        );
+        if (row.path.startsWith('cash/')) {
+          final oldCash = await cachedCash();
+          final cut = object(result['session']);
+          final closed = cut['closedAt'] != null;
+          await _saveCash(repo, {
+            ...oldCash,
+            'current': closed ? null : cut,
+            if (row.path == 'cash/open' || closed) 'movements': [],
+            if (closed)
+              'history': [
+                cut,
+                ...(oldCash['history'] as List? ?? []).where(
+                  (s) => object(s)['id'] != cut['id'],
+                ),
+              ].take(20).toList(),
+          });
+        }
+      });
+      if (row.path.startsWith('cash/')) return result;
       String? syncWarning;
       try {
         final info = await repo.info();
@@ -355,6 +459,23 @@ class AppController extends ChangeNotifier {
         throw const SaleInputException('No hay autorización para vender.');
       }
       await vault.verifyLease(session!, session!.lease!);
+      final unresolvedCash =
+          await (repository!.db.select(repository!.db.inventoryRequests)..where(
+                (t) => t.path.like('cash/%') & t.status.equals('pending'),
+              ))
+              .get();
+      if (unresolvedCash.isNotEmpty) {
+        throw const SaleInputException(
+          'Confirma la solicitud pendiente de caja antes de vender.',
+        );
+      }
+      if (online && hasPermission('cash.manage')) {
+        try {
+          await refreshCash();
+        } on ApiFailure catch (e) {
+          if (!e.isConnectionFailure) rethrow;
+        }
+      }
       result = await sales!.complete(request);
       await _refreshInfo();
     });
@@ -419,6 +540,7 @@ class AppController extends ChangeNotifier {
     await _stopSync();
     final old = repository;
     repository = null;
+    cashSessionId = null;
     if (old != null) await old.db.close();
     final db = await openDatabase(session!.contextId);
     try {
@@ -431,6 +553,11 @@ class AppController extends ChangeNotifier {
         error = 'El reloj del dispositivo retrocedió. Corrígelo y renueva la autorización online.';
       }
       repository = repo;
+      final cash = await cachedCash();
+      final currentCash = cash['current'];
+      cashSessionId = currentCash is Map && currentCash['closedAt'] == null
+          ? currentCash['id'] as String?
+          : null;
       _sync = CatalogSync(
         _api!,
         repo,
@@ -509,9 +636,13 @@ class AppController extends ChangeNotifier {
     await _openRepository();
     await _activateAndDownload();
   });
-  Future<void> _activateAndDownload() async {
+  Future<void> _activateAndDownload({bool closeOtherSessions = false}) async {
     await _stopSync();
-    final result = await _api!.activate(session!);
+    final result = await _api!.activate(
+      session!,
+      closeOtherSessions: closeOtherSessions,
+    );
+    deviceSessionConfirmationRequired = false;
     final lease = object(result['offlineLease']);
     await vault.verifyLease(session!, lease);
     session = session!.copyWith(lease: lease, blocked: false);
@@ -521,24 +652,35 @@ class AppController extends ChangeNotifier {
     await _sync!.synchronize();
     await _refreshInfo();
     online = true;
+    if (hasPermission('cash.manage')) await refreshCash();
     _scheduleSync();
   }
 
-  Future<void> activate() => _action(_activateAndDownload);
+  Future<void> activate() => _action(() => _activateAndDownload());
+  Future<void> replaceOtherDeviceSessions() =>
+      _action(() => _activateAndDownload(closeOtherSessions: true));
   Future<void> loadBranches() => _action(() async {
     final response = await _api!.request(
-      'branches', token: session!.token, method: 'GET',
+      'branches',
+      token: session!.token,
+      method: 'GET',
     );
     branches = (response['branches'] as List)
-        .map((raw) => Branch.fromJson(object(raw))).toList();
+        .map((raw) => Branch.fromJson(object(raw)))
+        .toList();
     online = true;
   });
 
-  Future<void> changeBranch(Branch branch) => _action(() async {
+  Future<void> changeBranch(
+    Branch branch, {
+    bool closeOtherSessions = false,
+  }) => _action(() async {
     final old = session!;
     if (branch.id == old.branch.id) return;
-    if (!branches.any((allowed) => allowed.id == branch.id &&
-        allowed.companyId == branch.companyId)) {
+    if (!branches.any(
+      (allowed) =>
+          allowed.id == branch.id && allowed.companyId == branch.companyId,
+    )) {
       throw const FormatException('Selecciona una sucursal autorizada.');
     }
     await _stopSync();
@@ -546,7 +688,9 @@ class AppController extends ChangeNotifier {
     final Map<String, dynamic> response;
     try {
       response = await _api!.exchange(old.token, {
-        'device_id': device, 'branch_id': branch.id,
+        'device_id': device,
+        'branch_id': branch.id,
+        if (closeOtherSessions) 'close_other_sessions': true,
       });
     } on ApiFailure catch (failure) {
       if (failure.status == 403) {
@@ -555,10 +699,15 @@ class AppController extends ChangeNotifier {
       }
       rethrow;
     }
+    deviceSessionConfirmationRequired = false;
     // The exchanged token replaces the old one. Each branch keeps its own DB.
     session = Session(
-      apiUrl: apiUrl, userId: old.userId, userName: old.userName,
-      deviceId: device, token: response['token'] as String, branch: branch,
+      apiUrl: apiUrl,
+      userId: old.userId,
+      userName: old.userName,
+      deviceId: device,
+      token: response['token'] as String,
+      branch: branch,
       tokenExpiresAt: DateTime.parse(response['expiresAt'] as String),
     );
     syncInfo = null;
@@ -575,6 +724,7 @@ class AppController extends ChangeNotifier {
       await _sync!.synchronize();
       await _refreshInfo();
       online = true;
+      if (hasPermission('cash.manage')) await refreshCash();
       _scheduleSync();
     } else {
       await _activateAndDownload();
@@ -593,6 +743,7 @@ class AppController extends ChangeNotifier {
     await _sync!.synchronize();
     await _refreshInfo();
     online = true;
+    if (hasPermission('cash.manage')) await refreshCash();
     _scheduleSync();
   });
   Future<void> synchronize({bool full = false}) =>
@@ -727,6 +878,7 @@ class AppController extends ChangeNotifier {
         generation++;
       }
       online = true;
+      if (hasPermission('cash.manage')) await refreshCash();
       _scheduleSync();
     } on ApiFailure catch (e) {
       if (session?.contextId == checked.contextId &&
@@ -742,6 +894,8 @@ class AppController extends ChangeNotifier {
 
   Future<void> _apiFailure(ApiFailure failure) async {
     online = !failure.isConnectionFailure;
+    deviceSessionConfirmationRequired =
+        failure.code == 'DEVICE_SESSION_CONFIRMATION_REQUIRED';
     error = failure.message;
     if (failure.blocksAccess && session != null) {
       session = session!.copyWith(blocked: true);
@@ -782,6 +936,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> signOut() async {
     if (busy) return;
+    deviceSessionConfirmationRequired = false;
     final old = session;
     final discoveryToken = _credentials?['token'] as String?;
     final api = _api;

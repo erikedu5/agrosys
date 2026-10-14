@@ -121,6 +121,47 @@ class _AccessScreenState extends State<AccessScreen> {
                         'La primera descarga requiere conexión. Las descargas interrumpidas se pueden continuar y no reemplazan datos anteriores.',
                       ),
                       const SizedBox(height: 20),
+                      if (c.deviceSessionConfirmationRequired)
+                        FilledButton.icon(
+                          icon: const Icon(Icons.logout),
+                          label: const Text(
+                            'Cerrar las demás sesiones y entrar',
+                          ),
+                          onPressed: c.busy
+                              ? null
+                              : () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: const Text(
+                                        'Cerrar las demás sesiones',
+                                      ),
+                                      content: const Text(
+                                        'Se cerrarán todas las demás sesiones web y POS de tu usuario. Las de otros usuarios seguirán abiertas. Los equipos sin conexión lo detectarán al reconectarse y conservarán sus ventas pendientes. Antes de continuar, sincroniza sus ventas si es posible.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(
+                                            dialogContext,
+                                            false,
+                                          ),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () => Navigator.pop(
+                                            dialogContext,
+                                            true,
+                                          ),
+                                          child: const Text('Cerrar y entrar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (confirmed == true) {
+                                    await c.replaceOtherDeviceSessions();
+                                  }
+                                },
+                        ),
                       FilledButton(
                         onPressed: c.busy
                             ? null

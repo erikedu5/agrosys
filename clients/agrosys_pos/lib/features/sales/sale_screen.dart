@@ -8,6 +8,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../ui/web_theme.dart';
 import 'daily_sales.dart';
+import '../cash/cash_screen.dart';
 import '../receipts/receipt_dialog.dart';
 import 'sale_domain.dart';
 
@@ -38,7 +39,10 @@ class _SaleScreenState extends State<SaleScreen> {
   Timer? _debounce;
   SaleRequest? _closingRequest;
   bool get _editable =>
-      !_closing && _closingRequest == null && !widget.controller.busy;
+      !_closing &&
+      _closingRequest == null &&
+      !widget.controller.busy &&
+      widget.controller.hasOpenCash;
   @override
   void initState() {
     super.initState();
@@ -363,7 +367,15 @@ class _SaleScreenState extends State<SaleScreen> {
   }
 
   Future<void> _showPayment() async {
+    if (!widget.controller.hasOpenCash) {
+      await _showCash();
+      return;
+    }
     if (_quote == null || _closing || widget.controller.busy) return;
+    final cash = widget.controller.hasPermission('cash.manage')
+        ? await widget.controller.cachedCash()
+        : null;
+    if (!mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -414,6 +426,12 @@ class _SaleScreenState extends State<SaleScreen> {
                         ),
                       ],
                     ),
+                    if (cash != null)
+                      Text(
+                        cash['current'] == null
+                            ? 'Abre la caja desde esta pantalla antes de vender.'
+                            : 'Caja abierta: este cobro se incluirá al sincronizar.',
+                      ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -578,6 +596,49 @@ class _SaleScreenState extends State<SaleScreen> {
     _refreshPayment = null;
   }
 
+  Future<void> _showCash() async {
+    if (_closing || widget.controller.busy) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ListenableBuilder(
+        listenable: widget.controller,
+        builder: (_, _) => Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: 960,
+            height: MediaQuery.sizeOf(dialogContext).height - 48,
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: 'Volver a la venta',
+                    onPressed: widget.controller.busy
+                        ? null
+                        : () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+                Expanded(child: CashScreen(controller: widget.controller)),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextButton(
+                    onPressed: widget.controller.busy
+                        ? null
+                        : () => Navigator.pop(dialogContext),
+                    child: const Text('Volver a la venta'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _lastReceipt() async {
     try {
       final rows = await widget.controller.sales!.history(limit: 1);
@@ -656,6 +717,44 @@ class _SaleScreenState extends State<SaleScreen> {
                         onPressed: _lastReceipt,
                         icon: const Icon(Icons.print_outlined),
                       ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton.icon(
+                        key: const Key('sale-cash-button'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(56),
+                          textStyle: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: _closing || widget.controller.busy
+                            ? null
+                            : _showCash,
+                        icon: const Icon(Icons.payments_outlined),
+                        label: Text(
+                          widget.controller.hasOpenCash
+                              ? 'Cerrar caja / corte'
+                              : 'Abrir caja',
+                        ),
+                      ),
+                      if (!widget.controller.hasOpenCash)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Abre la caja para comenzar a vender.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                     ],
                   ),
                 ),

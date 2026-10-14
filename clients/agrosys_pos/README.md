@@ -5,6 +5,13 @@ espera ante límites de solicitudes, ventas con filtro por categoría, inventari
 compras y transferencias con menús según los permisos del usuario.
 La gestión de inventario, compras y transferencias requiere conexión.
 
+Al alcanzar el número de dispositivos de la sucursal, el nuevo acceso solicita
+confirmar «Cerrar las demás sesiones y entrar». Cierra todos los otros accesos web
+y POS del mismo usuario, conservando los de otros usuarios y los datos locales.
+Los equipos sin conexión detectan el cierre al reconectarse. Este cambio requiere
+actualizar el backend, aplicar la migración y recompilar los instaladores; consulta
+[el flujo de sesiones](../../openspec/changes/flutter-pos-mvp/device-sessions.md).
+
 El paquete macOS universal (Intel y Apple Silicon) actualmente disponible es
 `dist/AgroSys-POS-2.1.0-macOS.dmg` (build 7), con checksum SHA-256. La landing utiliza
 `public/downloads/AgroSys-POS-2.1.0-macOS.dmg` del repositorio principal.
@@ -82,6 +89,28 @@ licencia OFL en assets para funcionar offline. Cancelación/error de impresión
 no deshace ni repite la venta; resultado enviado requiere comprobar salida
 física. Impresoras térmicas/Bluetooth/USB aún requieren elegir y probar adaptador
 en fase 5. Fuente: [printing](https://pub.dev/packages/printing).
+
+## Apertura y corte de caja
+
+**Venta → Abrir caja** abre un modal y comparte la sesión del cajero y sucursal con
+la web. No se permiten ventas hasta abrir caja. El botón cambia a **Cerrar caja / corte**
+cuando está abierta; el mismo modal conserva el carrito al volver a ventas y permite abrir
+con fondo inicial, registrar entradas/salidas con motivo, cerrar con efectivo
+contado y diferencia, y consultar/imprimir los últimos 20 cortes. Estos cambios
+están en el código fuente; los instaladores publicados 2.1.0 todavía no los incluyen.
+
+El esperado incluye cobros de contado, iniciales de crédito y abonos registrados
+en web; resta los reembolsos de contado. Si pagas a un proveedor con dinero de la
+caja, registra una salida manual. El backend también rechaza ventas sin caja abierta.
+
+La apertura y el cierre requieren conexión. Antes del corte, sincroniza TODOS los
+dispositivos de este cajero. Las ventas offline conservan su caja original y los
+pendientes/revisiones bloquean el cierre. Si otro dispositivo envía una venta tras
+cerrar su caja, requiere revisión central y conserva el corte. Las solicitudes de
+caja sobreviven al reinicio y se reintentan con el mismo identificador.
+
+SQLite migra a v7 conservando catálogo, ventas y pendientes. Más detalles y
+validación en [caja compartida](../../openspec/changes/flutter-pos-mvp/cash-register.md).
 
 ## Sincronizar y revisar pendientes
 

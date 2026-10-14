@@ -151,6 +151,30 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
     if (selected == null || !mounted) return;
     await c.changeBranch(selected);
+    if (mounted && c.deviceSessionConfirmationRequired) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Cerrar las demás sesiones'),
+          content: const Text(
+            'Esta sucursal alcanzó su número de dispositivos. Se cerrarán todas las demás sesiones web y POS de tu usuario. Las ventas pendientes se conservan; sincronízalas antes si es posible. Los equipos sin conexión detectarán el cierre al reconectarse.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Cerrar y entrar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await c.changeBranch(selected, closeOtherSessions: true);
+      }
+    }
     if (mounted && c.error != null) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(c.error!)));
