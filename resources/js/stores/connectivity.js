@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import { downloadInitialCatalog } from '@/Offline/services/catalogSync';
+import { getOfflineContext } from '@/Offline/services/context';
 
 export const useConnectivityStore = defineStore('connectivity', () => {
     const mode = ref('recovering');
@@ -14,6 +15,8 @@ export const useConnectivityStore = defineStore('connectivity', () => {
     let initialized = false;
     let recoveryHandler = null;
     let posWarmed = false;
+    let healthGeneration = 0;
+    const contextKey = () => JSON.stringify(getOfflineContext());
 
     // En sync_error el servidor sí responde: la app se usa en línea con normalidad
     // y solo la sincronización offline queda pendiente de revisión.
@@ -56,24 +59,31 @@ export const useConnectivityStore = defineStore('connectivity', () => {
     }
 
     async function healthCheck({ syncCatalog = false } = {}) {
+        const generation = ++healthGeneration;
+        const context = contextKey();
+        const isCurrent = () => generation === healthGeneration && context === contextKey();
         // Solo se pasa a "recuperando" al salir de offline; en línea o con un problema
         // de sincronización la app sigue usable mientras se revisa.
         if (mode.value === 'offline') mode.value = 'recovering';
         lastError.value = null;
         try {
             const { data: health } = await axios.get('/api/v1/offline/health', { timeout: 5000, headers: { Accept: 'application/json' } });
+            if (!isCurrent()) return false;
             if (!health.authenticated) {
                 const error = new Error('OFFLINE_SESSION_REQUIRES_ONLINE_LOGIN');
                 error.response = { status: 401 };
                 throw error;
             }
             await warmOfflineShell();
+            if (!isCurrent()) return false;
             if (syncCatalog) {
                 const bootstrap = await downloadInitialCatalog();
+                if (!isCurrent()) return false;
                 lastSyncAt.value = bootstrap.syncedAt;
             }
             if (recoveryHandler) {
                 const recovery = await recoveryHandler();
+                if (!isCurrent()) return false;
                 pendingCount.value = recovery?.pending ?? pendingCount.value;
                 lastSyncAt.value = recovery?.syncedAt ?? lastSyncAt.value;
                 if (recovery?.conflicts > 0) {
@@ -86,6 +96,7 @@ export const useConnectivityStore = defineStore('connectivity', () => {
             mode.value = 'online';
             return true;
         } catch (error) {
+            if (!isCurrent()) return false;
             const status = error?.response?.status;
             lastError.value = error;
             if (status === 401 && navigator.onLine !== false) {
@@ -106,6 +117,7 @@ export const useConnectivityStore = defineStore('connectivity', () => {
     }
 
     function markOffline() {
+        healthGeneration++;
         syncIssue.value = null;
         mode.value = 'offline';
         redirectToOfflineHome();

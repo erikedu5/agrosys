@@ -16,13 +16,13 @@ const q = ref('');
 const statusClass = (status) => {
     switch (status) {
         case 'pagada':
-            return 'bg-green-100 text-green-800';
+            return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
         case 'adeudo':
-            return 'bg-yellow-100 text-yellow-800';
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
         case 'retrasada':
-            return 'bg-red-100 text-red-800';
+            return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
         default:
-            return 'bg-gray-100 text-gray-800';
+            return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
     }
 };
 
@@ -39,13 +39,13 @@ watch(q, (value) => {
             </h2>
             <br>
             <div class="flex justify-between">
-                <input type="text" class="form-input rounded-md shadow-sm w-full" v-model="q"
+                <input type="text" class="form-input rounded-md shadow-sm w-full bg-white text-gray-900 border-gray-300 placeholder-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400" v-model="q"
                     placeholder="Buscar compra...">
 
             </div>
         </template>
 
-        <hr class="my-6">
+        <hr class="my-6 border-gray-200 dark:border-gray-600">
         <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
             <Link :href="route('compra.create')"
                 class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
@@ -59,28 +59,28 @@ watch(q, (value) => {
 
             <!-- Vista en tarjetas -->
             <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <div v-for="compra in compras.data" :key="compra.id" class="rounded-lg boder p-4 bg-white shadow-lg w-full">
-                    <div class="text-sm text-gray-500">Proveedor</div>
-                    <div class="font-semibold text-gray-900">{{ compra.proveedor }}</div>
+                <div v-for="compra in compras.data" :key="compra.id" class="rounded-lg border border-gray-200 dark:border-gray-600 p-4 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-lg w-full">
+                    <div class="text-sm text-gray-600 dark:text-gray-300">Proveedor</div>
+                    <div class="font-semibold text-gray-900 dark:text-white">{{ compra.proveedor }}</div>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <div>
-                            <div class="text-gray-500">Fecha de compra</div>
+                            <div class="text-gray-600 dark:text-gray-300">Fecha de compra</div>
                             <div>{{ compra.fecha_compra }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500">Total de la compra</div>
+                            <div class="text-gray-600 dark:text-gray-300">Total de la compra</div>
                             <div>{{ compra.total_compra }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500">Fecha limite de credito</div>
+                            <div class="text-gray-600 dark:text-gray-300">Fecha limite de credito</div>
                             <div>{{ compra.fecha_credito }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500">Total del credito</div>
+                            <div class="text-gray-600 dark:text-gray-300">Total del credito</div>
                             <div>{{ compra.total_credito }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500">Estatus de la compra</div>
+                            <div class="text-gray-600 dark:text-gray-300">Estatus de la compra</div>
                             <span :class="'px-2 py-1 rounded-full text-xs capitalize ' + statusClass(compra.status)">{{ compra.status }}</span>
                         </div>
                     </div>
@@ -98,8 +98,8 @@ watch(q, (value) => {
                 </div>
             </div>
             <div class="relative overflow-x-auto hidden md:block w-full">
-                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-50">
+                <table class="w-full text-sm text-left text-gray-700 dark:text-gray-100">
+                    <thead class="text-xs font-semibold uppercase bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100">
                         <tr class="[&>th]:px-4 [&>th]:py-3">
                             <th>Id</th>
                             <th>Proveedor</th>
@@ -112,7 +112,7 @@ watch(q, (value) => {
                         </tr>
                     </thead>
                     <tbody class="[&>tr>:is(td)]:px-4 [&>tr>:is(td)]:py-2">
-                        <tr v-for="compra in compras.data" :key="compra.id" class="border-b">
+                        <tr v-for="compra in compras.data" :key="compra.id" class="border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
                             <td class="px-4 py-2"> {{ compra.id }}</td>
                             <td class="px-4 py-2"> {{ compra.proveedor }} </td>
                             <td class="px-4 py-2"> {{ compra.fecha_compra }} </td>

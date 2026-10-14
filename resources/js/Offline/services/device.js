@@ -1,17 +1,34 @@
-import { openOfflineDatabase, requestAsPromise, runTransaction } from '../database/db';
+import { runTransaction } from '../database/db';
 import { getOfflineContext } from './context';
 
 const LEGACY_KEY = 'deviceId';
 const keyFor = (context) => (context ? `deviceId:${context.userId}:${context.branchId}` : LEGACY_KEY);
 
-async function readKey(key) {
-    const database = await openOfflineDatabase();
-    const record = await requestAsPromise(database.transaction('appMetadata', 'readonly').objectStore('appMetadata').get(key));
-    return record?.value ?? null;
-}
-
-async function writeKey(key, value) {
-    await runTransaction(['appMetadata'], 'readwrite', transaction => transaction.objectStore('appMetadata').put({ key, value }));
+async function resolveDeviceId(context, rotate = false, rejectedId = null) {
+    const key = keyFor(context);
+    let value;
+    // Bootstrap and activation (including other tabs) must share one identity.
+    // Keep reading and writing inside the same serialized IndexedDB transaction.
+    await runTransaction(['appMetadata'], 'readwrite', transaction => {
+        const store = transaction.objectStore('appMetadata');
+        const request = store.get(key);
+        request.onsuccess = () => {
+            const existing = request.result?.value;
+            if (existing && (!rotate || (rejectedId && existing !== rejectedId))) {
+                value = existing;
+            } else if (rotate) {
+                value = crypto.randomUUID();
+                store.put({ key, value });
+            } else {
+                const legacy = store.get(LEGACY_KEY);
+                legacy.onsuccess = () => {
+                    value = legacy.result?.value ?? crypto.randomUUID();
+                    store.put({ key, value });
+                };
+            }
+        };
+    });
+    return value;
 }
 
 /**
@@ -21,18 +38,11 @@ async function writeKey(key, value) {
  * si el servidor responde que pertenece a otro contexto, se rota con rotateDeviceId().
  */
 export async function getOrCreateDeviceId(context = getOfflineContext()) {
-    const key = keyFor(context);
-    const existing = await readKey(key);
-    if (existing) return existing;
-    const value = (await readKey(LEGACY_KEY)) ?? crypto.randomUUID();
-    await writeKey(key, value);
-    return value;
+    return resolveDeviceId(context);
 }
 
-export async function rotateDeviceId(context = getOfflineContext()) {
-    const value = crypto.randomUUID();
-    await writeKey(keyFor(context), value);
-    return value;
+export async function rotateDeviceId(context = getOfflineContext(), rejectedId = null) {
+    return resolveDeviceId(context, true, rejectedId);
 }
 
 export const isDeviceContextMismatch = (error) => error?.response?.status === 409
@@ -44,11 +54,12 @@ export const isDeviceContextMismatch = (error) => error?.response?.status === 40
  * uno nuevo para el contexto actual y reintenta una vez.
  */
 export async function withDeviceId(callback, context = getOfflineContext()) {
+    const deviceId = await getOrCreateDeviceId(context);
     try {
-        return await callback(await getOrCreateDeviceId(context));
+        return await callback(deviceId);
     } catch (error) {
         if (!isDeviceContextMismatch(error)) throw error;
-        return callback(await rotateDeviceId(context));
+        return callback(await rotateDeviceId(context, deviceId));
     }
 }
 

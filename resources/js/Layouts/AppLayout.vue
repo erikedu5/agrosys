@@ -264,7 +264,7 @@ const searchItems = computed(() => {
 
 <template>
     <DeviceSessionGate />
-    <div>
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Head :title="title" />
 
         <Banner />
@@ -577,7 +577,7 @@ const searchItems = computed(() => {
                 </header>
 
                 <!-- Contenido de la página -->
-                <main>
+                <main class="app-content">
                     <slot />
                 </main>
             </div>

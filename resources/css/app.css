@@ -13,3 +13,46 @@
         @apply block font-medium text-sm text-gray-700 capitalize;
     }
 }
+
+/* Legacy tables use light surfaces without matching dark variants. Keep this
+   fallback inside authenticated content and screen media so print stays light. */
+@media screen and (prefers-color-scheme: dark) {
+    .app-content table {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
+
+    .app-content table thead {
+        background-color: #374151;
+        color: #f9fafb;
+    }
+
+    .app-content table tbody {
+        background-color: #1f2937;
+    }
+
+    .app-content table :is(.bg-white, .bg-gray-50, .bg-gray-100):not([class*="dark:bg-"]) {
+        background-color: #1f2937;
+        color: #f3f4f6;
+    }
+
+    .app-content table thead:is(.bg-white, .bg-gray-50, .bg-gray-100),
+    .app-content table thead :is(.bg-white, .bg-gray-50, .bg-gray-100) {
+        background-color: #374151;
+    }
+
+    .app-content table :is(.text-gray-400, .text-gray-500, .text-gray-600, .text-gray-700, .text-gray-800, .text-gray-900):not([class*="bg-"]) {
+        color: #e5e7eb;
+    }
+
+    .app-content table :is(th, td, tr, thead, tbody) {
+        border-color: #4b5563;
+    }
+
+    .app-content table :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]) {
+        color-scheme: dark;
+        background-color: #111827;
+        color: #f3f4f6;
+        border-color: #6b7280;
+    }
+}
