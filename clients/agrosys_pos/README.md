@@ -1,6 +1,6 @@
 # Agrosys POS — cliente Flutter
 
-Versión actual: **2.1.0+7**. Incluye cambio de sucursal durante la sesión,
+Versión actual: **2.1.1+8**. Incluye cambio de sucursal durante la sesión,
 espera ante límites de solicitudes, ventas con filtro por categoría, inventario,
 compras y transferencias con menús según los permisos del usuario.
 La gestión de inventario, compras y transferencias requiere conexión.
@@ -9,14 +9,14 @@ Al alcanzar el número de dispositivos de la sucursal, el nuevo acceso solicita
 confirmar «Cerrar las demás sesiones y entrar». Cierra todos los otros accesos web
 y POS del mismo usuario, conservando los de otros usuarios y los datos locales.
 Los equipos sin conexión detectan el cierre al reconectarse. Este cambio requiere
-actualizar el backend, aplicar la migración y recompilar los instaladores; consulta
+actualizar el backend, aplicar la migración y actualizar los instaladores 2.1.1; consulta
 [el flujo de sesiones](../../openspec/changes/flutter-pos-mvp/device-sessions.md).
 
 El paquete macOS universal (Intel y Apple Silicon) actualmente disponible es
-`dist/AgroSys-POS-2.1.0-macOS.dmg` (build 7), con checksum SHA-256. La landing utiliza
-`public/downloads/AgroSys-POS-2.1.0-macOS.dmg` del repositorio principal.
+`dist/AgroSys-POS-2.1.1-macOS.dmg` (build 8), con checksum SHA-256. La landing utiliza
+`public/downloads/AgroSys-POS-2.1.1-macOS.dmg` del repositorio principal.
 Requiere macOS 12 o posterior. Compilación release verificada con análisis sin
-incidencias y 117 pruebas Flutter aprobadas.
+incidencias y 131 pruebas Flutter aprobadas.
 Compilar con `--dart-define-from-file=config/production.json`.
 La firma actual es ad hoc; el paquete no está notarizado.
 
@@ -96,8 +96,7 @@ en fase 5. Fuente: [printing](https://pub.dev/packages/printing).
 la web. No se permiten ventas hasta abrir caja. El botón cambia a **Cerrar caja / corte**
 cuando está abierta; el mismo modal conserva el carrito al volver a ventas y permite abrir
 con fondo inicial, registrar entradas/salidas con motivo, cerrar con efectivo
-contado y diferencia, y consultar/imprimir los últimos 20 cortes. Estos cambios
-están en el código fuente; los instaladores publicados 2.1.0 todavía no los incluyen.
+contado y diferencia, y consultar/imprimir los últimos 20 cortes. La versión 2.1.1 incluye estos cambios y requiere publicar las migraciones y el backend correspondiente.
 
 El esperado incluye cobros de contado, iniciales de crédito y abonos registrados
 en web; resta los reembolsos de contado. Si pagas a un proveedor con dinero de la
