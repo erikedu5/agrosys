@@ -206,8 +206,11 @@ aún requiere ejecución en un host compatible. Evidencia detallada en
 [fase 4](../../openspec/changes/flutter-pos-mvp/client-phase-4.md).
 
 CI en `.github/workflows/flutter-pos.yml`: calidad, pruebas nativas de escritorio,
-Android y build de simulador iOS. La existencia del workflow no demuestra que
-haya corrido: no se publicó ni ejecutó remotamente durante esta implementación.
+Android y build de simulador iOS. La compilación 2.1.1+8 pasó todos los jobs en
+[GitHub Actions](https://github.com/erikedu5/agrosys/actions/runs/38497195062),
+incluidas las pruebas de instalación y desinstalación de Windows. El instalador
+verificado está en `dist/AgroSys-POS-2.1.1-Windows-Setup.exe` y
+`public/downloads/AgroSys-POS-2.1.1-Windows-Setup.exe`, con checksum SHA-256.
 
 ### Descargar la compilación de Windows en GitHub
 

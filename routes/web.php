@@ -28,7 +28,7 @@ Route::get('/', function () {
     return Inertia::render('Welcome', [
         'desktopDownloads' => [
             'macos' => is_file(public_path('downloads/AgroSys-POS-2.1.1-macOS.dmg')),
-            'windows' => is_file(public_path('downloads/AgroSys-POS-Setup.exe')),
+            'windows' => is_file(public_path('downloads/AgroSys-POS-2.1.1-Windows-Setup.exe')),
         ],
     ]);
 });

@@ -110,11 +110,11 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                     </div>
                     <div class="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
                         <h3 class="text-xl font-bold text-gray-900">Windows</h3>
-                        <p class="mt-2 text-gray-600">Windows 10 o posterior · 64 bits · Instalador EXE</p>
-                        <a v-if="desktopDownloads.windows" href="/downloads/AgroSys-POS-Setup.exe" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para Windows</a>
+                        <p class="mt-2 text-gray-600">Versión 2.1.1 · Windows 10 o posterior · 64 bits · Instalador EXE</p>
+                        <a v-if="desktopDownloads.windows" href="/downloads/AgroSys-POS-2.1.1-Windows-Setup.exe" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para Windows</a>
                         <button v-else disabled class="mt-5 min-h-11 rounded-lg bg-gray-100 px-6 py-3 font-bold text-gray-500">Próximamente para Windows</button>
-                        <p class="mt-3 text-sm text-gray-500">Ejecuta AgroSys-POS-Setup.exe y sigue el asistente en español. Incluye las bibliotecas necesarias y un desinstalador.</p>
-                        <a v-if="desktopDownloads.windows" href="/downloads/AgroSys-POS-Setup.exe.sha256" download class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-green-700 underline hover:text-green-900">Descargar checksum SHA-256</a>
+                        <p class="mt-3 text-sm text-gray-500">Ejecuta el instalador y sigue el asistente en español. Incluye las bibliotecas necesarias y un desinstalador.</p>
+                        <a v-if="desktopDownloads.windows" href="/downloads/AgroSys-POS-2.1.1-Windows-Setup.exe.sha256" download class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-green-700 underline hover:text-green-900">Descargar checksum SHA-256</a>
                     </div>
                 </div>
             </div>
