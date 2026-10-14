@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Empresa;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,7 +23,7 @@ class SucursalesFactory extends Factory
             'telefono' => $this->faker->numberBetween(1, 10),
             'email' => $this->faker->unique()->safeEmail(),
             'es_matriz' => true,
-            'id_empresa' => 1,
+            'id_empresa' => Empresa::factory(),
         ];
     }
 }

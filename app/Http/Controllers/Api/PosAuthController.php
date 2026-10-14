@@ -84,11 +84,12 @@ class PosAuthController extends Controller
 
     public function context(Request $request, PosAccess $access)
     {
-        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1']);
+        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1', 'close_other_sessions' => 'sometimes|boolean']);
         $id = strtolower($data['device_id']);
         $branch = $access->branch($request->user(), $data['branch_id']);
 
-        return DB::transaction(function () use ($request, $access, $branch, $id) {
+        return DB::transaction(function () use ($request, $access, $branch, $id, $data) {
+            User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
             $token = \Laravel\Sanctum\PersonalAccessToken::lockForUpdate()->find($request->user()->currentAccessToken()->id);
             abort_unless($token, 401, 'La sesión ya fue intercambiada.');
             $device = \App\Models\OfflineDevice::lockForUpdate()->find($id);
@@ -101,7 +102,7 @@ class PosAuthController extends Controller
                 $access->device($request, $source->id, $source->branch_id);
                 // Activate within this transaction before consuming the current session.
                 $activation = app(PosDeviceController::class)->activateContext(
-                    $request->user(), $branch, $id, $access, app(\App\Services\Pos\OfflineLease::class)
+                    $request->user(), $branch, $id, $access, app(\App\Services\Pos\OfflineLease::class), $data['close_other_sessions'] ?? false, $token->id
                 );
             }
             $response = $this->issue($request->user(), $id, 'Agrosys POS', $access);

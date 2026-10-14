@@ -38,21 +38,14 @@ class OfflineController extends Controller
         $deviceId = $request->header('X-Device-ID');
         abort_unless(Str::isUuid($deviceId), 422, 'Se requiere un identificador de dispositivo válido.');
         $offlineExpiresAt = now()->addDays(config('offline.valid_days'));
-        $device = OfflineDevice::firstOrNew(['id' => $deviceId]);
-        if ($device->exists) {
-            abort_unless($device->client_kind === 'web' && !$device->revoked_at, 403, 'El dispositivo fue revocado.');
-            // El navegador usa un identificador por usuario y sucursal; si llega uno registrado
-            // para otro contexto, el cliente genera uno nuevo y reintenta.
-            if ((int) $device->user_id !== (int) $request->user()->id || (int) $device->branch_id !== (int) $branchId) {
-                throw new HttpResponseException(response()->json([
-                    'code' => 'DEVICE_CONTEXT_MISMATCH',
-                    'message' => 'El dispositivo está registrado para otro usuario o sucursal.',
-                ], 409));
-            }
-        }
-        if (!$device->exists) $device->authorized = !config('offline.require_activation');
-        $device->fill(['user_id' => $request->user()->id, 'branch_id' => $branchId, 'last_seen_at' => now(), 'offline_expires_at' => $offlineExpiresAt]);
-        $device->save();
+        $device = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $branch, $deviceId, $branchId, $offlineExpiresAt) {
+            $user = \App\Models\User::whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            abort_unless((int) $request->session()->get('device_session_version', 0) === (int) $user->device_session_version, 401);
+            Sucursales::whereKey($branchId)->lockForUpdate()->firstOrFail();
+            $device = app(\App\Services\DeviceSessions::class)->activate($user, $branch, strtolower($deviceId), 'web', false);
+            $device->fill(['last_seen_at' => now(), 'offline_expires_at' => $offlineExpiresAt])->save();
+            return $device;
+        }, 3);
         abort_unless($device->authorized, 403, 'El dispositivo no está autorizado.');
         $canSell = in_array($request->user()->tipo, ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'], true);
 

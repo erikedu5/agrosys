@@ -125,6 +125,9 @@ class DevolucionesController extends Controller
             ]);
 
             DB::transaction(function () use ($data, $venta, $productosVenta, $devueltos, $logger) {
+                abort_unless((int) $venta->id_sucursal === (int) SucursalService::getSucursalActiva(), 403, 'Venta de otra sucursal.');
+                $cash = app(\App\Services\CashRegister::class);
+                $cashSession = $cash->saleSession((int) Auth::id(), (int) $venta->id_sucursal);
                 $totalDevuelto = 0;
                 $detallesValidos = [];
 
@@ -212,6 +215,10 @@ class DevolucionesController extends Controller
                         'stock_anterior' => $actual,
                         'stock_nuevo' => $alta->cantidad_nueva,
                     ]);
+                }
+
+                if ($venta->tipo_venta === 'Contado') {
+                    $cash->record($cashSession, -\App\Services\Pos\Decimal::units($totalDevuelto, 'total_devuelto'), 'refund', 'refund:'.$Devoluciones->id, 'Devolución #'.$Devoluciones->id.' de venta #'.$venta->id);
                 }
 
                 // Ajustar venta total

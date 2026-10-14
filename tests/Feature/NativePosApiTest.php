@@ -82,14 +82,124 @@ class NativePosApiTest extends TestCase
         $this->lease = $this->api('POST', 'devices/activate', $this->context())->assertOk()->json('offlineLease');
     }
 
-    private function operation(string $type = 'Contado', string $payment = '100.00', int $sequence = 1): array
+    private function operation(string $type = 'Contado', string $payment = '100.00', int $sequence = 1, bool $withCash = true): array
     {
-        return ['operation_id' => (string) Str::uuid(), 'aggregate_id' => (string) Str::uuid(), 'aggregate_type' => 'sale', 'event_type' => 'SALE_COMPLETED', 'sequence' => $sequence, 'occurred_at' => now()->toIso8601String(), 'offline_lease_id' => $this->lease['claims']['leaseId'], 'payload' => ['customerId' => (string) $this->customer->id, 'saleType' => $type, 'total' => '100.00', 'localFolio' => 'LOCAL-'.$sequence, 'items' => [['productId' => (string) $this->product->id, 'quantity' => '2.00', 'unitPrice' => '50.00', 'total' => '100.00']], 'payments' => [['method' => 'cash', 'amount' => $payment]]]];
+        $cash = app(\App\Services\CashRegister::class);
+        $session = $cash->current($this->user->id, $this->branch->id);
+        if ($withCash && ! $session) {
+            $cash->write($this->user->id, $this->branch->id, 'open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00']);
+            $session = $cash->current($this->user->id, $this->branch->id);
+        }
+        return ['operation_id' => (string) Str::uuid(), 'aggregate_id' => (string) Str::uuid(), 'aggregate_type' => 'sale', 'event_type' => 'SALE_COMPLETED', 'sequence' => $sequence, 'occurred_at' => now()->toIso8601String(), 'offline_lease_id' => $this->lease['claims']['leaseId'], 'payload' => ['cashSessionId' => $withCash ? $session->id : null, 'customerId' => (string) $this->customer->id, 'saleType' => $type, 'total' => '100.00', 'localFolio' => 'LOCAL-'.$sequence, 'items' => [['productId' => (string) $this->product->id, 'quantity' => '2.00', 'unitPrice' => '50.00', 'total' => '100.00']], 'payments' => [['method' => 'cash', 'amount' => $payment]]]];
     }
 
     private function push(array $operations)
     {
         return $this->api('POST', 'sync/push', [...$this->context(), 'schemaVersion' => 2, 'operations' => $operations]);
+    }
+
+    public function test_pending_sale_can_sync_after_session_replacement_and_fresh_login(): void
+    {
+        $this->branch->empresa->update(['plan_code' => null, 'numero_dispositivos_por_sucursal' => 1]);
+        $this->activate();
+        $pending = $this->operation();
+        $oldDevice = $this->device;
+        $originalLease = $this->lease;
+
+        $this->device = (string) Str::uuid();
+        $this->login();
+        $this->api('POST', 'devices/activate', $this->context())->assertStatus(409)->assertJsonPath('code', 'DEVICE_SESSION_CONFIRMATION_REQUIRED');
+        $this->api('POST', 'devices/activate', [...$this->context(), 'close_other_sessions' => true])->assertOk();
+        $this->assertSame(0, Venta::count());
+
+        $this->device = $oldDevice;
+        $this->login();
+        $this->api('POST', 'devices/activate', [...$this->context(), 'close_other_sessions' => true])->assertOk();
+        $this->lease = $originalLease;
+        $this->push([$pending])->assertOk()->assertJsonPath('results.0.status', 'confirmed');
+        $this->push([$pending])->assertOk()->assertJsonPath('results.0.status', 'duplicate');
+        $this->assertSame(1, Venta::count());
+    }
+
+    public function test_cash_is_shared_between_web_and_native_and_sale_retries_do_not_duplicate_money(): void
+    {
+        $this->activate();
+        $id = $this->api('POST', 'cash/open', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'opening' => '200.00'])->assertOk()->json('sessionId');
+        $sale = $this->operation();
+        $sale['payload']['cashSessionId'] = $id;
+        $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'confirmed');
+        $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'duplicate');
+        $credit = $this->operation('Credito', '25.10', 2);
+        $credit['payload']['cashSessionId'] = $id;
+        $this->push([$credit])->assertOk()->assertJsonPath('results.0.status', 'confirmed');
+        $this->api('POST', 'cash/status', $this->context())->assertOk()->assertJsonPath('current.expected', '325.10');
+        Auth::forgetGuards();
+        $this->actingAs($this->user)->postJson('/caja/status')->assertOk()->assertJsonPath('current.id', $id)->assertJsonPath('current.expected', '325.10');
+        $this->assertDatabaseCount('cash_movements', 2);
+    }
+
+    public function test_cash_sale_sent_after_close_requires_review_and_does_not_change_the_cut(): void
+    {
+        $this->activate();
+        $id = $this->api('POST', 'cash/open', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'opening' => '200.00'])->assertOk()->json('sessionId');
+        $sale = $this->operation();
+        $sale['payload']['cashSessionId'] = $id;
+        $this->api('POST', 'cash/close', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'session_id' => $id, 'expected' => '200.00', 'counted' => '200.00', 'confirmed' => true])->assertOk();
+        $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'conflict');
+        $this->assertDatabaseCount('ventas', 0);
+        $this->assertDatabaseCount('cash_movements', 0);
+        $this->api('POST', 'cash/status', $this->context())->assertOk()->assertJsonPath('history.0.expected', '200.00');
+    }
+
+    public function test_sales_without_open_cash_are_rejected_even_if_a_box_is_opened_later(): void
+    {
+        $this->activate();
+        $sale = $this->operation(withCash: false);
+        $sale['payload']['cashSessionId'] = null;
+        $this->api('POST', 'cash/open', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'opening' => '0.00'])->assertOk();
+        $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'conflict');
+        $this->assertDatabaseCount('ventas', 0);
+        $this->api('POST', 'cash/status', $this->context())->assertOk()->assertJsonPath('current.expected', '0.00');
+    }
+
+    public function test_web_sale_requires_open_cash_and_closing_disables_new_sales(): void
+    {
+        $this->actingAs($this->user);
+        $body = ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Contado', 'total' => '100.00',
+            'producto_venta' => [['producto' => ['id' => $this->product->id], 'cantidad' => '2.00', 'precio_unitario' => '50.00', 'importe' => '100.00']]];
+        $this->postJson('/venta', $body)->assertUnprocessable()->assertJsonValidationErrors('cashSessionId');
+        $this->assertDatabaseCount('ventas', 0);
+        $this->assertDatabaseCount('abono_cuentas', 0);
+        $this->assertDatabaseCount('alta_inventarios', 1);
+        $id = $this->postJson('/caja/open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00'])->assertOk()->json('sessionId');
+        $this->postJson('/venta', $body)->assertSuccessful();
+        $this->postJson('/caja/close', ['operation_id' => (string) Str::uuid(), 'session_id' => $id, 'expected' => '100.00', 'counted' => '100.00', 'confirmed' => true])->assertOk();
+        $this->postJson('/venta', $body)->assertUnprocessable()->assertJsonValidationErrors('cashSessionId');
+        $this->assertDatabaseCount('ventas', 1);
+        $this->assertDatabaseCount('abono_cuentas', 1);
+    }
+
+    public function test_web_sale_and_refund_record_real_cash_in_the_open_session(): void
+    {
+        $this->actingAs($this->user);
+        $this->postJson('/caja/open', ['operation_id' => (string) Str::uuid(), 'opening' => '50.00'])->assertOk();
+        $this->postJson('/venta', ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Contado', 'total' => '100.00',
+            'producto_venta' => [['producto' => ['id' => $this->product->id], 'cantidad' => '2.00', 'precio_unitario' => '50.00', 'importe' => '100.00']]])->assertSuccessful();
+        $this->postJson('/caja/status')->assertOk()->assertJsonPath('current.expected', '150.00');
+        $this->post('/venta/'.Venta::first()->id.'/devoluciones', ['items' => [['producto_id' => $this->product->id, 'cantidad' => '1.00']]])->assertRedirect();
+        $this->postJson('/caja/status')->assertOk()->assertJsonPath('current.expected', '100.00')->assertJsonPath('current.totals.refund', '-50.00');
+    }
+
+    public function test_cash_conflict_prevents_cut_until_centrally_resolved(): void
+    {
+        $this->activate();
+        $id = $this->api('POST', 'cash/open', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'opening' => '200.00'])->assertOk()->json('sessionId');
+        $sale = $this->operation();
+        $sale['payload']['cashSessionId'] = $id;
+        $sale['payload']['total'] = '1.00';
+        $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'conflict');
+        $this->api('POST', 'cash/close', [...$this->context(), 'operation_id' => (string) Str::uuid(), 'session_id' => $id, 'expected' => '200.00', 'counted' => '200.00', 'confirmed' => true])->assertStatus(409);
+        $this->assertDatabaseCount('ventas', 0);
     }
 
     public function test_login_token_logout_and_json_errors_without_accept_header(): void
@@ -521,6 +631,7 @@ class NativePosApiTest extends TestCase
 
     public function test_valid_web_credit_marks_full_payment_without_settling_previous_debt(): void
     {
+        app(\App\Services\CashRegister::class)->write($this->user->id, $this->branch->id, 'open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00']);
         $this->customer->update(['adeudo_total' => 100, 'abono_total' => 0, 'balance' => 100]);
         $this->actingAs($this->user)->postJson('/venta', ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Credito', 'total' => '100.00', 'abono' => '100.00',
             'producto_venta' => [['producto' => ['id' => $this->product->id], 'cantidad' => '2.00', 'precio_unitario' => '50.00', 'importe' => '100.00']]])->assertSuccessful();

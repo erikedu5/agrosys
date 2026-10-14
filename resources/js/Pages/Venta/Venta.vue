@@ -4,11 +4,13 @@ import { ref, watch, onMounted, onUnmounted, reactive, computed, nextTick } from
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import DialogModal from '@/Components/DialogModal.vue';
+import CashPanel from '@/Components/Cash/CashPanel.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { notify } from '@/utils/notify';
 import { useConnectivityStore } from '@/stores/connectivity';
 import { offlineProductRepository } from '@/Offline/repositories/OfflineProductRepository';
 import { offlineSaleRepository } from '@/Offline/repositories/OfflineSaleRepository';
+import { rememberCashSession, rememberedCashSession } from '@/Offline/services/cashSession';
 import { getOrCreateDeviceId } from '@/Offline/services/device';
 import { SaleApplicationService } from '@/Domain/Sales/SaleApplicationService';
 import { printProvisionalTicket } from '@/Offline/services/provisionalTicket';
@@ -17,6 +19,23 @@ const productoVenta = reactive([]);
 
 const page = usePage();
 const connectivity = useConnectivityStore();
+const cashModalOpen = ref(false), cashBusy = ref(false), cashPending = ref(false);
+const cashSessionId = ref(page.props.cashSessionId ?? null);
+const cashReady = computed(() => !!cashSessionId.value && !cashModalOpen.value && !cashBusy.value && !cashPending.value);
+const cashChanged = state => { if ('sessionId' in state) cashSessionId.value = state.sessionId; cashPending.value = state.pending; };
+const openCashModal = () => { pagoModalOpen.value = false; cashModalOpen.value = true; };
+watch(() => [page.props.auth.user.id, page.props.sucursalActiva.id], () => {
+    cashModalOpen.value = false;
+    cashSessionId.value = page.props.cashSessionId ?? null;
+    cashPending.value = false;
+});
+window.addEventListener('storage', cashStorageChanged);
+function cashStorageChanged(event) {
+    if (event.key === `cash-session:${page.props.auth.user.id}:${page.props.sucursalActiva.id}`) {
+        cashSessionId.value = rememberedCashSession(page.props.auth.user.id, page.props.sucursalActiva.id);
+    }
+}
+
 const localProducts = ref([]);
 const isCompletingSale = ref(false);
 const saleApplicationService = new SaleApplicationService(connectivity);
@@ -401,7 +420,7 @@ const elegirMontoRapido = (monto) => {
 };
 
 const puedeConfirmar = computed(() => {
-    if (productoVenta.length === 0 || isCompletingSale.value) return false;
+    if (!cashReady.value || productoVenta.length === 0 || isCompletingSale.value) return false;
     if (esCredito.value) {
         const abono = Number(form.abono || 0);
         return abono >= 0 && abono <= totalVenta.value;
@@ -410,6 +429,7 @@ const puedeConfirmar = computed(() => {
 });
 
 const abrirCobro = () => {
+    if (!cashReady.value) { openCashModal(); return; }
     if (bloqueoActivo.value || productoVenta.length === 0) return;
     if (!form.cliente?.id) {
         notify('Selecciona un cliente para continuar.', 'error');
@@ -494,6 +514,7 @@ const finalizeSale = async () => {
     try {
         const deviceId = await getOrCreateDeviceId();
         const command = {
+            cashSessionId: cashSessionId.value,
             saleId: crypto.randomUUID(),
             operationId: crypto.randomUUID(),
             branchId: String(page.props.sucursalActiva.id),
@@ -536,6 +557,7 @@ const finalizeSale = async () => {
             OFFLINE_SESSION_MISMATCH: 'La sesión offline no corresponde a este usuario o sucursal.',
             OFFLINE_SALE_NOT_AUTHORIZED: 'Este usuario o dispositivo no tiene autorización para vender sin conexión.',
         };
+        cashSessionId.value = rememberedCashSession(page.props.auth.user.id, page.props.sucursalActiva.id, cashSessionId.value);
         notify(messages[error.message] ?? error?.response?.data?.message ?? error.message ?? 'No se pudo completar la venta.', 'error');
     } finally {
         isCompletingSale.value = false;
@@ -543,6 +565,7 @@ const finalizeSale = async () => {
 }
 
 const submitLegacySale = () => {
+    if (!cashReady.value) { openCashModal(); return; }
     if (productoVenta.length === 0) return;
     isCompletingSale.value = true;
     form.post(route('venta.store',
@@ -562,6 +585,7 @@ const submitLegacySale = () => {
                 printTicketSilently(url);
             },
             onError: (errors) => {
+                if (errors?.cashSessionId) { cashSessionId.value = null; openCashModal(); }
                 if (errors?.bloqueo) {
                     bloqueoManual.value = true;
                 }
@@ -713,13 +737,15 @@ const estiloExistencia = (cantidad) => {
 // ---------------------------------------------------------------------------
 
 const cerrarModalActivo = () => {
-    if (pagoModalOpen.value) pagoModalOpen.value = false;
+    if (cashModalOpen.value) { if (!cashBusy.value) cashModalOpen.value = false; }
+    else if (pagoModalOpen.value) pagoModalOpen.value = false;
     else if (clientesModalOpen.value) clientesModalOpen.value = false;
     else if (isModalOpen.value) closeModal();
     else if (carritoAbierto.value) carritoAbierto.value = false;
 };
 
 const handleKeydown = (event) => {
+    if (cashModalOpen.value) return;
     if (bloqueoActivo.value) {
         return;
     }
@@ -752,6 +778,9 @@ const seleccionarClientePorDefecto = () => {
 };
 
 onMounted(() => {
+    if (connectivity.isUsableOnline) rememberCashSession(page.props.auth.user.id, page.props.sucursalActiva.id, page.props.cashSessionId);
+    else cashSessionId.value = rememberedCashSession(page.props.auth.user.id, page.props.sucursalActiva.id, page.props.cashSessionId);
+    cashPending.value = !!localStorage.getItem(`cash-request:${page.props.auth.user.id}:${page.props.sucursalActiva.id}`);
     window.addEventListener("keydown", handleKeydown);
     if (!connectivity.isUsableOnline) loadLocalProducts();
 
@@ -764,6 +793,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener("keydown", handleKeydown);
+    window.removeEventListener("storage", cashStorageChanged);
     if (sucursalTimeout) {
         clearTimeout(sucursalTimeout);
     }
@@ -793,7 +823,12 @@ onUnmounted(() => {
                         <span class="h-2 w-2 rounded-full bg-amber-600" aria-hidden="true"></span>Sin conexión
                     </span>
                 </div>
-                <div class="ml-auto flex items-center gap-2">
+                <div class="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+                    <button type="button" @click="openCashModal" :disabled="isCompletingSale"
+                        class="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-green-700 sm:w-auto px-5 py-3 text-base font-bold text-white shadow-sm hover:bg-green-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">
+                        <svg class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18v14H3zM7 7V3h10v4M7 12h10M7 17h2m4 0h4" /></svg>
+                        {{ cashSessionId ? 'Cerrar caja / corte' : 'Abrir caja' }}
+                    </button>
                     <button type="button" @click="abrirBusquedaSucursales()" :disabled="bloqueoActivo"
                         class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                         aria-label="Buscar en otras sucursales (F2)" title="Buscar en otras sucursales (F2)">
@@ -1055,6 +1090,14 @@ onUnmounted(() => {
         </div>
 
         <!-- Cobro -->
+        <DialogModal :show="cashModalOpen" max-width="5xl" :closeable="!cashBusy" @close="cashModalOpen = false">
+            <template #content>
+                <CashPanel v-if="cashModalOpen" @changed="cashChanged" @busy-change="cashBusy = $event" />
+            </template>
+            <template #footer>
+                <button type="button" :disabled="cashBusy" @click="cashModalOpen = false" class="min-h-11 rounded-lg border border-gray-300 px-5 py-2 font-semibold disabled:opacity-50">Volver a la venta</button>
+            </template>
+        </DialogModal>
         <div v-if="pagoModalOpen" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="pagoModalOpen = false">
             <div role="dialog" aria-modal="true" aria-labelledby="titulo-cobro" class="flex max-h-[95dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl dark:bg-gray-800 sm:max-w-lg sm:rounded-2xl">
                 <div class="flex items-center justify-between">

@@ -136,6 +136,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'sucursalActiva' => $sucursalActiva,
+            'cashSessionId' => fn () => $user && $sucursalActiva ? app(\App\Services\CashRegister::class)->current((int) $user->id, (int) $sucursalActiva['id'])?->id : null,
             'empresaConfig' => $empresaConfig,
             'subscription' => $subscription,
             'offline' => [

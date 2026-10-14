@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
@@ -15,7 +15,9 @@ import SubscriptionBanner from '@/Components/SubscriptionBanner.vue';
 import OfflineBanner from '@/Components/OfflineBanner.vue';
 import RequiresConnection from '@/Components/RequiresConnection.vue';
 import SyncStatus from '@/Components/SyncStatus.vue';
+import DeviceSessionGate from '@/Components/DeviceSessionGate.vue';
 import { useConnectivityStore } from '@/stores/connectivity';
+import { logoutBrowser } from '@/services/browserLogout';
 import { canVisitOffline } from '@/Offline/guards/routePolicies';
 
 defineProps({
@@ -43,11 +45,13 @@ const showingNavigationDropdown = ref(false);
 const showingSucursalModal = ref(false);
 const page = usePage();
 const isLoading = ref(false);
+const isLoggingOut = ref(false);
 const connectivity = useConnectivityStore();
 const isOfflineNow = computed(() => navigator.onLine === false || connectivity.isLimited);
 
-router.on('start', () => (isLoading.value = true));
-router.on('finish', () => (isLoading.value = false));
+const stopStartListener = router.on('start', () => (isLoading.value = true));
+const stopFinishListener = router.on('finish', () => (isLoading.value = false));
+onUnmounted(() => { stopStartListener(); stopFinishListener(); });
 
 onMounted(() => {
     // Lógica para autoselección de sucursal
@@ -94,12 +98,16 @@ onMounted(() => {
     }
 });
 
-const logout = () => {
+const logout = async () => {
+    if (isLoggingOut.value) return;
     if (isOfflineNow.value) {
         notify('Cerrar sesión requiere conexión. La sesión local se conserva temporalmente.', 'error');
         return;
     }
-    router.post(route('logout'));
+    isLoggingOut.value = true;
+    try { await logoutBrowser(); }
+    catch { notify('No se pudo confirmar el cierre de sesión. Reintenta cuando tengas conexión.', 'error'); }
+    finally { isLoggingOut.value = false; }
 };
 
 const isItemOfflineBlocked = (item) => isOfflineNow.value && !canVisitOffline(route(item.route, item.params));
@@ -255,6 +263,7 @@ const searchItems = computed(() => {
 </script>
 
 <template>
+    <DeviceSessionGate />
     <div>
         <Head :title="title" />
 
@@ -329,6 +338,7 @@ const searchItems = computed(() => {
                             </div>
 
                             <button
+                                type="button" :disabled="isLoggingOut"
                                 @click="logout"
                                 class="px-3 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-md hover:bg-red-50 dark:border-red-500 dark:text-red-300 dark:hover:bg-red-900 transition-colors duration-200">
                                 Cerrar sesión
@@ -533,7 +543,7 @@ const searchItems = computed(() => {
                         <!-- Botón de cerrar sesión -->
                         <form @submit.prevent="logout" class="w-full">
                             <button 
-                                type="submit"
+                                type="submit" :disabled="isLoggingOut"
                                 class="w-full flex items-center justify-center p-3 border-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-800 rounded-lg transition-all duration-200 hover:shadow-md">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>

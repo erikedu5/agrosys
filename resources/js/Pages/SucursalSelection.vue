@@ -1,6 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref } from 'vue';
+import { logoutBrowser } from '@/services/browserLogout';
+import { notify } from '@/utils/notify';
 import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -9,6 +11,14 @@ const props = defineProps({
 });
 
 const loading = ref(false);
+const loggingOut = ref(false);
+const logout = async () => {
+    if (loggingOut.value) return;
+    loggingOut.value = true;
+    try { await logoutBrowser(); }
+    catch { notify('No se pudo confirmar el cierre de sesión. Reintenta.', 'error'); }
+    finally { loggingOut.value = false; }
+};
 const selectedSucursal = ref(null);
 
 const selectSucursal = async (sucursal) => {
@@ -147,9 +157,8 @@ const selectSucursal = async (sucursal) => {
                         Podrás cambiar de sucursal en cualquier momento desde el menú principal
                     </p>
                     <div class="mt-4">
-                        <form method="POST" action="/logout" class="inline">
-                            <input type="hidden" name="_token" :value="$page.props.csrf_token">
-                            <button type="submit" class="text-gray-400 hover:text-gray-600 text-sm underline">
+                        <form @submit.prevent="logout" class="inline">
+                            <button type="submit" :disabled="loggingOut" class="text-gray-400 hover:text-gray-600 text-sm underline">
                                 Cerrar Sesión
                             </button>
                         </form>

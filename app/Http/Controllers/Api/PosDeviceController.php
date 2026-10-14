@@ -20,27 +20,23 @@ class PosDeviceController extends Controller
 
     public function activate(Request $request, PosAccess $access, OfflineLease $leases)
     {
-        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1']);
+        $data = $request->validate(['device_id' => 'required|uuid', 'branch_id' => 'required|integer|min:1', 'close_other_sessions' => 'sometimes|boolean']);
         $id = strtolower($data['device_id']);
         abort_unless($request->user()->currentAccessToken()->pos_device_id === $id, 403, 'Token de otro dispositivo.');
         $branch = $access->branch($request->user(), $data['branch_id']);
-        return response()->json($this->activateContext($request->user(), $branch, $id, $access, $leases));
+        return response()->json($this->activateContext($request->user(), $branch, $id, $access, $leases, $data['close_other_sessions'] ?? false, $request->user()->currentAccessToken()->id));
     }
 
-    public function activateContext(\App\Models\User $user, Sucursales $branch, string $id, PosAccess $access, OfflineLease $leases): array
+    public function activateContext(\App\Models\User $user, Sucursales $branch, string $id, PosAccess $access, OfflineLease $leases, bool $confirmed = false, ?int $keepToken = null): array
     {
         try {
-            $result = DB::transaction(function () use ($user, $access, $leases, $branch, $id) {
-                Sucursales::whereKey($branch->id)->lockForUpdate()->firstOrFail();
-                $device = OfflineDevice::lockForUpdate()->find($id);
-                if ($device) {
-                    abort_unless((int) $device->user_id === (int) $user->id && (int) $device->branch_id === (int) $branch->id && $device->client_kind === 'pos', 403, 'Dispositivo de otro contexto.');
-                    abort_if($device->revoked_at, 403, 'Dispositivo revocado.');
-                } else {
-                    $limit = $branch->empresa->dispositivosPorSucursalPermitidos();
-                    abort_if($limit !== null && OfflineDevice::where('branch_id', $branch->id)->where('authorized', true)->count() >= $limit, 403, 'Límite de dispositivos alcanzado.');
-                    $device = OfflineDevice::create(['id' => $id, 'user_id' => $user->id, 'branch_id' => $branch->id, 'client_kind' => 'pos', 'authorized' => ! config('offline.require_activation'), 'offline_expires_at' => now()]);
+            $result = DB::transaction(function () use ($user, $access, $leases, $branch, $id, $confirmed, $keepToken) {
+                $user = \App\Models\User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                if ($keepToken !== null) {
+                    abort_unless($user->tokens()->whereKey($keepToken)->lockForUpdate()->exists(), 401, 'La sesión fue cerrada desde otro dispositivo.');
                 }
+                Sucursales::whereKey($branch->id)->lockForUpdate()->firstOrFail();
+                $device = app(\App\Services\DeviceSessions::class)->activate($user, $branch, $id, 'pos', $confirmed, $keepToken);
                 if (! $device->authorized) {
                     return null;
                 }

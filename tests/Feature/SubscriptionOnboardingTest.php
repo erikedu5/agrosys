@@ -46,6 +46,8 @@ class SubscriptionOnboardingTest extends TestCase
 
         $sucursal = Sucursales::where('id_empresa', $empresa->id)->firstOrFail();
         $this->assertTrue((bool) $sucursal->es_matriz);
+        $this->assertEquals('Matriz', $sucursal->nombre);
+        $this->assertEquals($empresa->direccion, $sucursal->direccion);
 
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
         $this->assertEquals('adminEmpresa', $admin->tipo);
@@ -60,4 +62,3 @@ class SubscriptionOnboardingTest extends TestCase
         });
     }
 }
-

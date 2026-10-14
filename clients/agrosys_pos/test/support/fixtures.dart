@@ -1,9 +1,30 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:agrosys_pos/data/database.dart';
 import 'package:agrosys_pos/core/models.dart';
 import 'package:agrosys_pos/core/pos_api.dart';
 import 'package:agrosys_pos/core/session_vault.dart';
+
+Map<String, dynamic> fixtureCashState() => {
+  'current': {
+    'id': 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    'closedAt': null,
+    'openedAt': DateTime.now().toUtc().toIso8601String(),
+    'opening': '0.00',
+    'expected': '0.00',
+    'counted': null,
+    'difference': null,
+    'notes': null,
+    'totals': <String, dynamic>{},
+  },
+  'history': [],
+  'movements': [],
+};
+Future<void> seedOpenCash(PosDatabase db) => db.customStatement(
+  'INSERT OR REPLACE INTO cash_local_state (id, payload) VALUES (1, ?)',
+  [jsonEncode(fixtureCashState())],
+);
 
 Session fixtureSession({
   String user = '1',
@@ -144,6 +165,7 @@ class MemorySecretStore implements SecretStore {
 class FixtureApi extends PosApi {
   bool disconnected = false;
   bool salesEnabled = false;
+  bool cashOpen = true;
   List<String>? permissions;
   int? deniedStatus;
   bool requiresTwoFactor = false;
@@ -167,6 +189,11 @@ class FixtureApi extends PosApi {
     if (disconnected) throw ApiFailure(null, 'Sin conexión');
     if (deniedStatus != null) {
       throw ApiFailure(deniedStatus, 'Acceso bloqueado');
+    }
+    if (path == 'cash/status') {
+      return cashOpen
+          ? fixtureCashState()
+          : {'current': null, 'history': [], 'movements': []};
     }
     if (path == 'auth/login' && requiresTwoFactor) {
       return {'requiresTwoFactor': true, 'challenge': 'challenge'};
@@ -207,6 +234,7 @@ class FixtureApi extends PosApi {
                       'sale.print_local_ticket',
                       'customer.read',
                       'sale.history',
+                      'cash.manage',
                     ]
                   : null),
         ),

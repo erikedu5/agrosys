@@ -42,6 +42,7 @@ class EnsureEmpresaSubscription
             ($route?->named('profile.*') ?? false) ||
             ($route?->named('cashier.*') ?? false) ||
             ($route?->named('logout') ?? false) ||
+            ($route?->named('sanctum.csrf-cookie') ?? false) ||
             ($route?->named('manual') ?? false);
 
         if ($isAllowed) {

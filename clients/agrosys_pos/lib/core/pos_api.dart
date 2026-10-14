@@ -5,9 +5,10 @@ import 'models.dart';
 
 class ApiFailure implements Exception {
   final int? status;
+  final String? code;
   final String message;
   final Map<String, List<String>> errors;
-  ApiFailure(this.status, this.message, {this.errors = const {}});
+  ApiFailure(this.status, this.message, {this.errors = const {}, this.code});
   bool get blocksAccess => status == 401 || status == 402 || status == 403;
   bool get isConnectionFailure => status == null;
   @override
@@ -59,8 +60,12 @@ class PosApi {
   }) async {
     final retryAt = _retryAt;
     if (retryAt != null && DateTime.now().isBefore(retryAt)) {
-      final seconds = (retryAt.difference(DateTime.now()).inMilliseconds / 1000).ceil();
-      throw ApiFailure(429, 'Demasiados intentos. Reintenta en $seconds segundos.');
+      final seconds = (retryAt.difference(DateTime.now()).inMilliseconds / 1000)
+          .ceil();
+      throw ApiFailure(
+        429,
+        'Demasiados intentos. Reintenta en $seconds segundos.',
+      );
     }
     try {
       final response = await dio.request<Object?>(
@@ -77,7 +82,9 @@ class PosApi {
       if (status == 429) {
         final header = e.response?.headers.value('retry-after');
         final seconds = int.tryParse(header ?? '') ?? 60;
-        _retryAt = DateTime.now().add(Duration(seconds: seconds > 0 ? seconds : 1));
+        _retryAt = DateTime.now().add(
+          Duration(seconds: seconds > 0 ? seconds : 1),
+        );
       }
       final messages = {
         401: path == 'auth/login'
@@ -99,12 +106,15 @@ class PosApi {
           : null;
       throw ApiFailure(
         status,
-        (status == 403 && serverMessage != null ? serverMessage : messages[status]) ??
+        (status == 403 && serverMessage != null
+                ? serverMessage
+                : messages[status]) ??
             (status == null
                 ? 'No fue posible conectar. Puedes consultar el catálogo descargado.'
                 : status >= 500
                 ? 'El servidor no pudo completar la solicitud. Reintenta.'
                 : serverMessage ?? 'La solicitud no pudo completarse.'),
+        code: response is Map ? response['code'] as String? : null,
         errors: response is Map && response['errors'] is Map
             ? {
                 for (final e in (response['errors'] as Map).entries)
@@ -145,8 +155,17 @@ class PosApi {
     String token,
     Map<String, dynamic> context,
   ) => request('auth/context', token: token, body: context);
-  Future<Map<String, dynamic>> activate(Session s) =>
-      request('devices/activate', token: s.token, body: s.requestContext);
+  Future<Map<String, dynamic>> activate(
+    Session s, {
+    bool closeOtherSessions = false,
+  }) => request(
+    'devices/activate',
+    token: s.token,
+    body: {
+      ...s.requestContext,
+      if (closeOtherSessions) 'close_other_sessions': true,
+    },
+  );
   Future<Map<String, dynamic>> renew(Session s) =>
       request('devices/renew', token: s.token, body: s.requestContext);
   Future<Map<String, dynamic>> page(

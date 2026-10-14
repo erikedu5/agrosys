@@ -29,7 +29,11 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Event::listen(\Illuminate\Auth\Events\Login::class, function ($event) {
+            if ($event->guard === 'web' && request()->hasSession()) {
+                request()->session()->put('device_session_version', (int) $event->user->device_session_version);
+            }
+        });
     }
 
     /**

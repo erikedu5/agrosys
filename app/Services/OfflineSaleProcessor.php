@@ -34,6 +34,9 @@ class OfflineSaleProcessor
             $branch = Sucursales::with('empresa')->findOrFail($operation->branch_id);
             abort_unless($branch->empresa && ! $branch->empresa->ventas_bloqueadas, 403, 'Ventas bloqueadas.');
             $payload = $operation->payload;
+            $cash = app(CashRegister::class);
+            $cashSession = $cash->requireSaleSession((int) $operation->user_id, (int) $operation->branch_id,
+                $payload['cashSessionId'] ?? null, true);
             $items = collect($payload['items'] ?? []);
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages(['items' => 'La venta no contiene partidas.']);
@@ -87,6 +90,7 @@ class OfflineSaleProcessor
             }
 
             AbonoCuenta::create(['cantidad_abonada' => $paymentAmount, 'cuenta_pagada' => $amounts['paid'], 'id_cliente' => $customer->id, 'id_usuario' => $operation->user_id, 'is_active' => ! $amounts['paid'], 'id_sucursal' => $operation->branch_id]);
+            $cash->record($cashSession, $amounts['payment'], $saleType === 'Contado' ? 'sale' : 'credit_initial', 'sale:'.$sale->id, 'Venta #'.$sale->id);
             $customer->adeudo_total = Decimal::format($debt);
             $customer->abono_total = Decimal::format($payments);
             $customer->balance = Decimal::format($debt - $payments);

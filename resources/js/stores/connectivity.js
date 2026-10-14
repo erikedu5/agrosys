@@ -88,6 +88,9 @@ export const useConnectivityStore = defineStore('connectivity', () => {
         } catch (error) {
             const status = error?.response?.status;
             lastError.value = error;
+            if (status === 401 && navigator.onLine !== false) {
+                window.location.replace('/login');
+            }
             if (status && ![502, 503, 504].includes(status)) {
                 syncIssue.value = [401, 419].includes(status)
                     ? { type: 'session' }

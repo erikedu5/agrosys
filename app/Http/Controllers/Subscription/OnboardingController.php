@@ -166,7 +166,7 @@ class OnboardingController extends Controller
         $user = null;
 
         DB::transaction(function () use (&$empresa, &$sucursal, &$user, $data, $plan, $trialEndsAt, $empresaAvisoDefault) {
-            $empresa = Empresa::create([
+            $empresa = new Empresa([
                 'nombre' => $data['empresa_nombre'],
                 'direccion' => $data['empresa_direccion'],
                 'telefono' => $data['empresa_telefono'] ?? null,
@@ -177,7 +177,6 @@ class OnboardingController extends Controller
                 'numero_dispositivos_por_sucursal' => (int) ($plan['limits']['devices_per_sucursal'] ?? 1),
                 'plan_code' => $data['plan'],
                 'plan_cycle' => $data['cycle'],
-                'trial_ends_at' => $trialEndsAt,
                 'billing_requires_invoice' => (bool) ($data['billing_requires_invoice'] ?? false),
                 'billing_email' => $data['billing_email'] ?? null,
                 'billing_razon_social' => $data['billing_razon_social'] ?? null,
@@ -190,9 +189,11 @@ class OnboardingController extends Controller
                 'privacy_version' => config('legal.privacy_version'),
                 'privacy_accepted_at' => now(),
             ]);
+            $empresa->trial_ends_at = $trialEndsAt;
+            $empresa->save();
 
-            $sucursalNombre = $data['sucursal_nombre'] ?: 'Matriz';
-            $sucursalDireccion = $data['sucursal_direccion'] ?: $empresa->direccion;
+            $sucursalNombre = ($data['sucursal_nombre'] ?? null) ?: 'Matriz';
+            $sucursalDireccion = ($data['sucursal_direccion'] ?? null) ?: $empresa->direccion;
 
             $sucursal = Sucursales::create([
                 'nombre' => $sucursalNombre,

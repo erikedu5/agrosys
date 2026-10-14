@@ -34,11 +34,12 @@ class OfflineSaleIdempotencyTest extends TestCase
         AltaInventario::create(['cantidad_actual' => 10, 'cantidad_nueva' => 10, 'id_usuario' => $user->id, 'id_producto' => $product->id, 'id_sucursal' => $branch->id]);
         $deviceId = (string) Str::uuid();
         OfflineDevice::create(['id' => $deviceId, 'user_id' => $user->id, 'branch_id' => $branch->id, 'authorized' => true, 'last_sequence' => 0, 'offline_expires_at' => now()->addDays(7)]);
+        $cashId = app(\App\Services\CashRegister::class)->write($user->id, $branch->id, 'open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00'])['sessionId'];
         $operationId = (string) Str::uuid();
         $saleId = (string) Str::uuid();
         $body = ['device_id' => $deviceId, 'branch_id' => (string) $branch->id, 'operations' => [[
             'operation_id' => $operationId, 'aggregate_type' => 'sale', 'aggregate_id' => $saleId, 'event_type' => 'SALE_COMPLETED', 'sequence' => 1, 'occurred_at' => now()->toIso8601String(),
-            'payload' => ['customerId' => (string) $customer->id, 'saleType' => 'Contado', 'total' => 250, 'localFolio' => 'LOCAL-1', 'items' => [['productId' => (string) $product->id, 'name' => $product->nombre, 'quantity' => 2, 'unitPrice' => 125, 'total' => 250]], 'payments' => [['method' => 'cash', 'amount' => 250]]],
+            'payload' => ['cashSessionId' => $cashId, 'customerId' => (string) $customer->id, 'saleType' => 'Contado', 'total' => 250, 'localFolio' => 'LOCAL-1', 'items' => [['productId' => (string) $product->id, 'name' => $product->nombre, 'quantity' => 2, 'unitPrice' => 125, 'total' => 250]], 'payments' => [['method' => 'cash', 'amount' => 250]]],
         ]]];
 
         $first = $this->actingAs($user)->postJson('/api/v1/offline/sync/push', $body, ['Idempotency-Key' => $operationId])->assertOk()->json('results.0');

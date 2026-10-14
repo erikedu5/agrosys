@@ -254,18 +254,24 @@ class PosDatabase extends _$PosDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
       await m.createAll();
+      await customStatement(
+        'CREATE TABLE IF NOT EXISTS cash_local_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)',
+      );
     },
     onUpgrade: (m, from, to) async {
-      if (from < 1 || from > 5 || to != 6) {
+      if (from < 1 || from > 6 || to != 7) {
         throw StateError(
           'Migración no soportada. Conserva la base y solicita soporte.',
         );
       }
+      await customStatement(
+        'CREATE TABLE IF NOT EXISTS cash_local_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)',
+      );
       if (from < 6) await m.createTable(inventoryRequests);
       if (from < 5) {
         await m.addColumn(localProducts, localProducts.classification);

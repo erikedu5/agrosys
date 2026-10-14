@@ -106,6 +106,20 @@ class SalesRepository {
         }
         return receipt(existing.id);
       }
+      final cashState = await db
+          .customSelect('SELECT payload FROM cash_local_state WHERE id = 1')
+          .getSingleOrNull();
+      final cashCurrent = cashState == null
+          ? null
+          : object(jsonDecode(cashState.read<String>('payload')))['current'];
+      if (cashCurrent is! Map ||
+          cashCurrent['id'] is! String ||
+          (cashCurrent['id'] as String).isEmpty ||
+          cashCurrent['closedAt'] != null) {
+        throw const SaleInputException(
+          'Abre la caja antes de realizar una venta.',
+        );
+      }
       final quote = await _quote(request.customerId, request.lines);
       if (quote.priceFingerprint != request.expectedPriceFingerprint) {
         throw const SaleInputException(
@@ -225,6 +239,7 @@ class SalesRepository {
         'occurred_at': now,
         'offline_lease_id': leaseId,
         'payload': {
+          'cashSessionId': cashCurrent['id'],
           'customerId': quote.customer.id,
           'saleType': request.type,
           'total': decimalText(quote.totalCents),

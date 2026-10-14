@@ -8,31 +8,83 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fixtures.dart';
 
 void main() {
-  test('rate limit honors retry-after without sending repeated requests', () async {
+  test('transport preserves the session confirmation code and sends approval only explicitly', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     final api = PosApi('http://127.0.0.1:${server.port}/api/v1/pos');
-    var requests = 0;
+    final bodies = <Map<String, dynamic>>[];
     server.listen((request) async {
-      requests++;
-      await request.drain<void>();
-      request.response.statusCode = 429;
-      request.response.headers.set('Retry-After', '30');
+      bodies.add(
+        jsonDecode(await utf8.decoder.bind(request).join())
+            as Map<String, dynamic>,
+      );
+      request.response.statusCode = 409;
       request.response.headers.contentType = ContentType.json;
-      request.response.write(jsonEncode({'message': 'Too many requests'}));
+      request.response.write(
+        jsonEncode({
+          'code': 'DEVICE_SESSION_CONFIRMATION_REQUIRED',
+          'message': 'Confirma el cierre.',
+        }),
+      );
       await request.response.close();
     });
     try {
-      for (var i = 0; i < 2; i++) {
-        await expectLater(api.page(fixtureSession(), incremental: false),
-          throwsA(isA<ApiFailure>().having((e) => e.status, 'status', 429)
-            .having((e) => e.message, 'wait time', contains('30 segundos'))));
+      for (final confirmed in [false, true]) {
+        await expectLater(
+          api.activate(fixtureSession(), closeOtherSessions: confirmed),
+          throwsA(
+            isA<ApiFailure>().having(
+              (e) => e.code,
+              'code',
+              'DEVICE_SESSION_CONFIRMATION_REQUIRED',
+            ),
+          ),
+        );
       }
-      expect(requests, 1);
+      expect(bodies.first.containsKey('close_other_sessions'), isFalse);
+      expect(bodies.last['close_other_sessions'], isTrue);
     } finally {
       api.close();
       await server.close(force: true);
     }
   });
+
+  test(
+    'rate limit honors retry-after without sending repeated requests',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final api = PosApi('http://127.0.0.1:${server.port}/api/v1/pos');
+      var requests = 0;
+      server.listen((request) async {
+        requests++;
+        await request.drain<void>();
+        request.response.statusCode = 429;
+        request.response.headers.set('Retry-After', '30');
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'message': 'Too many requests'}));
+        await request.response.close();
+      });
+      try {
+        for (var i = 0; i < 2; i++) {
+          await expectLater(
+            api.page(fixtureSession(), incremental: false),
+            throwsA(
+              isA<ApiFailure>()
+                  .having((e) => e.status, 'status', 429)
+                  .having(
+                    (e) => e.message,
+                    'wait time',
+                    contains('30 segundos'),
+                  ),
+            ),
+          );
+        }
+        expect(requests, 1);
+      } finally {
+        api.close();
+        await server.close(force: true);
+      }
+    },
+  );
   test(
     'login distinguishes unavailable native API from rejected credentials',
     () async {

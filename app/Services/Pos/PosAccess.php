@@ -54,6 +54,7 @@ class PosAccess
         $permissions = ['catalog.read', 'product.search', 'stock.read_estimated', 'account.read_estimated', 'sync.view', 'sync.retry'];
         if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
             $permissions = [...$permissions, 'customer.read', 'sale.history'];
+            $permissions[] = 'cash.manage';
         }
         if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
             $permissions = [...$permissions, 'purchase.read'];

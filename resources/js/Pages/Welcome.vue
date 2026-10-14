@@ -37,7 +37,7 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l-4-4m4 4l4-4M5 17v4h14v-4" />
                             </svg>
-                            <span>Descargas</span>
+                            <span class="sr-only sm:not-sr-only">Descargas</span>
                         </a>
                         <Link :href="route('login')" class="inline-flex min-h-11 items-center px-4 py-2 sm:px-6 rounded-lg bg-white text-green-700 font-bold hover:bg-gray-100 transition duration-300 ease-in-out shadow-md">
                             Ingresar
@@ -90,7 +90,7 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                     </p>
                 </div>
                 <div class="mt-6 rounded-xl border border-green-200 bg-white p-5">
-                    <h3 class="font-bold text-green-800">Novedades de la versión 2.1</h3>
+                    <h3 class="font-bold text-green-800">Novedades de la versión 2.1.1</h3>
                     <ul class="mt-3 grid list-disc gap-2 pl-5 text-gray-700 sm:grid-cols-2">
                         <li>Ventas con filtro por categoría.</li>
                         <li>Inventario, existencias y cardex.</li>
@@ -102,11 +102,11 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user));
                 <div class="mt-8 grid gap-6 sm:grid-cols-2">
                     <div class="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
                         <h3 class="text-xl font-bold text-gray-900">macOS</h3>
-                        <p class="mt-2 text-gray-600">Versión 2.1 · macOS 12 o posterior · Intel y Apple Silicon</p>
-                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-2.1.0-macOS.dmg" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para macOS</a>
+                        <p class="mt-2 text-gray-600">Versión 2.1.1 · macOS 12 o posterior · Intel y Apple Silicon</p>
+                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-2.1.1-macOS.dmg" download class="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-green-700 px-6 py-3 font-bold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">Descargar para macOS</a>
                         <button v-else disabled class="mt-5 min-h-11 rounded-lg bg-gray-100 px-6 py-3 font-bold text-gray-500">Próximamente para macOS</button>
                         <p class="mt-3 text-sm text-gray-500">Abre el DMG y arrastra AgroSys POS a Applications. Esta versión de prueba no está notarizada; macOS puede bloquear su apertura.</p>
-                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-2.1.0-macOS.dmg.sha256" download class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-green-700 underline hover:text-green-900">Descargar checksum SHA-256</a>
+                        <a v-if="desktopDownloads.macos" href="/downloads/AgroSys-POS-2.1.1-macOS.dmg.sha256" download class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-green-700 underline hover:text-green-900">Descargar checksum SHA-256</a>
                     </div>
                     <div class="rounded-2xl border border-green-100 bg-white p-6 shadow-sm">
                         <h3 class="text-xl font-bold text-gray-900">Windows</h3>

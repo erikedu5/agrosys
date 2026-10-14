@@ -45,6 +45,10 @@ Route::prefix('v1/pos')->name('pos.')->middleware(\App\Http\Middleware\PosApi::c
         Route::post('/devices/revoke', [\App\Http\Controllers\Api\PosDeviceController::class, 'revoke'])->name('revoke');
         Route::post('/device/heartbeat', [\App\Http\Controllers\Api\PosDeviceController::class, 'heartbeat'])->name('heartbeat');
         Route::post('/sync/push', [\App\Http\Controllers\Api\PosSyncController::class, 'push'])->name('push');
+        Route::post('/cash/status', [\App\Http\Controllers\CashRegisterController::class, 'status'])->name('cash.status');
+        foreach (['open', 'movement', 'close'] as $action) {
+            Route::post('/cash/'.$action, [\App\Http\Controllers\CashRegisterController::class, 'write'])->defaults('action', $action)->name('cash.'.$action);
+        }
         Route::get('/operations/{operationId}', [\App\Http\Controllers\Api\PosSyncController::class, 'operation'])->whereUuid('operationId')->name('operation');
         Route::post('/inventory/options', [\App\Http\Controllers\Api\PosInventoryController::class, 'options'])->name('inventory.options');
         Route::post('/inventory/products', [\App\Http\Controllers\Api\PosInventoryController::class, 'create'])->name('inventory.create');

@@ -75,6 +75,7 @@ void main() {
     await catalog.startDownload(incremental: false);
     await catalog.stage(await api.page(session, incremental: false));
     await catalog.commitDownload();
+    await seedOpenCash(db);
   });
   tearDown(() async {
     api.close();
@@ -467,6 +468,7 @@ void main() {
         await api.page(otherSession, incremental: false),
       );
       await otherCatalog.commitDownload();
+      await seedOpenCash(otherDb);
       await sale(credit: true);
       final otherSales = SalesRepository(otherCatalog, otherSession);
       final q = await otherSales.quote('20', [const CartLine('10', 100)]);

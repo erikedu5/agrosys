@@ -82,6 +82,7 @@ void main() {
       ),
     );
     await catalog.commitDownload();
+    await seedOpenCash(db);
   });
   tearDown(() async {
     await db.close();
@@ -119,6 +120,59 @@ void main() {
     expect((await catalog.products('')).single.estimatedQuantity, 800);
     expect((await sales.history()).single.status, 'pending_sync');
   });
+  test(
+    'cash session survives reopen and stays immutable in queued sale retries',
+    () async {
+      const cashId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+      await db.customStatement(
+        'INSERT OR REPLACE INTO cash_local_state (id, payload) VALUES (1, ?)',
+        [
+          jsonEncode({
+            'current': {'id': cashId},
+          }),
+        ],
+      );
+      await db.close();
+      await open();
+      final input = await request();
+      await sales.complete(input);
+      final original = await db.select(db.outbox).getSingle();
+      expect(
+        object(
+          object(jsonDecode(original.payload))['payload'],
+        )['cashSessionId'],
+        cashId,
+      );
+      await db.customStatement(
+        'UPDATE cash_local_state SET payload = ? WHERE id = 1',
+        [
+          jsonEncode({'current': null}),
+        ],
+      );
+      await sales.complete(input);
+      expect(
+        (await db.select(db.outbox).getSingle()).payload,
+        original.payload,
+      );
+    },
+  );
+  test(
+    'sale without open cash is rejected before any local sale or outbox write',
+    () async {
+      await db.customStatement('DELETE FROM cash_local_state');
+      await expectLater(
+        sales.complete(await request()),
+        throwsA(
+          isA<SaleInputException>().having(
+            (e) => e.message,
+            'message',
+            contains('Abre la caja'),
+          ),
+        ),
+      );
+      await empty();
+    },
+  );
   for (final initial in [0, 3000, 10000]) {
     test(
       'AC-19/20/22 credit initial $initial persists sale balance and exact account delta',

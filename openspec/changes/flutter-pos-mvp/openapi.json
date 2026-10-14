@@ -709,6 +709,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "DEVICE_SESSION_CONFIRMATION_REQUIRED: ask user before retrying with close_other_sessions=true. The current token is preserved; no other user sessions are closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -716,7 +726,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Context"
+                "$ref": "#/components/schemas/SessionActivation"
               }
             }
           }
@@ -1740,6 +1750,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "DEVICE_SESSION_CONFIRMATION_REQUIRED: ask user before retrying with close_other_sessions=true. The current token is preserved; no other user sessions are closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -1747,7 +1767,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Context"
+                "$ref": "#/components/schemas/SessionActivation"
               }
             }
           }
@@ -4778,6 +4798,275 @@
           }
         ]
       }
+    },
+    "/cash/status": {
+      "post": {
+        "operationId": "cashStatus",
+        "summary": "Current cashier/branch session and latest 20 cuts",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "branch_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "branch_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cash state"
+          },
+          "401": {
+            "description": "Reauthenticate"
+          },
+          "402": {
+            "description": "Subscription required"
+          },
+          "403": {
+            "description": "Unauthorized cashier/branch/device"
+          },
+          "409": {
+            "description": "Session changed, pending sales or reused identity"
+          },
+          "422": {
+            "description": "Invalid amount or missing difference explanation"
+          }
+        }
+      }
+    },
+    "/cash/open": {
+      "post": {
+        "operationId": "cashOpen",
+        "summary": "Open one session per cashier/branch",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "branch_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "opening": {
+                    "type": "string",
+                    "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                  },
+                  "operation_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "branch_id",
+                  "opening",
+                  "operation_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent confirmation with operationId, sessionId and session"
+          },
+          "401": {
+            "description": "Reauthenticate"
+          },
+          "402": {
+            "description": "Subscription required"
+          },
+          "403": {
+            "description": "Unauthorized cashier/branch/device"
+          },
+          "409": {
+            "description": "Session changed, pending sales or reused identity"
+          },
+          "422": {
+            "description": "Invalid amount or missing difference explanation"
+          }
+        }
+      }
+    },
+    "/cash/movement": {
+      "post": {
+        "operationId": "cashMovement",
+        "summary": "Register a cash entry or withdrawal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "branch_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "kind": {
+                    "enum": [
+                      "in",
+                      "out"
+                    ]
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "operation_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "branch_id",
+                  "session_id",
+                  "kind",
+                  "amount",
+                  "description",
+                  "operation_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent confirmation with operationId, sessionId and session"
+          },
+          "401": {
+            "description": "Reauthenticate"
+          },
+          "402": {
+            "description": "Subscription required"
+          },
+          "403": {
+            "description": "Unauthorized cashier/branch/device"
+          },
+          "409": {
+            "description": "Session changed, pending sales or reused identity"
+          },
+          "422": {
+            "description": "Invalid amount or missing difference explanation"
+          }
+        }
+      }
+    },
+    "/cash/close": {
+      "post": {
+        "operationId": "cashClose",
+        "summary": "Save immutable expected/count/difference and close; synchronize all devices first",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "branch_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expected": {
+                    "type": "string",
+                    "pattern": "^-?\\d{1,8}(?:\\.\\d{1,2})?$"
+                  },
+                  "counted": {
+                    "type": "string",
+                    "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                  },
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
+                  },
+                  "confirmed": {
+                    "const": true
+                  },
+                  "operation_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "branch_id",
+                  "session_id",
+                  "expected",
+                  "counted",
+                  "confirmed",
+                  "operation_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent confirmation with operationId, sessionId and session"
+          },
+          "401": {
+            "description": "Reauthenticate"
+          },
+          "402": {
+            "description": "Subscription required"
+          },
+          "403": {
+            "description": "Unauthorized cashier/branch/device"
+          },
+          "409": {
+            "description": "Session changed, pending sales or reused identity"
+          },
+          "422": {
+            "description": "Invalid amount or missing difference explanation"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5133,6 +5422,11 @@
                 "amount"
               ]
             }
+          },
+          "cashSessionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Required original open cashier/branch session. Missing/null/closed/foreign sessions produce a conflict; queued payloads stay immutable."
           }
         },
         "required": [
@@ -5140,7 +5434,8 @@
           "saleType",
           "total",
           "items",
-          "payments"
+          "payments",
+          "cashSessionId"
         ]
       },
       "Operation": {
@@ -5914,6 +6209,23 @@
             "required": [
               "transferId"
             ]
+          }
+        ]
+      },
+      "SessionActivation": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Context"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "close_other_sessions": {
+                "type": "boolean",
+                "default": false,
+                "description": "Explicit confirmation to close all other web and POS sessions of this user. Does not grant manual admin authorization."
+              }
+            }
           }
         ]
       }

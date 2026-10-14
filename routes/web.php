@@ -1,5 +1,7 @@
 <?php
 
+\Illuminate\Support\Facades\Route::post('/device-session/activate', [\App\Http\Controllers\DeviceSessionController::class, 'activate'])->middleware('auth')->name('device-session.activate');
+
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,7 +27,7 @@ use App\Http\Controllers\Subscription\SubscriptionController;
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'desktopDownloads' => [
-            'macos' => is_file(public_path('downloads/AgroSys-POS-2.1.0-macOS.dmg')),
+            'macos' => is_file(public_path('downloads/AgroSys-POS-2.1.1-macOS.dmg')),
             'windows' => is_file(public_path('downloads/AgroSys-POS-Setup.exe')),
         ],
     ]);
@@ -81,6 +83,11 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/dashboard', [App\Http\Controllers\MainController::class, 'index'])
     ->name('dashboard')
     ->middleware(['auth:sanctum', 'sucursal.selection']);
+Route::middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection'])->group(function () {
+    Route::get('/caja', [App\Http\Controllers\CashRegisterController::class, 'index'])->name('cash.index');
+    Route::post('/caja/status', [App\Http\Controllers\CashRegisterController::class, 'status'])->name('cash.status');
+    Route::post('/caja/{action}', [App\Http\Controllers\CashRegisterController::class, 'write'])->whereIn('action', ['open', 'movement', 'close'])->name('cash.write');
+});
 Route::get('/venta/devoluciones/index', [App\Http\Controllers\DevolucionesController::class, 'index'])
     ->name('venta.devoluciones.index')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa', 'sucursal.selection']);

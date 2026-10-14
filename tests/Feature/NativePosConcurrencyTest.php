@@ -100,9 +100,15 @@ class NativePosConcurrencyTest extends TestCase
         $this->lease = $this->api('POST', 'devices/activate', $this->context())->assertOk()->json('offlineLease');
     }
 
-    private function operation(string $type = 'Contado', string $payment = '100.00', int $sequence = 1): array
+    private function operation(string $type = 'Contado', string $payment = '100.00', int $sequence = 1, bool $withCash = true): array
     {
-        return ['operation_id' => (string) Str::uuid(), 'aggregate_id' => (string) Str::uuid(), 'aggregate_type' => 'sale', 'event_type' => 'SALE_COMPLETED', 'sequence' => $sequence, 'occurred_at' => now()->toIso8601String(), 'offline_lease_id' => $this->lease['claims']['leaseId'], 'payload' => ['customerId' => (string) $this->customer->id, 'saleType' => $type, 'total' => '100.00', 'localFolio' => 'LOCAL-'.$sequence, 'items' => [['productId' => (string) $this->product->id, 'quantity' => '2.00', 'unitPrice' => '50.00', 'total' => '100.00']], 'payments' => [['method' => 'cash', 'amount' => $payment]]]];
+        $cash = app(\App\Services\CashRegister::class);
+        $session = $cash->current($this->user->id, $this->branch->id);
+        if ($withCash && ! $session) {
+            $cash->write($this->user->id, $this->branch->id, 'open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00']);
+            $session = $cash->current($this->user->id, $this->branch->id);
+        }
+        return ['operation_id' => (string) Str::uuid(), 'aggregate_id' => (string) Str::uuid(), 'aggregate_type' => 'sale', 'event_type' => 'SALE_COMPLETED', 'sequence' => $sequence, 'occurred_at' => now()->toIso8601String(), 'offline_lease_id' => $this->lease['claims']['leaseId'], 'payload' => ['cashSessionId' => $withCash ? $session->id : null, 'customerId' => (string) $this->customer->id, 'saleType' => $type, 'total' => '100.00', 'localFolio' => 'LOCAL-'.$sequence, 'items' => [['productId' => (string) $this->product->id, 'quantity' => '2.00', 'unitPrice' => '50.00', 'total' => '100.00']], 'payments' => [['method' => 'cash', 'amount' => $payment]]]];
     }
 
     private function push(array $operations)
