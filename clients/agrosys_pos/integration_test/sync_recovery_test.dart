@@ -40,7 +40,16 @@ void main() {
             request.response.headers.contentType = ContentType.json;
             request.response.write(jsonEncode(result));
           } on ApiFailure catch (e) {
-            request.response.statusCode = e.status ?? 503;
+            if (e.isConnectionFailure) {
+              // A closed transport models offline/lost acknowledgement. HTTP 503
+              // is a server response and must not bypass online cash validation.
+              final socket = await request.response.detachSocket(
+                writeHeaders: false,
+              );
+              socket.destroy();
+              return;
+            }
+            request.response.statusCode = e.status!;
             request.response.headers.contentType = ContentType.json;
             request.response.write(jsonEncode({'message': e.message}));
           } catch (e) {
