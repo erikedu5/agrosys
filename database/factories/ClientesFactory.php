@@ -25,7 +25,6 @@ class ClientesFactory extends Factory
     {
         return [
             'nombre' => $this->faker->text(20),
-            'porcentaje_descuento' => $this->faker->numberBetween(1, 30),
             'adeudo_total' => 0,
             'abono_total' => 0,
             'balance' => 0,

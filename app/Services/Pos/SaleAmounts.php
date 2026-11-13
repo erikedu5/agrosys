@@ -18,10 +18,6 @@ class SaleAmounts
             'items.*.quantity' => 'required', 'items.*.unitPrice' => 'required', 'items.*.total' => 'required',
             'payments' => 'required|array|size:1', 'payments.0.method' => 'required|in:cash', 'payments.0.amount' => 'required',
         ])->validate();
-        $discount = Decimal::units($customer->porcentaje_descuento, 'discount');
-        if ($discount > 10000) {
-            $this->fail('discount', 'Descuento inválido.');
-        }
         $query = Producto::withoutGlobalScope('empresa')->where('id_empresa', $branch->id_empresa)->whereIn('id', array_column($payload['items'], 'productId'))->orderBy('id');
         if ($lock) {
             $query->lockForUpdate();
@@ -38,7 +34,7 @@ class SaleAmounts
             if ($quantity <= 0 || $quantity > 99999999) {
                 $this->fail('quantity', 'Cantidad fuera de rango.');
             }
-            $price = Decimal::roundRatio(Decimal::units($product->precio_ieps, 'price') * (10000 - $discount), 10000);
+            $price = Decimal::units($product->precioPara($customer->tipo_precio), 'price');
             if (Decimal::units($item['unitPrice'], 'unitPrice') !== $price) {
                 $this->fail('unitPrice', "El precio de {$product->nombre} cambió desde la última sincronización.");
             }

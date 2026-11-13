@@ -47,11 +47,13 @@ class PosInventoryController extends Controller
         $result['id'] = (string) $product->id;
         $result['id_clasificacion'] = (string) $product->id_clasificacion;
         $result['id_marca'] = (string) $product->id_marca;
-        $result['precio_ieps'] = Decimal::format(Decimal::units($product->precio_ieps, 'price'));
+        foreach (Producto::PRECIOS as $column) {
+            $result[$column] = Decimal::format(Decimal::units($product->{$column}, 'price'));
+        }
+        $result['precio_ieps'] = $result['precio_publico']; // compatibilidad con clientes POS anteriores
         $result['version'] = $management->version($product);
         if ($management->canManageCosts($request->user(), $branch)) {
             $result['precio_unitario'] = Decimal::format(Decimal::units($product->precio_unitario, 'price'));
-            $result['ieps'] = (string) $product->ieps;
         }
 
         return response()->json(['product' => $result]);
@@ -110,7 +112,11 @@ class PosInventoryController extends Controller
         if ($action === 'add') {
             $rules['cantidad'] = ['required', 'string', 'regex:/^\d{1,6}(?:\.\d{1,2})?$/'];
         } elseif (! in_array($action, ['reset', 'delete'], true)) {
-            $rules['precio_ieps'] = ['required', 'string', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/'];
+            $price = ['string', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/'];
+            $rules['precio_publico'] = ['required_without:precio_ieps', ...$price];
+            $rules['precio_ieps'] = ['required_without:precio_publico', ...$price];
+            $rules['precio_preferencial_1'] = ['nullable', ...$price];
+            $rules['precio_preferencial_2'] = ['nullable', ...$price];
         }
         $request->validate($rules);
         $id = strtolower($request->input('operation_id'));

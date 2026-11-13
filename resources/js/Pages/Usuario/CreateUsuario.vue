@@ -104,13 +104,13 @@
                             <br>
                             <br>
 
-                            <label class="block font-medium text-sm text-gray-700">Password</label>
+                            <label class="block font-medium text-sm text-gray-700">{{ props.usuario ? 'Password (opcional)' : 'Password' }}</label>
                             <PasswordInput 
                                 v-model="form.password"
-                                placeholder="Ingrese la contraseña"
+                                :placeholder="props.usuario ? 'Dejar vacío para conservar la contraseña actual' : 'Ingrese la contraseña'"
                                 input-class="form-input w-full rounded-md shadow-sm"
                                 autocomplete="new-password"
-                                required />
+                                :required="!props.usuario" />
                             <InputError class="mt-2" :message="form.errors.password" />
                             <br>
                             <br>

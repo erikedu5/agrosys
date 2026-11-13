@@ -115,7 +115,6 @@ class SucursalController extends Controller
             // Crear cliente "Público en general" para la nueva sucursal
             $clientePublico = Clientes::create([
                 'nombre' => 'Público en general',
-                'porcentaje_descuento' => 0,
                 'adeudo_total' => 0,
                 'abono_total' => 0,
                 'balance' => 0,

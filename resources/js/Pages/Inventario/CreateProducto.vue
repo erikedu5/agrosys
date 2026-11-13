@@ -5,6 +5,7 @@ import InputError from '@/Components/InputError.vue';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import { ref, watch, onMounted, computed } from 'vue';
 import { notify } from '@/utils/notify';
+import { TIPOS_PRECIO } from '@/utils/precios';
 
 const props = defineProps({
     producto: Object,
@@ -26,8 +27,9 @@ const form = useForm({
     id_marca: 0,
     id: null,
     precio_unitario: '',
-    ieps: '',
-    precio_ieps: '',
+    precio_publico: '',
+    precio_preferencial_1: '',
+    precio_preferencial_2: '',
     tamano: '',
     cantidad: 0,
     ingrediente_activo: '',
@@ -46,8 +48,9 @@ const cargarDatosProducto = () => {
         form.id_marca = props.producto.id_marca || 0;
         form.id = props.producto.id || null;
         form.precio_unitario = props.producto.precio_unitario || 0.0;
-        form.ieps = props.producto.ieps || 0;
-        form.precio_ieps = props.producto.precio_ieps || 0.0;
+        TIPOS_PRECIO.forEach(({ campo }) => {
+            form[campo] = props.producto[campo] || 0.0;
+        });
         form.tamano = props.producto.tamano || '';
         form.cantidad = props.producto.cantidad || 0;
         form.ingrediente_activo = props.producto.ingrediente_activo || '';
@@ -83,11 +86,19 @@ watch(() => form.precio_unitario, (value) => {
     }
 });
 
-watch(() => form.ieps, (value) => {
-    if (value === '' || value === null || value === undefined) {
-        form.clearErrors('ieps');
+// En un producto nuevo los precios preferenciales siguen al público hasta que se editan.
+const preferencialesEditados = ref(false);
+const copiarPrecioPublico = (campo) => {
+    if (props.producto) {
+        return;
     }
-});
+    if (campo !== 'precio_publico') {
+        preferencialesEditados.value = true;
+    } else if (!preferencialesEditados.value) {
+        form.precio_preferencial_1 = form.precio_publico;
+        form.precio_preferencial_2 = form.precio_publico;
+    }
+};
 
 const validateForm = () => {
     form.clearErrors();
@@ -108,32 +119,23 @@ const validateForm = () => {
         hasErrors = true;
     }
 
-    if (mostrarCamposPrecio.value) {
-        if (
-            form.precio_unitario !== null &&
-            form.precio_unitario !== undefined &&
-            form.precio_unitario !== '' &&
-            parseFloat(form.precio_unitario) <= 0
-        ) {
-            form.setError('precio_unitario', 'El precio de compra debe ser mayor a 0 cuando se capture');
-            hasErrors = true;
-        }
-
-        if (!form.precio_ieps || parseFloat(form.precio_ieps) <= 0) {
-            form.setError('precio_ieps', 'El precio de venta debe ser mayor a 0');
-            hasErrors = true;
-        }
-
-        if (
-            form.ieps !== null &&
-            form.ieps !== undefined &&
-            form.ieps !== '' &&
-            parseFloat(form.ieps) < 0
-        ) {
-            form.setError('ieps', 'El porcentaje de ganancia debe ser mayor o igual a 0 cuando se capture');
-            hasErrors = true;
-        }
+    if (
+        mostrarCamposPrecio.value &&
+        form.precio_unitario !== null &&
+        form.precio_unitario !== undefined &&
+        form.precio_unitario !== '' &&
+        parseFloat(form.precio_unitario) < 0
+    ) {
+        form.setError('precio_unitario', 'El precio de compra no puede ser negativo');
+        hasErrors = true;
     }
+
+    TIPOS_PRECIO.forEach(({ campo, label }) => {
+        if (!form[campo] || parseFloat(form[campo]) <= 0) {
+            form.setError(campo, `El precio ${label.toLowerCase()} debe ser mayor a 0`);
+            hasErrors = true;
+        }
+    });
 
     if (!form.tamano || form.tamano.trim() === '') {
         form.setError('tamano', 'El tamaño del producto es requerido');
@@ -160,6 +162,7 @@ const submit = () => {
         form.post(route('inventario.store'), {
             onSuccess: () => {
                 form.reset();
+                preferencialesEditados.value = false;
             },
             onError: handleErrors,
         });
@@ -172,47 +175,6 @@ const submit = () => {
         });
     }
 }
-
-const toNumberOrNull = (value) => {
-    const parsed = parseFloat(value);
-    return Number.isNaN(parsed) ? null : parsed;
-};
-
-const recalcularValores = (trigger) => {
-    const precioCompra = toNumberOrNull(form.precio_unitario);
-    const porcentajeGanancia = toNumberOrNull(form.ieps);
-    const precioVenta = toNumberOrNull(form.precio_ieps);
-
-    if (
-        precioCompra !== null &&
-        porcentajeGanancia !== null &&
-        trigger !== 'precio_ieps'
-    ) {
-        form.precio_ieps = (precioCompra * (1 + (porcentajeGanancia / 100))).toFixed(2);
-        return;
-    }
-
-    if (
-        precioVenta !== null &&
-        porcentajeGanancia !== null &&
-        trigger !== 'precio_unitario'
-    ) {
-        const divisor = 1 + (porcentajeGanancia / 100);
-        if (divisor !== 0) {
-            form.precio_unitario = (precioVenta / divisor).toFixed(2);
-        }
-        return;
-    }
-
-    if (
-        precioCompra !== null &&
-        precioVenta !== null &&
-        trigger !== 'ieps' &&
-        precioCompra !== 0
-    ) {
-        form.ieps = (((precioVenta - precioCompra) / precioCompra) * 100).toFixed(2);
-    }
-};
 </script>
 
 <template>
@@ -251,7 +213,7 @@ const recalcularValores = (trigger) => {
 
                             <div v-if="mostrarCamposPrecio">
                                 <label class="block font-medium text-sm text-gray-700">Precio Compra (opcional)</label>
-                                <input type="number" step="0.01" min="0.01" @input="recalcularValores('precio_unitario')"
+                                <input type="number" step="0.01" min="0"
                                     class="form-input w-full rounded-md shadow-sm"
                                     :class="{ 'border-red-500': form.errors.precio_unitario }"
                                     v-model="form.precio_unitario">
@@ -259,23 +221,18 @@ const recalcularValores = (trigger) => {
                                 <br>
                                 <br>
 
-                                <label class="block font-medium text-sm text-gray-700">Porcentaje de ganancia (%) (opcional)</label>
-                                <input type="number" step="0.01" min="0" @input="recalcularValores('ieps')"
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{ 'border-red-500': form.errors.ieps }" v-model="form.ieps"
-                                    placeholder="Ingrese el porcentaje de ganancia (ej: 15)">
-                                <InputError class="mt-2" :message="form.errors.ieps" />
-                                <br>
-                                <br>
                             </div>
 
-                            <label class="block font-medium text-sm text-gray-700">Precio Venta *</label>
-                            <input type="number" step="0.01" min="0.01" @input="recalcularValores('precio_ieps')"
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{ 'border-red-500': form.errors.precio_ieps }" v-model="form.precio_ieps"
-                                required>
-                            <InputError class="mt-2" :message="form.errors.precio_ieps" />
-                            <br>
+                            <div class="grid gap-4 sm:grid-cols-3">
+                                <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo">
+                                    <label class="block font-medium text-sm text-gray-700">Precio {{ tipo.label }} *</label>
+                                    <input type="number" step="0.01" min="0.01" @input="copiarPrecioPublico(tipo.campo)"
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="{ 'border-red-500': form.errors[tipo.campo] }" v-model="form[tipo.campo]"
+                                        required>
+                                    <InputError class="mt-2" :message="form.errors[tipo.campo]" />
+                                </div>
+                            </div>
                             <br>
 
                             <label class="block font-medium text-sm text-gray-700">Tamaño * (Agrega unidad al tamaño

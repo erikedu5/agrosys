@@ -42,7 +42,6 @@ class CreateClientesPublicos extends Command
             // Crear cliente "Público en general" para la sucursal
             $clientePublico = Clientes::create([
                 'nombre' => 'Público en general',
-                'porcentaje_descuento' => 0,
                 'adeudo_total' => 0,
                 'abono_total' => 0,
                 'balance' => 0,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Clientes;
 use App\Exceptions\FacturapiException;
+use App\Models\Producto;
 use App\Models\Sucursales;
 use App\Services\FacturapiService;
 use App\Services\SucursalService;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ClientesController extends Controller
@@ -47,7 +49,9 @@ class ClientesController extends Controller
 
         $request->validate([
             'nombre' => ['required'],
-            'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
+            'tipo_precio' => ['nullable', Rule::in(array_keys(Producto::PRECIOS))],
+            'limite_credito' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'plazo_credito_dias' => ['nullable', 'integer', 'min:1', 'max:3650'],
             'requiereFactura' => ['required', 'boolean'],
             'rfc' => [
                 $request->boolean('requiereFactura') ? 'required' : 'nullable',
@@ -76,15 +80,13 @@ class ClientesController extends Controller
             ],
         ], [
             'nombre.required' => 'Por favor ingresa el nombre del cliente.',
-            'porcentaje_descuento.required' => 'Agregar un porcentage para el cliente.',
-            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
-            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
-            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
+            'tipo_precio.in' => 'El tipo de precio seleccionado no es valido.',
+            'limite_credito.numeric' => 'El limite de credito debe ser numerico.',
+            'limite_credito.min' => 'El limite de credito no puede ser negativo.',
+            'plazo_credito_dias.integer' => 'El plazo de credito debe ser un numero entero de dias.',
+            'plazo_credito_dias.min' => 'El plazo de credito debe ser de al menos 1 dia.',
             'requiereFactura.required' => 'Favor de validar si requiere factura.',
             'requiereFactura.boolean' => 'El campo requiere factura debe ser verdadero o falso.',
-            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
-            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
-            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
             'rfc.required' => 'El RFC es obligatorio para clientes que requieren factura.',
             'regimen_fiscal.required' => 'El regimen fiscal es obligatorio para clientes que requieren factura.',
             'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
@@ -93,16 +95,12 @@ class ClientesController extends Controller
         ]);
 
 
-        $porcentaje = (float) $request->porcentaje_descuento;
-        if (!is_finite($porcentaje) || $porcentaje < 0 || $porcentaje > 100) {
-            throw ValidationException::withMessages([
-                'porcentaje_descuento' => 'El porcentaje de descuento debe ser un numero valido entre 0 y 100.',
-            ]);
-        }
 
         $clienteData = [
             'nombre' => $request->nombre,
-            'porcentaje_descuento' => $porcentaje,
+            'tipo_precio' => $request->input('tipo_precio') ?: 'publico',
+            'limite_credito' => $request->input('limite_credito'),
+            'plazo_credito_dias' => $request->input('plazo_credito_dias'),
             'adeudo_total' => 0,
             'abono_total' => 0,
             'balance' => 0,
@@ -141,7 +139,9 @@ class ClientesController extends Controller
     {
         $request->validate([
             'nombre' => ['required'],
-            'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
+            'tipo_precio' => ['nullable', Rule::in(array_keys(Producto::PRECIOS))],
+            'limite_credito' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'plazo_credito_dias' => ['nullable', 'integer', 'min:1', 'max:3650'],
             'requiereFactura' => ['required', 'boolean'],
             'rfc' => [
                 $request->boolean('requiereFactura') ? 'required' : 'nullable',
@@ -169,9 +169,11 @@ class ClientesController extends Controller
                 'max:255',
             ],
         ], [
-            'porcentaje_descuento.numeric' => 'El porcentaje de descuento debe ser numerico.',
-            'porcentaje_descuento.min' => 'El porcentaje de descuento no puede ser negativo.',
-            'porcentaje_descuento.max' => 'El porcentaje de descuento no puede ser mayor a 100.',
+            'tipo_precio.in' => 'El tipo de precio seleccionado no es valido.',
+            'limite_credito.numeric' => 'El limite de credito debe ser numerico.',
+            'limite_credito.min' => 'El limite de credito no puede ser negativo.',
+            'plazo_credito_dias.integer' => 'El plazo de credito debe ser un numero entero de dias.',
+            'plazo_credito_dias.min' => 'El plazo de credito debe ser de al menos 1 dia.',
             'rfc.required' => 'El RFC es obligatorio para clientes que requieren factura.',
             'regimen_fiscal.required' => 'El regimen fiscal es obligatorio para clientes que requieren factura.',
             'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
@@ -180,18 +182,14 @@ class ClientesController extends Controller
         ]);
 
 
-        $porcentaje = (float) $request->porcentaje_descuento;
-        if (!is_finite($porcentaje) || $porcentaje < 0 || $porcentaje > 100) {
-            throw ValidationException::withMessages([
-                'porcentaje_descuento' => 'El porcentaje de descuento debe ser un numero valido entre 0 y 100.',
-            ]);
-        }
 
         $cliente = Clientes::where('id_sucursal', SucursalService::getSucursalActiva())
             ->where('activo', true)->findOrFail($cliente);
 
         $cliente->nombre = $request->nombre;
-        $cliente->porcentaje_descuento = $porcentaje;
+        $cliente->tipo_precio = $request->input('tipo_precio') ?: 'publico';
+        $cliente->limite_credito = $request->input('limite_credito');
+        $cliente->plazo_credito_dias = $request->input('plazo_credito_dias');
         $cliente->requiereFactura = $request->boolean('requiereFactura');
         if ($request->requiereFactura) {
             $cliente->rfc = strtoupper($request->rfc);

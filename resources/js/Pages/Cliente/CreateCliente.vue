@@ -5,6 +5,7 @@
     import Checkbox from '@/Components/Checkbox.vue';
     import InputError from '@/Components/InputError.vue';
     import { watch } from 'vue';
+    import { TIPOS_PRECIO } from '@/utils/precios';
 
     const props=defineProps({cliente: Object});
 
@@ -16,7 +17,9 @@
         codigo_postal: props.cliente !== undefined ? props.cliente.codigo_postal : '',
         uso_cfdi: props.cliente !== undefined ? props.cliente.uso_cfdi : '',
         email_facturacion: props.cliente !== undefined ? props.cliente.email_facturacion : '',
-        porcentaje_descuento: props.cliente !== undefined ? props.cliente.porcentaje_descuento: 0,
+        tipo_precio: props.cliente !== undefined ? (props.cliente.tipo_precio ?? 'publico') : 'publico',
+        limite_credito: props.cliente !== undefined ? (props.cliente.limite_credito ?? '') : '',
+        plazo_credito_dias: props.cliente !== undefined ? (props.cliente.plazo_credito_dias ?? '') : '',
         id: props.cliente !== undefined ? props.cliente.id: null,
     });
 
@@ -57,7 +60,9 @@
         form.codigo_postal = cliente?.codigo_postal ?? '';
         form.uso_cfdi = cliente?.uso_cfdi ?? '';
         form.email_facturacion = cliente?.email_facturacion ?? '';
-        form.porcentaje_descuento = cliente?.porcentaje_descuento ?? 0;
+        form.tipo_precio = cliente?.tipo_precio ?? 'publico';
+        form.limite_credito = cliente?.limite_credito ?? '';
+        form.plazo_credito_dias = cliente?.plazo_credito_dias ?? '';
         form.id = cliente?.id ?? null;
     };
 
@@ -122,13 +127,36 @@
                             <br>
                             <br>
 
-                            <label class="block font-medium text-sm text-gray-700">Porcentaje de descuento</label>
-                            <input type="number" step="0.01"
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{'border-red-500': form.errors.porcentaje_descuento}"
-                                v-model="form.porcentaje_descuento">
-                            <InputError class="mt-2" :message="form.errors.porcentaje_descuento" />
+                            <label class="block font-medium text-sm text-gray-700">Precio asignado</label>
+                            <select class="form-input w-full rounded-md shadow-sm"
+                                :class="{'border-red-500': form.errors.tipo_precio}"
+                                v-model="form.tipo_precio">
+                                <option v-for="tipo in TIPOS_PRECIO" :key="tipo.value" :value="tipo.value">{{ tipo.label }}</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Precio del catálogo de productos que se usará en las ventas de este cliente.</p>
+                            <InputError class="mt-2" :message="form.errors.tipo_precio" />
                             <br>
+                            <br>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label class="block font-medium text-sm text-gray-700">Límite de crédito ($)</label>
+                                    <input type="number" step="0.01" min="0" placeholder="Sin límite"
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="{'border-red-500': form.errors.limite_credito}"
+                                        v-model="form.limite_credito">
+                                    <InputError class="mt-2" :message="form.errors.limite_credito" />
+                                </div>
+                                <div>
+                                    <label class="block font-medium text-sm text-gray-700">Plazo de crédito (días)</label>
+                                    <input type="number" step="1" min="1" placeholder="Sin plazo"
+                                        class="form-input w-full rounded-md shadow-sm"
+                                        :class="{'border-red-500': form.errors.plazo_credito_dias}"
+                                        v-model="form.plazo_credito_dias">
+                                    <InputError class="mt-2" :message="form.errors.plazo_credito_dias" />
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Si el adeudo excede el límite o la venta a crédito sin pagar más antigua rebasa el plazo, al cliente solo se le podrá vender de contado. Vacío = sin restricción.</p>
                             <br>
                             <label class="block font-medium text-sm text-gray-700">
                                 <checkbox v-model:checked="form.requiereFactura" />

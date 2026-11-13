@@ -30,8 +30,9 @@ class SucursalProductosController extends Controller
      *         "id": 10,
      *         "nombre": "Herbicida X",
      *         "precio_unitario": 120.5,
-     *         "ieps": 8.0,
-     *         "precio_ieps": 9.64,
+     *         "precio_publico": 150.0,
+     *         "precio_preferencial_1": 140.0,
+     *         "precio_preferencial_2": 130.0,
      *         "tamano": "1L",
      *         "ingrediente_activo": "Glifosato",
      *         "cantidad": 15

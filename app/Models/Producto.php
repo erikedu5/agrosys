@@ -17,14 +17,28 @@ class Producto extends Model
         'id_marca',
         'cantidad',
         'precio_unitario',
-        'ieps',
-        'precio_ieps',
+        'precio_publico',
+        'precio_preferencial_1',
+        'precio_preferencial_2',
         'tamano',
         'id_usuario',
         'ingrediente_activo',
         'barcode',
         'id_empresa',
     ];
+
+    /** Tipo de precio del cliente => columna del producto. */
+    public const PRECIOS = [
+        'publico' => 'precio_publico',
+        'preferencial_1' => 'precio_preferencial_1',
+        'preferencial_2' => 'precio_preferencial_2',
+    ];
+
+    /** Precio de venta para el tipo de precio dado (público por defecto). */
+    public function precioPara(?string $tipo): mixed
+    {
+        return $this->{self::PRECIOS[$tipo] ?? self::PRECIOS['publico']};
+    }
 
     protected static function booted()
     {

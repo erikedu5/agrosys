@@ -131,6 +131,18 @@ async function retry() {
                         <div><p class="text-sm text-gray-500">Efectivo esperado</p><p class="text-2xl font-bold text-green-700">{{ money(current.expected) }}</p></div>
                     </div>
                 </section>
+                <section v-if="current.sales" class="rounded-xl bg-white p-6 shadow">
+                    <h3 class="text-lg font-semibold">Ventas de esta caja</h3>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <div><p class="text-sm text-gray-500">Vendido de contado ({{ current.sales.cashCount }})</p><p class="text-xl font-bold">{{ money(current.sales.cash) }}</p></div>
+                        <div><p class="text-sm text-gray-500">Vendido a crédito ({{ current.sales.creditCount }})</p><p class="text-xl font-bold">{{ money(current.sales.credit) }}</p></div>
+                        <div><p class="text-sm text-gray-500">Total vendido</p><p class="text-xl font-bold">{{ money(current.sales.total) }}</p></div>
+                        <div><p class="text-sm text-gray-500">Abonos iniciales de crédito (cobrado)</p><p class="text-xl font-bold">{{ money(current.sales.creditInitial) }}</p></div>
+                        <div><p class="text-sm text-gray-500">Crédito por cobrar de estas ventas</p><p class="text-xl font-bold">{{ money(current.sales.creditPending) }}</p></div>
+                        <div><p class="text-sm text-gray-500">Abonos de clientes a crédito (cobrado)</p><p class="text-xl font-bold">{{ money(current.sales.accountPayments) }}</p></div>
+                    </div>
+                    <p class="mt-3 text-xs text-gray-500">El efectivo esperado solo incluye lo cobrado: ventas de contado, abonos iniciales y abonos de clientes. El crédito por cobrar no entra a la caja.</p>
+                </section>
                 <div class="grid gap-6 md:grid-cols-2">
                     <form class="space-y-4 rounded-xl bg-white p-6 shadow" @submit.prevent="submit('movement', { session_id: current.id, kind, amount, description })">
                         <h3 class="text-lg font-semibold">Entrada o salida de efectivo</h3>
@@ -168,10 +180,69 @@ async function retry() {
             </section>
         </div>
         <Teleport to="body"><div v-if="printable" class="cash-print">
-            <h1>Corte de caja · AgroSys</h1><p>{{ page.props.auth.user.name }} · {{ page.props.sucursalActiva.nombre }}</p>
-            <p>Folio: {{ printable.id }}</p><p>Apertura: {{ date(printable.openedAt) }}</p><p>Cierre: {{ date(printable.closedAt) }}</p>
-            <p>Fondo inicial: {{ money(printable.opening) }}</p><p v-for="(value, key) in printable.totals" :key="key">{{ labels[key] }}: {{ money(value) }}</p>
-            <p>Efectivo esperado: {{ money(printable.expected) }}</p><p>Efectivo contado: {{ money(printable.counted) }}</p><p>Diferencia: {{ money(printable.difference) }}</p><p>{{ printable.notes }}</p>
+            <header class="cash-print-header">
+                <div>
+                    <p class="cash-print-company">{{ page.props.empresaConfig?.nombre ?? 'AgroSys' }}</p>
+                    <h1>Corte de caja</h1>
+                </div>
+                <div class="cash-print-meta">
+                    <p><span>Sucursal:</span> {{ page.props.sucursalActiva.nombre }}</p>
+                    <p><span>Cajero:</span> {{ page.props.auth.user.name }}</p>
+                    <p><span>Apertura:</span> {{ date(printable.openedAt) }}</p>
+                    <p><span>Cierre:</span> {{ date(printable.closedAt) }}</p>
+                </div>
+            </header>
+            <p class="cash-print-folio">Folio: {{ printable.id }}</p>
+
+            <div class="cash-print-result">
+                <div><span>Efectivo esperado</span><strong>{{ money(printable.expected) }}</strong></div>
+                <div><span>Efectivo contado</span><strong>{{ money(printable.counted) }}</strong></div>
+                <div :class="{ 'cash-print-alert': Number(printable.difference) !== 0 }"><span>Diferencia</span><strong>{{ money(printable.difference) }}</strong></div>
+            </div>
+
+            <template v-if="printable.sales">
+                <h2>Ventas del turno</h2>
+                <table>
+                    <thead><tr><th>Concepto</th><th class="num">Ventas</th><th class="num">Importe</th></tr></thead>
+                    <tbody>
+                        <tr><td>Vendido de contado</td><td class="num">{{ printable.sales.cashCount }}</td><td class="num">{{ money(printable.sales.cash) }}</td></tr>
+                        <tr><td>Vendido a crédito</td><td class="num">{{ printable.sales.creditCount }}</td><td class="num">{{ money(printable.sales.credit) }}</td></tr>
+                        <tr class="total"><td>Total vendido</td><td class="num">{{ printable.sales.cashCount + printable.sales.creditCount }}</td><td class="num">{{ money(printable.sales.total) }}</td></tr>
+                    </tbody>
+                </table>
+
+                <h2>Crédito</h2>
+                <table>
+                    <tbody>
+                        <tr><td>Abonos iniciales de ventas a crédito (cobrado)</td><td class="num">{{ money(printable.sales.creditInitial) }}</td></tr>
+                        <tr><td>Crédito por cobrar de las ventas del turno</td><td class="num">{{ money(printable.sales.creditPending) }}</td></tr>
+                        <tr><td>Abonos de clientes a adeudos (cobrado)</td><td class="num">{{ money(printable.sales.accountPayments) }}</td></tr>
+                    </tbody>
+                </table>
+            </template>
+
+            <h2>Efectivo en caja</h2>
+            <table>
+                <thead><tr><th>Concepto</th><th class="num">Importe</th></tr></thead>
+                <tbody>
+                    <tr><td>Fondo inicial</td><td class="num">{{ money(printable.opening) }}</td></tr>
+                    <tr v-for="(value, key) in printable.totals" :key="key"><td>{{ labels[key] ?? key }}</td><td class="num">{{ money(value) }}</td></tr>
+                    <tr class="total"><td>Efectivo esperado</td><td class="num">{{ money(printable.expected) }}</td></tr>
+                    <tr><td>Efectivo contado</td><td class="num">{{ money(printable.counted) }}</td></tr>
+                    <tr class="total"><td>Diferencia</td><td class="num">{{ money(printable.difference) }}</td></tr>
+                </tbody>
+            </table>
+
+            <template v-if="printable.notes">
+                <h2>Observaciones</h2>
+                <p class="cash-print-notes">{{ printable.notes }}</p>
+            </template>
+
+            <div class="cash-print-signatures">
+                <div>Entrega (cajero)<br>{{ page.props.auth.user.name }}</div>
+                <div>Recibe (nombre y firma)</div>
+            </div>
+            <p class="cash-print-footer">Impreso el {{ date(new Date()) }}</p>
         </div></Teleport>
     </section>
 </template>
@@ -179,9 +250,30 @@ async function retry() {
 <style>
 .cash-print { display: none; }
 @media print {
+    /* Hoja carta completa: el corte se imprime en impresora normal, no en la térmica de tickets. */
+    @page { size: letter portrait; margin: 15mm; }
     body > * { display: none !important; }
-    body > .cash-print { display: block !important; font: 12pt sans-serif; color: black; padding: 16px; }
-    .cash-print h1 { font-size: 18pt; font-weight: bold; margin-bottom: 12px; }
-    .cash-print p { margin-bottom: 8px; }
+    body > .cash-print { display: block !important; font: 11pt/1.4 Arial, Helvetica, sans-serif; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cash-print-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    .cash-print-company { font-size: 12pt; font-weight: bold; text-transform: uppercase; letter-spacing: .04em; }
+    .cash-print h1 { font-size: 22pt; font-weight: bold; line-height: 1.1; }
+    .cash-print-meta { font-size: 10.5pt; text-align: right; }
+    .cash-print-meta span { font-weight: bold; }
+    .cash-print-folio { margin-top: 6px; font-size: 9pt; color: #444; }
+    .cash-print-result { display: flex; gap: 12px; margin: 16px 0 6px; }
+    .cash-print-result > div { flex: 1; border: 1.5px solid #000; border-radius: 6px; padding: 10px 12px; }
+    .cash-print-result span { display: block; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .03em; }
+    .cash-print-result strong { display: block; font-size: 18pt; }
+    .cash-print-result .cash-print-alert { background: #e5e5e5; border-width: 2.5px; }
+    .cash-print h2 { margin: 18px 0 6px; font-size: 12.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: .03em; break-after: avoid; }
+    .cash-print table { width: 100%; border-collapse: collapse; break-inside: avoid; }
+    .cash-print th, .cash-print td { border: 1px solid #555; padding: 6px 10px; text-align: left; font-size: 11pt; }
+    .cash-print th { background: #e5e5e5; font-weight: bold; }
+    .cash-print .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cash-print tr.total td { font-weight: bold; background: #f1f1f1; }
+    .cash-print-notes { border: 1px solid #555; padding: 8px 10px; white-space: pre-wrap; }
+    .cash-print-signatures { display: flex; gap: 48px; margin-top: 56px; break-inside: avoid; }
+    .cash-print-signatures > div { flex: 1; border-top: 1px solid #000; padding-top: 6px; text-align: center; font-size: 10.5pt; }
+    .cash-print-footer { margin-top: 16px; font-size: 9pt; color: #444; text-align: right; }
 }
 </style>

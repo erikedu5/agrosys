@@ -22,7 +22,7 @@ class InventoryManagement
     public function version(Producto $product): string
     {
         return hash('sha256', json_encode($product->only(['id', 'nombre', 'tamano', 'id_clasificacion', 'id_marca',
-            'precio_unitario', 'precio_ieps', 'ieps', 'ingrediente_activo', 'barcode', 'updated_at']), JSON_THROW_ON_ERROR));
+            'precio_unitario', ...array_values(Producto::PRECIOS), 'ingrediente_activo', 'barcode', 'updated_at']), JSON_THROW_ON_ERROR));
     }
 
     public function product(User $user, Sucursales $branch, array $input, ?int $id = null, ?string $version = null): Producto
@@ -40,12 +40,11 @@ class InventoryManagement
                 'id_marca' => 'required|integer|exists:cat_marcas,id', 'barcode' => 'nullable|string|max:255',
                 'ingrediente_activo' => 'nullable|string|max:255'];
             $data = Validator::make($input, $rules, ['nombre.unique' => 'Ya existe un producto con ese nombre y tamaño. Edítalo en lugar de duplicarlo.'])->validate();
-            $product->fill([...$data, ...$this->prices($user, $branch, $input), 'id_usuario' => $user->id]);
+            $product->fill([...$data, ...$this->prices($user, $branch, $input, $id === null), 'id_usuario' => $user->id]);
             if ($id === null) {
                 $product->id_empresa = $branch->id_empresa;
                 $product->cantidad = 0;
                 $product->precio_unitario ??= 0;
-                $product->ieps ??= 0;
                 $product->barcode ??= '';
                 $product->ingrediente_activo ??= '';
             }
@@ -70,20 +69,29 @@ class InventoryManagement
         }, 3);
     }
 
-    private function prices(User $user, Sucursales $branch, array $input): array
+    private function prices(User $user, Sucursales $branch, array $input, bool $new = false): array
     {
-        $rules = ['precio_ieps' => 'required|numeric|min:0.01|max:99999999.99'];
+        // Clientes POS anteriores envían un solo precio de venta como precio_ieps.
+        $input['precio_publico'] ??= $input['precio_ieps'] ?? null;
+        $rules = ['precio_publico' => 'required|numeric|min:0.01|max:99999999.99',
+            'precio_preferencial_1' => 'nullable|numeric|min:0.01|max:99999999.99',
+            'precio_preferencial_2' => 'nullable|numeric|min:0.01|max:99999999.99'];
         if ($this->canManageCosts($user, $branch)) {
-            $rules += ['precio_unitario' => 'nullable|numeric|min:0|max:99999999.99', 'ieps' => 'nullable|numeric|min:0|max:99999999.99'];
+            $rules += ['precio_unitario' => 'nullable|numeric|min:0|max:99999999.99'];
         }
-        $data = Validator::make($input, $rules)->validate();
-        foreach (['precio_ieps', 'precio_unitario', 'ieps'] as $field) {
-            if (array_key_exists($field, $data)) {
-                $data[$field] = Decimal::format(Decimal::units($data[$field] ?? '0', $field));
+        $data = Validator::make($input, $rules, [], ['precio_publico' => 'precio público en general',
+            'precio_preferencial_1' => 'precio preferencial 1', 'precio_preferencial_2' => 'precio preferencial 2'])->validate();
+        foreach (['precio_preferencial_1', 'precio_preferencial_2'] as $field) {
+            // Sin capturar: producto nuevo toma el precio público; existente conserva el suyo.
+            if (($data[$field] ?? null) === null) {
+                unset($data[$field]);
+                if ($new) {
+                    $data[$field] = $data['precio_publico'];
+                }
             }
         }
-        if (array_key_exists('ieps', $data)) {
-            $data['ieps'] ??= 0;
+        foreach ($data as $field => $value) {
+            $data[$field] = Decimal::format(Decimal::units($value ?? '0', $field));
         }
 
         return $data;

@@ -5,38 +5,51 @@ import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
+import { etiquetaFormaPago } from '@/utils/formasPago';
 
-defineProps({
+const props = defineProps({
     facturas: {
         type: Object,
         default: {}
+    },
+    // Rango aplicado por el servidor, en formato yyyy-MM-dd.
+    filtros: {
+        type: Object,
+        default: () => ({ fechaInicio: null, fechaFin: null })
     }
 });
 
-const form = useForm({
-    dates: []
+// El selector trabaja en yyyy-MM-dd, igual que el servidor, y arranca con el rango que se está mostrando.
+const fechas = ref(props.filtros.fechaInicio && props.filtros.fechaFin ? [props.filtros.fechaInicio, props.filtros.fechaFin] : []);
+watch(() => props.filtros, (filtros) => {
+    if (filtros.fechaInicio && filtros.fechaFin) fechas.value = [filtros.fechaInicio, filtros.fechaFin];
 });
 
-const minusDays = (date, days) => {
-    let result = new Date(date);
-    result.setDate(date.getDate() - days);
-    return result;
-}
-
-let fechaFin = new Date();
-let fechaInicio = minusDays(fechaFin, 1);
+const rangoActual = () => {
+    const [inicio, fin] = fechas.value ?? [];
+    return {
+        fechaInicio: inicio || props.filtros.fechaInicio,
+        fechaFin: fin || inicio || props.filtros.fechaFin,
+    };
+};
 
 const filterFacturas = () => {
-    const InicioString = form.dates[0].split('-')
-    const FinString = form.dates[1].split('-')
-    fechaInicio = new Date(InicioString[2], parseInt(InicioString[1]) - 1, InicioString[0]);
-    fechaFin = new Date(FinString[2], parseInt(FinString[1]) - 1, FinString[0]);
-    router.get(route('facturas.index', { 'fechaInicio': fechaInicio, 'fechaFin': fechaFin }), { preserveState: true });
-}
+    router.get(route('facturas.index'), rangoActual(), { preserveState: true, preserveScroll: true });
+};
+
+const descargarExcel = () => {
+    window.location.href = route('facturas.export', rangoActual());
+};
 
 const update = (id) => {
-    router.put(route('facturas.update', { 'id': id, 'fechaInicio': fechaInicio, 'fechaFin': fechaFin }));
-}
+    router.put(route('facturas.update', { id, ...rangoActual() }), {}, { preserveScroll: true });
+};
+
+const estatus = (factura) => {
+    if (factura.facturaCompleta) return 'Facturada';
+    if (factura.factura_status === 'error') return 'Error al facturar';
+    return 'No facturada';
+};
 
 </script>
 
@@ -48,13 +61,17 @@ const update = (id) => {
             </h2>
             <br>
             <div class="flex justify-between">
-                <VueDatePicker v-model="form.dates" range model-type="dd-MM-yyyy"></VueDatePicker>
+                <VueDatePicker v-model="fechas" range model-type="yyyy-MM-dd" format="dd/MM/yyyy" :clearable="false"></VueDatePicker>
                 <button @click="filterFacturas"
                     class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                    filtar
+                    Filtrar
+                </button>
+                <button @click="descargarExcel"
+                    class="ml-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 whitespace-nowrap">
+                    Descargar Excel
                 </button>
             </div>
         </template>
@@ -84,8 +101,13 @@ const update = (id) => {
                             <div>$ {{ factura.venta.total }}</div>
                         </div>
                         <div>
-                            <div class="text-gray-500">Cantidad a Facturar</div>
-                            <div>{{ factura.facturaCompleta ? 'Facturada' : 'No Facturada' }}</div>
+                            <div class="text-gray-500">Forma de pago</div>
+                            <div>{{ etiquetaFormaPago(factura.venta.forma_pago) || 'Sin definir' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Estatus</div>
+                            <div>{{ estatus(factura) }}</div>
+                            <div v-if="factura.factura_error && !factura.facturaCompleta" class="text-xs text-red-600">{{ factura.factura_error }}</div>
                         </div>
                     </div>
                     <div class="flex justify-end mt-3">
@@ -100,6 +122,7 @@ const update = (id) => {
                         </div>
                     </div>
                 </div>
+                <p v-if="!facturas.data?.length" class="py-6 text-center text-gray-500">No hay ventas por facturar en el rango seleccionado.</p>
                 <div name="Pagination">
                     <Pagination class="mt-6" :links="facturas.links" />
                 </div>
@@ -115,6 +138,7 @@ const update = (id) => {
                             <th>Id venta</th>
                             <th>Fecha Venta</th>
                             <th>Cantidad a Facturar</th>
+                            <th>Forma de pago</th>
                             <th>Ha sido facturada</th>
                             <th></th>
                         </tr>
@@ -127,7 +151,10 @@ const update = (id) => {
                             <td class="px-4 py-2"> {{ factura.venta.id }} </td>
                             <td class="px-4 py-2"> {{ factura.venta.created_at }} </td>
                             <td class="px-4 py-2"> $ {{ factura.venta.total }} </td>
-                            <td class="px-4 py-2"> {{ factura.facturaCompleta ? 'Facturada' : 'No Facturada' }} </td>
+                            <td class="px-4 py-2"> {{ etiquetaFormaPago(factura.venta.forma_pago) || 'Sin definir' }} </td>
+                            <td class="px-4 py-2"> {{ estatus(factura) }}
+                                <div v-if="factura.factura_error && !factura.facturaCompleta" class="text-xs text-red-600">{{ factura.factura_error }}</div>
+                            </td>
                             <td class="px-4 py-2">
                                 <div class="inline-flex rounded-md shadow-sm" role="group">
                                     <button @click="update(factura.id)" v-show="!factura.facturaCompleta" class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200
@@ -142,6 +169,7 @@ const update = (id) => {
                         </tr>
                     </tbody>
                 </table>
+                <p v-if="!facturas.data?.length" class="py-6 text-center text-gray-500">No hay ventas por facturar en el rango seleccionado.</p>
 
                 <div name="Pagination">
                     <Pagination class="mt-6" :links="facturas.links" />

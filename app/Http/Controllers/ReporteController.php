@@ -345,7 +345,7 @@ class ReporteController extends Controller
         if ($sucursalIds->isNotEmpty()) {
             $gananciasPorDia = ProductoVenta::selectRaw(
                 'DATE(ventas.created_at) as fecha,
-                 SUM((COALESCE(productos.precio_ieps, 0) - COALESCE(productos.precio_unitario, 0)) * producto_ventas.cantidad) AS ganancia_total,
+                 SUM(producto_ventas.total_productos - COALESCE(productos.precio_unitario, 0) * producto_ventas.cantidad) AS ganancia_total,
                  SUM(producto_ventas.cantidad) as unidades_vendidas'
             )
                 ->join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
@@ -364,7 +364,7 @@ class ReporteController extends Controller
                  COALESCE(clientes.nombre, \'Cliente público\') as cliente_nombre,
                  productos.nombre as producto_nombre,
                  producto_ventas.cantidad,
-                 (COALESCE(productos.precio_ieps, 0) - COALESCE(productos.precio_unitario, 0)) * producto_ventas.cantidad as ganancia_linea'
+                 producto_ventas.total_productos - COALESCE(productos.precio_unitario, 0) * producto_ventas.cantidad as ganancia_linea'
             )
                 ->join('ventas', 'producto_ventas.id_venta', '=', 'ventas.id')
                 ->join('productos', 'producto_ventas.id_producto', '=', 'productos.id')
@@ -402,6 +402,191 @@ class ReporteController extends Controller
         $pdf->setOption('javascript-delay', 3000);
 
         return $pdf->stream('ganancias_diarias.pdf');
+    }
+
+    /**
+     * Cortes de caja en PDF. alcance=todas: todas las sucursales de la empresa (superAdmin / adminEmpresa).
+     * alcance=sucursal: una sucursal (el admin de sucursal solo ve la suya).
+     */
+    public function cortesCaja(Request $request, \App\Services\CashRegister $cash)
+    {
+        $usuario = Auth::user();
+        $data = $request->validate([
+            'fechaInicio' => ['required', 'date_format:Y-m-d'],
+            'fechaFin' => ['required', 'date_format:Y-m-d', 'after_or_equal:fechaInicio'],
+            'alcance' => ['required', 'in:todas,sucursal'],
+            'id_sucursal' => ['nullable', 'integer'],
+        ], [
+            'fechaInicio.required' => 'La fecha de inicio es requerida.',
+            'fechaFin.required' => 'La fecha de fin es requerida.',
+            'fechaFin.after_or_equal' => 'La fecha de fin no puede ser anterior a la de inicio.',
+        ]);
+
+        $sucursalActiva = Sucursales::with('empresa')->find(SucursalService::getSucursalActiva());
+        abort_unless($sucursalActiva && $sucursalActiva->empresa, 404, 'No se encontró la sucursal activa.');
+        $empresa = $sucursalActiva->empresa;
+        $esAdminGeneral = in_array($usuario->tipo, ['superAdmin', 'adminEmpresa'], true);
+
+        // superAdmin administra la plataforma: ve sucursales de todas las empresas. adminEmpresa: solo las suyas.
+        $esSuperAdmin = $usuario->tipo === 'superAdmin';
+        $visibles = fn () => Sucursales::with('empresa')
+            ->when(! $esSuperAdmin, fn ($query) => $query->where('id_empresa', $empresa->id));
+
+        if ($data['alcance'] === 'todas') {
+            abort_unless($esAdminGeneral, 403, 'No tienes permiso para ver los cortes de todas las sucursales.');
+            $sucursales = $visibles()->orderBy('id_empresa')->orderBy('nombre')->get();
+        } else {
+            // El admin de sucursal solo consulta su sucursal activa.
+            $idSucursal = $esAdminGeneral && ! empty($data['id_sucursal']) ? (int) $data['id_sucursal'] : $sucursalActiva->id;
+            $sucursales = $visibles()->whereKey($idSucursal)->get();
+            abort_if($sucursales->isEmpty(), 404, 'La sucursal no está disponible para este usuario.');
+        }
+        $variasEmpresas = $sucursales->pluck('id_empresa')->unique()->count() > 1;
+        if ($variasEmpresas) {
+            // Solo para mostrar en el PDF; no se guarda.
+            $sucursales->each(fn ($sucursal) => $sucursal->nombre = ($sucursal->empresa->nombre ?? 'Empresa').' · '.$sucursal->nombre);
+        } elseif ($sucursales->first()?->empresa) {
+            $empresa = $sucursales->first()->empresa;
+        }
+
+        $inicio = (new DateTime($data['fechaInicio']))->setTime(0, 0, 0);
+        $fin = (new DateTime($data['fechaFin']))->setTime(23, 59, 59);
+        $sesiones = DB::table('cash_sessions')->whereIn('branch_id', $sucursales->pluck('id'))
+            ->whereBetween('opened_at', [$inicio, $fin])->orderBy('opened_at')->get();
+        $cajeros = User::withTrashed()->whereIn('id', $sesiones->pluck('user_id')->unique())->pluck('name', 'id');
+
+        $campos = ['fondo', 'contado', 'credito', 'abonoInicial', 'abonos', 'entradas', 'salidas', 'reembolsos', 'esperado', 'contadoCaja', 'diferencia'];
+        $vacio = array_fill_keys($campos, 0.0);
+        $totalGeneral = $vacio;
+        $grupos = [];
+        foreach ($sucursales as $sucursal) {
+            $filas = [];
+            $subtotal = $vacio;
+            foreach ($sesiones->where('branch_id', $sucursal->id) as $sesion) {
+                $resumen = $cash->summary($sesion);
+                $fila = [
+                    'cajero' => $cajeros[$sesion->user_id] ?? 'Usuario #'.$sesion->user_id,
+                    'apertura' => \Carbon\Carbon::parse($sesion->opened_at)->format('d/m/Y H:i'),
+                    'cierre' => $sesion->closed_at ? \Carbon\Carbon::parse($sesion->closed_at)->format('d/m/Y H:i') : null,
+                    'notas' => $sesion->notes,
+                    'fondo' => (float) $resumen['opening'],
+                    'contado' => (float) $resumen['sales']['cash'],
+                    'credito' => (float) $resumen['sales']['credit'],
+                    'abonoInicial' => (float) $resumen['sales']['creditInitial'],
+                    'abonos' => (float) $resumen['sales']['accountPayments'],
+                    'entradas' => (float) ($resumen['totals']['in'] ?? 0),
+                    'salidas' => (float) ($resumen['totals']['out'] ?? 0),
+                    'reembolsos' => (float) ($resumen['totals']['refund'] ?? 0),
+                    'esperado' => (float) $resumen['expected'],
+                    // Caja aún abierta: sin conteo ni diferencia.
+                    'contadoCaja' => $sesion->closed_at ? (float) $resumen['counted'] : null,
+                    'diferencia' => $sesion->closed_at ? (float) $resumen['difference'] : null,
+                ];
+                foreach ($campos as $campo) {
+                    $subtotal[$campo] += (float) ($fila[$campo] ?? 0);
+                    $totalGeneral[$campo] += (float) ($fila[$campo] ?? 0);
+                }
+                $filas[] = $fila;
+            }
+            $grupos[] = ['sucursal' => $sucursal, 'filas' => $filas, 'subtotal' => $subtotal];
+        }
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('reportes/cortes_caja', [
+            'titulo' => $variasEmpresas ? 'Todas las empresas' : $empresa->nombre,
+            'fechaInicio' => $inicio->format('d/m/Y'),
+            'fechaFin' => $fin->format('d/m/Y'),
+            'todas' => $data['alcance'] === 'todas',
+            'grupos' => $grupos,
+            'totalGeneral' => $totalGeneral,
+            'generado' => now()->format('d/m/Y H:i'),
+            'usuario' => $usuario->name,
+        ]);
+        $pdf->setPaper('letter', 'landscape');
+
+        return $pdf->stream('cortes_caja.pdf');
+    }
+
+    /**
+     * Cuentas por pagar: compras a proveedores con saldo pendiente, por sucursal y resumen por proveedor.
+     */
+    public function cuentasPorPagar(Request $request)
+    {
+        $usuario = Auth::user();
+        $sucursalActiva = Sucursales::with('empresa')->find(SucursalService::getSucursalActiva());
+        abort_unless($sucursalActiva, 404, 'No se encontró la sucursal activa para el usuario.');
+
+        // Mismo alcance que el reporte de clientes con adeudo.
+        if ($usuario->tipo === 'superAdmin') {
+            $sucursales = Sucursales::with('empresa')->orderBy('id_empresa')->orderBy('nombre')->get();
+        } elseif ($usuario->tipo === 'adminEmpresa' || ($usuario->tipo === 'admin' && $sucursalActiva->es_matriz)) {
+            $sucursales = Sucursales::with('empresa')->where('id_empresa', $sucursalActiva->id_empresa)->orderBy('nombre')->get();
+        } else {
+            $sucursales = collect([$sucursalActiva]);
+        }
+        if ($request->filled('id_sucursal')) {
+            $sucursales = $sucursales->where('id', (int) $request->id_sucursal)->values();
+            abort_if($sucursales->isEmpty(), 404, 'La sucursal no está disponible para este usuario.');
+        }
+        $variasEmpresas = $sucursales->pluck('id_empresa')->unique()->count() > 1;
+
+        $compras = \App\Models\Compras::whereIn('id_sucursal', $sucursales->pluck('id'))
+            ->where('total_credito', '>', 0)
+            ->orderBy('fecha_credito')->orderBy('id')->get();
+        $abonado = \App\Models\ComprasAbonos::whereIn('id_compra', $compras->pluck('id'))
+            ->selectRaw('id_compra, SUM(cantidad_abonada) as total')->groupBy('id_compra')->pluck('total', 'id_compra');
+
+        $hoy = \Carbon\Carbon::today();
+        $fila = function ($compra) use ($abonado, $hoy) {
+            $vence = $compra->fecha_credito ? \Carbon\Carbon::parse($compra->fecha_credito)->startOfDay() : null;
+            $diasVencido = $vence && $vence->lt($hoy) ? (int) $vence->diffInDays($hoy) : 0;
+
+            return [
+                'id' => $compra->id,
+                'proveedor' => trim((string) $compra->proveedor) ?: 'Sin proveedor',
+                'fechaCompra' => \Carbon\Carbon::parse($compra->fecha_compra)->format('d/m/Y'),
+                'vence' => $vence?->format('d/m/Y'),
+                'diasVencido' => $diasVencido,
+                'total' => (float) $compra->total_compra,
+                'abonado' => (float) ($abonado[$compra->id] ?? 0),
+                'saldo' => (float) $compra->total_credito,
+            ];
+        };
+
+        $grupos = $sucursales->map(function ($sucursal) use ($compras, $fila, $variasEmpresas) {
+            $filas = $compras->where('id_sucursal', $sucursal->id)->map($fila)->values();
+
+            return [
+                'nombre' => ($variasEmpresas ? ($sucursal->empresa->nombre ?? 'Empresa').' · ' : '').$sucursal->nombre,
+                'filas' => $filas,
+                'total' => $filas->sum('total'), 'abonado' => $filas->sum('abonado'), 'saldo' => $filas->sum('saldo'),
+                'vencido' => $filas->where('diasVencido', '>', 0)->sum('saldo'),
+            ];
+        })->values();
+
+        $todas = $grupos->flatMap(fn ($grupo) => $grupo['filas']);
+        $proveedores = $todas->groupBy(fn ($row) => mb_strtoupper($row['proveedor']))->map(fn ($rows) => [
+            'proveedor' => $rows->first()['proveedor'],
+            'compras' => $rows->count(),
+            'saldo' => $rows->sum('saldo'),
+            'vencido' => $rows->where('diasVencido', '>', 0)->sum('saldo'),
+            'proximoVencimiento' => $rows->first()['vence'],
+        ])->sortByDesc('saldo')->values();
+
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('reportes/cuentas_por_pagar', [
+            'titulo' => $variasEmpresas ? 'Todas las empresas' : ($sucursales->first()->empresa->nombre ?? ''),
+            'grupos' => $grupos,
+            'proveedores' => $proveedores,
+            'totalSaldo' => $todas->sum('saldo'),
+            'totalVencido' => $todas->where('diasVencido', '>', 0)->sum('saldo'),
+            'totalCompras' => $todas->count(),
+            'generado' => now()->format('d/m/Y H:i'),
+            'usuario' => $usuario->name,
+        ]);
+        $pdf->setPaper('letter', 'portrait');
+
+        return $pdf->stream('cuentas_por_pagar.pdf');
     }
 
     public function clientesAdeudo(Request $request)

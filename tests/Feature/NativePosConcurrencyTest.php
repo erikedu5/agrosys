@@ -64,9 +64,9 @@ class NativePosConcurrencyTest extends TestCase
         $company = Empresa::factory()->create();
         $this->branch = Sucursales::factory()->create(['id_empresa' => $company->id]);
         $this->user = User::factory()->create(['tipo' => 'vendedor', 'id_empresa' => $company->id, 'id_sucursal' => $this->branch->id, 'password' => Hash::make('test-password')]);
-        $this->customer = Clientes::factory()->create(['id_sucursal' => $this->branch->id, 'activo' => true, 'porcentaje_descuento' => 0]);
+        $this->customer = Clientes::factory()->create(['id_sucursal' => $this->branch->id, 'activo' => true]);
         $this->branch->update(['id_cliente_publico' => $this->customer->id]);
-        $this->product = Producto::factory()->create(['id_empresa' => $company->id, 'id_usuario' => $this->user->id, 'id_marca' => CatMarca::factory()->create()->id, 'id_clasificacion' => CatClasificacion::factory()->create()->id, 'tamano' => '1L', 'precio_unitario' => 50, 'precio_ieps' => 50]);
+        $this->product = Producto::factory()->create(['id_empresa' => $company->id, 'id_usuario' => $this->user->id, 'id_marca' => CatMarca::factory()->create()->id, 'id_clasificacion' => CatClasificacion::factory()->create()->id, 'tamano' => '1L', 'precio_unitario' => 50, 'precio_publico' => 50, 'precio_preferencial_1' => 50, 'precio_preferencial_2' => 50]);
         AltaInventario::create(['id_producto' => $this->product->id, 'id_sucursal' => $this->branch->id, 'id_usuario' => $this->user->id, 'cantidad_actual' => 10, 'cantidad_nueva' => 10]);
         $this->device = (string) Str::uuid();
     }

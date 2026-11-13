@@ -263,8 +263,8 @@ Una vez que entres, verás el **Dashboard** (tablero principal). Aquí encontrar
 **3. Información de precios**
 
 -   **Precio Compra:** Lo que te cuesta a ti
--   **IEPS:** Impuesto especial (0%, 3%, 6%, 7%, 9%) - pregunta a tu contador
--   **Precio con IEPS:** Se calcula automáticamente
+-   **Precio Público en general:** Precio de venta por defecto
+-   **Precio Preferencial 1 y Preferencial 2:** Precios para clientes con ese precio asignado (se asigna en la pantalla de clientes)
 
 **4. Detalles del producto**
 
@@ -867,7 +867,7 @@ El dashboard es la página principal del sistema donde encontrará:
     - **Clasificación**: Seleccione de la lista (Fertilizantes, Pesticidas, etc.)
     - **Marca**: Seleccione la marca correspondiente
     - **Precio Unitario**: Precio base del producto
-    - **IEPS**: Porcentaje de impuesto especial (0%, 3%, 6%, 7%, 9%)
+    - **Precios de venta**: Público en general, Preferencial 1 y Preferencial 2 (la venta usa el precio asignado al cliente)
     - **Tamaño**: Especificaciones del envase
     - **Ingrediente Activo**: Componente principal
     - **Código de Barras**: Para identificación rápida

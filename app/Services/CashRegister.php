@@ -69,7 +69,28 @@ class CashRegister
             'opening' => Decimal::format($session->opening_cents), 'expected' => Decimal::format($session->expected_cents ?? $expected),
             'counted' => $session->counted_cents === null ? null : Decimal::format($session->counted_cents),
             'difference' => $session->difference_cents === null ? null : Decimal::format($session->difference_cents),
-            'notes' => $session->notes, 'totals' => $totals->map(fn ($value) => Decimal::format((int) $value))->all()];
+            'notes' => $session->notes, 'totals' => $totals->map(fn ($value) => Decimal::format((int) $value))->all(),
+            'sales' => $this->salesBreakdown($session, (int) ($totals['credit_initial'] ?? 0), (int) ($totals['account_payment'] ?? 0))];
+    }
+
+    /** Ventas de la caja por tipo: lo vendido de contado y a crédito, y lo cobrado de crédito. */
+    private function salesBreakdown(object $session, int $creditInitial, int $accountPayments): array
+    {
+        $sold = ['Contado' => 0, 'Credito' => 0];
+        $count = ['Contado' => 0, 'Credito' => 0];
+        foreach (DB::table('ventas')->where('cash_session_id', $session->id)->get(['tipo_venta', 'total']) as $sale) {
+            if (isset($sold[$sale->tipo_venta])) {
+                $sold[$sale->tipo_venta] += (int) round(((float) $sale->total) * 100);
+                $count[$sale->tipo_venta]++;
+            }
+        }
+
+        return ['cash' => Decimal::format($sold['Contado']), 'cashCount' => $count['Contado'],
+            'credit' => Decimal::format($sold['Credito']), 'creditCount' => $count['Credito'],
+            'total' => Decimal::format($sold['Contado'] + $sold['Credito']),
+            'creditInitial' => Decimal::format($creditInitial),
+            'creditPending' => Decimal::format($sold['Credito'] - $creditInitial),
+            'accountPayments' => Decimal::format($accountPayments)];
     }
 
     public function status(int $user, int $branch): array

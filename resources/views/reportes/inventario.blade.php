@@ -55,9 +55,10 @@
                     <th>Marca</th>
                     <th>Tamaño</th>
                     <th>Cantidad en stock</th>
-                    <th>Precio unitario</th>
-                    <th>IEP</th>
-                    <th>Precio IEP</th>
+                    <th>Precio compra</th>
+                    <th>Precio público</th>
+                    <th>Preferencial 1</th>
+                    <th>Preferencial 2</th>
                     <th>Ultima actualizacion</th>
                     <th>Usuario que actualizo por última vez</th>
                 </tr>
@@ -71,8 +72,9 @@
                         <td class="px-4 py-2">  {{ $producto->tamano }} </td>
                         <td class="px-4 py-2">  {{ $producto->cantidad }} </td>
                         <td class="px-4 py-2">  {{ $producto->precio_unitario }} </td>
-                        <td class="px-4 py-2">  {{ $producto->ieps }} </td>
-                        <td class="px-4 py-2">  {{ $producto->precio_ieps }} </td>
+                        <td class="px-4 py-2">  {{ $producto->precio_publico }} </td>
+                        <td class="px-4 py-2">  {{ $producto->precio_preferencial_1 }} </td>
+                        <td class="px-4 py-2">  {{ $producto->precio_preferencial_2 }} </td>
                         <td class="px-4 py-2">  {{ $producto->updated_at }} </td>
                         <td class="px-4 py-2">  {{ $producto->usuario->name }} </td>
                         </tr>

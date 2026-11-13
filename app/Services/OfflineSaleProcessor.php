@@ -68,6 +68,8 @@ class OfflineSaleProcessor
                 'device_id' => $operation->device_id,
                 'occurred_at' => $operation->occurred_at,
                 'id_cliente' => $customer->id,
+                'cash_session_id' => $cashSession->id,
+                'forma_pago' => $customer->requiereFactura && isset(Venta::FORMAS_PAGO[(string) ($payload['paymentForm'] ?? '')]) ? (string) $payload['paymentForm'] : null,
                 'total' => $total,
                 'id_usuario' => $operation->user_id,
                 'tipo_venta' => $saleType,
@@ -87,6 +89,11 @@ class OfflineSaleProcessor
                     throw ValidationException::withMessages(['items' => "Existencia insuficiente para {$product->nombre}."]);
                 }
                 AltaInventario::create(['cantidad_actual' => Decimal::format($before), 'cantidad_nueva' => Decimal::format($before - $quantity), 'id_usuario' => $operation->user_id, 'id_producto' => $product->id, 'id_sucursal' => $operation->branch_id, 'tipo_evento' => AltaInventario::EVENTO_VENTA]);
+            }
+
+            if ($customer->requiereFactura) {
+                // Las ventas sincronizadas no se timbran en automático: quedan pendientes en la pantalla de facturas.
+                \App\Models\Factura::create(['facturaCompleta' => false, 'id_venta' => $sale->id, 'id_cliente' => $customer->id, 'factura_status' => 'pendiente']);
             }
 
             AbonoCuenta::create(['cantidad_abonada' => $paymentAmount, 'cuenta_pagada' => $amounts['paid'], 'id_cliente' => $customer->id, 'id_usuario' => $operation->user_id, 'is_active' => ! $amounts['paid'], 'id_sucursal' => $operation->branch_id]);

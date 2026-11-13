@@ -18,8 +18,7 @@
                             Actualizar precios del producto
                         </h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Ajusta el precio de venta y, si tienes permiso, el precio de compra y el porcentaje de
-                            ganancia.
+                            Ajusta los tres precios de venta y, si tienes permiso, el precio de compra.
                         </p>
                     </div>
                 </div>
@@ -32,36 +31,27 @@
                             :value="producto?.nombre || 'Producto sin nombre'">
                     </div>
 
-                    <div v-if="canManageCosts" class="grid gap-4 sm:grid-cols-2">
-                        <div>
+                    <div v-if="canManageCosts">
+                        <label class="block text-sm font-medium text-gray-700">
+                            Precio de compra (opcional)
+                        </label>
+                        <input type="number" step="0.01" min="0"
+                            class="form-input mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            v-model="form.precio_unitario">
+                        <InputError class="mt-1" :message="form.errors.precio_unitario" />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div v-for="(tipo, index) in TIPOS_PRECIO" :key="tipo.campo">
                             <label class="block text-sm font-medium text-gray-700">
-                                Precio de compra (opcional)
+                                {{ tipo.label }} <span class="text-red-500">*</span>
                             </label>
                             <input type="number" step="0.01" min="0.01"
                                 class="form-input mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                v-model="form.precio_unitario" @input="recalcularValores('precio_unitario')">
-                            <InputError class="mt-1" :message="form.errors.precio_unitario" />
+                                v-model="form[tipo.campo]" :ref="(el) => setPrecioInput(el, index)"
+                                required>
+                            <InputError class="mt-1" :message="form.errors[tipo.campo]" />
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">
-                                % de ganancia (opcional)
-                            </label>
-                            <input type="number" step="0.01" min="0"
-                                class="form-input mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                v-model="form.ieps" @input="recalcularValores('ieps')">
-                            <InputError class="mt-1" :message="form.errors.ieps" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">
-                            Precio de venta <span class="text-red-500">*</span>
-                        </label>
-                        <input type="number" step="0.01" min="0.01"
-                            class="form-input mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            v-model="form.precio_ieps" ref="precioVentaInput" @input="recalcularValores('precio_ieps')"
-                            required>
-                        <InputError class="mt-1" :message="form.errors.precio_ieps" />
                     </div>
 
                     <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -88,6 +78,7 @@ import { nextTick, ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import { notify } from '@/utils/notify';
+import { TIPOS_PRECIO } from '@/utils/precios';
 
 const props = defineProps({
     show: {
@@ -107,20 +98,27 @@ const props = defineProps({
 const emit = defineEmits(['close', 'updated']);
 
 const precioVentaInput = ref(null);
+const setPrecioInput = (el, index) => {
+    if (index === 0) {
+        precioVentaInput.value = el;
+    }
+};
 
 const form = useForm({
-    precio_ieps: '',
+    precio_publico: '',
+    precio_preferencial_1: '',
+    precio_preferencial_2: '',
     precio_unitario: '',
-    ieps: '',
 });
 
 const resetForm = () => {
     form.reset();
     form.clearErrors();
 
-    form.precio_ieps = props.producto?.precio_ieps ?? '';
+    TIPOS_PRECIO.forEach(({ campo }) => {
+        form[campo] = props.producto?.[campo] ?? '';
+    });
     form.precio_unitario = props.producto?.precio_unitario ?? '';
-    form.ieps = props.producto?.ieps ?? '';
 };
 
 watch(() => props.show, (value) => {
@@ -129,49 +127,13 @@ watch(() => props.show, (value) => {
         nextTick(() => {
             if (precioVentaInput.value) {
                 precioVentaInput.value.focus();
-                if (form.precio_ieps !== '' && !Number.isNaN(parseFloat(form.precio_ieps))) {
+                if (form.precio_publico !== '' && !Number.isNaN(parseFloat(form.precio_publico))) {
                     precioVentaInput.value.select();
                 }
             }
         });
     }
 });
-
-const toNumberOrNull = (value) => {
-    if (value === null || value === undefined || value === '') {
-        return null;
-    }
-
-    const parsed = parseFloat(value);
-    return Number.isNaN(parsed) ? null : parsed;
-};
-
-const recalcularValores = (trigger) => {
-    if (!props.canManageCosts) {
-        return;
-    }
-
-    const precioCompra = toNumberOrNull(form.precio_unitario);
-    const porcentajeGanancia = toNumberOrNull(form.ieps);
-    const precioVenta = toNumberOrNull(form.precio_ieps);
-
-    if (precioCompra !== null && porcentajeGanancia !== null && trigger !== 'precio_ieps') {
-        form.precio_ieps = (precioCompra * (1 + (porcentajeGanancia / 100))).toFixed(2);
-        return;
-    }
-
-    if (precioVenta !== null && porcentajeGanancia !== null && trigger !== 'precio_unitario') {
-        const divisor = 1 + (porcentajeGanancia / 100);
-        if (divisor !== 0) {
-            form.precio_unitario = (precioVenta / divisor).toFixed(2);
-        }
-        return;
-    }
-
-    if (precioCompra !== null && precioVenta !== null && trigger !== 'ieps' && precioCompra !== 0) {
-        form.ieps = (((precioVenta - precioCompra) / precioCompra) * 100).toFixed(2);
-    }
-};
 
 const closeModal = () => {
     emit('close');
@@ -188,13 +150,10 @@ const submit = () => {
     form.clearErrors();
 
     form.transform(() => {
-        const payload = {
-            precio_ieps: form.precio_ieps,
-        };
+        const payload = Object.fromEntries(TIPOS_PRECIO.map(({ campo }) => [campo, form[campo]]));
 
         if (props.canManageCosts) {
             payload.precio_unitario = form.precio_unitario;
-            payload.ieps = form.ieps;
         }
 
         return payload;
@@ -203,9 +162,8 @@ const submit = () => {
         onSuccess: () => {
             notify('Precios actualizados correctamente.', 'success');
             emit('updated', {
-                precio_ieps: form.precio_ieps,
+                ...Object.fromEntries(TIPOS_PRECIO.map(({ campo }) => [campo, form[campo]])),
                 precio_unitario: form.precio_unitario,
-                ieps: form.ieps,
             });
             closeModal();
         },
