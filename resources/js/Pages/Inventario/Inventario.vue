@@ -128,13 +128,7 @@ const closePriceModal = () => {
 
 const handlePriceUpdated = (payload) => {
     if (selectedProduct.value) {
-        selectedProduct.value.precio_ieps = payload.precio_ieps;
-        if (payload.precio_unitario !== undefined) {
-            selectedProduct.value.precio_unitario = payload.precio_unitario;
-        }
-        if (payload.ieps !== undefined) {
-            selectedProduct.value.ieps = payload.ieps;
-        }
+        Object.assign(selectedProduct.value, payload);
     }
 
     router.reload({
@@ -269,8 +263,16 @@ const confirmarEliminar = () => {
                         </div>
 
                         <div>
-                            <div class="text-gray-500">Precio de venta</div>
-                            <div>{{ producto.precio_ieps }}</div>
+                            <div class="text-gray-500">Precio público</div>
+                            <div>{{ producto.precio_publico }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Preferencial 1</div>
+                            <div>{{ producto.precio_preferencial_1 }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Preferencial 2</div>
+                            <div>{{ producto.precio_preferencial_2 }}</div>
                         </div>
                         <div>
                             <div class="text-gray-500">Cantidad en stock</div>
@@ -348,7 +350,9 @@ const confirmarEliminar = () => {
                             <th>Tamaño</th>
                             <th>Marca</th>
                             <th>Cantidad en stock</th>
-                            <th>Precio de venta</th>
+                            <th>Precio público</th>
+                            <th>Preferencial 1</th>
+                            <th>Preferencial 2</th>
                             <th>Ultima actualización</th>
                             <th>Acciones</th>
                         </tr>
@@ -361,7 +365,9 @@ const confirmarEliminar = () => {
                             <td class="whitespace-nowrap"> {{ producto.tamano }} </td>
                             <td class="whitespace-nowrap"> {{ producto.marca.nombre }}</td>
                             <td class="whitespace-nowrap"> {{ producto.cantidad }}</td>
-                            <td class="whitespace-nowrap"> {{ producto.precio_ieps }}</td>
+                            <td class="whitespace-nowrap"> {{ producto.precio_publico }}</td>
+                            <td class="whitespace-nowrap"> {{ producto.precio_preferencial_1 }}</td>
+                            <td class="whitespace-nowrap"> {{ producto.precio_preferencial_2 }}</td>
                             <td class="whitespace-nowrap"> {{ producto.updated_at }} </td>
                             <td class="whitespace-nowrap">
                                 <div class="flex flex-wrap items-center gap-2">

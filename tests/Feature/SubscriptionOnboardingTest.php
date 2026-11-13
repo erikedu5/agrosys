@@ -61,4 +61,20 @@ class SubscriptionOnboardingTest extends TestCase
             return $mail->hasTo($admin->email) && $mail->empresa->id === $empresa->id;
         });
     }
+
+    public function test_onboarding_does_not_fail_when_mail_server_is_unreachable(): void
+    {
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'host-inexistente.invalid', 'mail.mailers.smtp.port' => 1025]);
+
+        $this->post(route('subscription.onboarding.store'), [
+            'plan' => array_key_first(\App\Support\SubscriptionPlans::all()), 'cycle' => 'monthly',
+            'name' => 'Admin', 'email' => 'sin-correo@example.com', 'password' => 'Password123!',
+            'empresa_nombre' => 'Empresa sin correo', 'empresa_direccion' => 'Calle 1',
+            'empresa_telefono' => '', 'empresa_email' => '', 'sucursal_nombre' => '', 'sucursal_direccion' => '',
+            'billing_requires_invoice' => false, 'terms_accepted' => true, 'privacy_accepted' => true,
+        ])->assertRedirect(route('subscription.onboarding', ['step' => 2]))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('empresas', ['nombre' => 'Empresa sin correo']);
+        $this->assertDatabaseHas('users', ['email' => 'sin-correo@example.com']);
+    }
 }

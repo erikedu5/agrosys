@@ -50,7 +50,7 @@ class OfflineController extends Controller
         $canSell = in_array($request->user()->tipo, ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'], true);
 
         $products = Producto::query()
-            ->select(['id', 'nombre', 'barcode', 'tamano', 'precio_unitario', 'precio_ieps', 'updated_at'])
+            ->select(['id', 'nombre', 'barcode', 'tamano', 'precio_unitario', ...array_values(Producto::PRECIOS), 'updated_at'])
             ->orderBy('id')
             ->get()
             ->map(function (Producto $product) use ($branchId) {
@@ -70,7 +70,8 @@ class OfflineController extends Controller
                     'name' => $product->nombre,
                     'size' => $product->tamano,
                     'unitPrice' => (float) $product->precio_unitario,
-                    'price' => (float) $product->precio_ieps,
+                    'price' => (float) $product->precio_publico,
+                    'prices' => array_map(fn ($column) => (float) $product->{$column}, Producto::PRECIOS),
                     'active' => true,
                     'updatedAtServer' => optional($changedAt)->toIso8601String(),
                     'branchId' => (string) $branchId,
@@ -82,13 +83,14 @@ class OfflineController extends Controller
             ->where('id_sucursal', $branchId)
             ->where('activo', true)
             ->orderBy('id')
-            ->get(['id', 'nombre', 'porcentaje_descuento', 'updated_at'])
+            ->get(['id', 'nombre', 'tipo_precio', 'updated_at'])
             ->map(fn (Clientes $customer) => [
                 'id' => (string) $customer->id,
                 'serverId' => (string) $customer->id,
                 'branchId' => (string) $branchId,
                 'name' => $customer->nombre,
-                'discountPercentage' => (float) $customer->porcentaje_descuento,
+                'discountPercentage' => 0.0, // sin descuentos por cliente; se conserva por compatibilidad
+                'priceTier' => $customer->tipo_precio ?? 'publico',
                 'active' => true,
                 'updatedAtServer' => optional($customer->updated_at)->toIso8601String(),
             ])->values();
@@ -194,7 +196,8 @@ class OfflineController extends Controller
             'name' => $product->nombre,
             'size' => $product->tamano,
             'unitPrice' => (float) $product->precio_unitario,
-            'price' => (float) $product->precio_ieps,
+            'price' => (float) $product->precio_publico,
+            'prices' => array_map(fn ($column) => (float) $product->{$column}, Producto::PRECIOS),
             'active' => false,
             'updatedAtServer' => optional($product->updated_at)->toIso8601String(),
             'branchId' => (string) $branchId,
@@ -206,7 +209,8 @@ class OfflineController extends Controller
             'serverId' => (string) $customer->id,
             'branchId' => (string) $branchId,
             'name' => $customer->nombre,
-            'discountPercentage' => (float) $customer->porcentaje_descuento,
+            'discountPercentage' => 0.0,
+            'priceTier' => $customer->tipo_precio ?? 'publico',
             'active' => (bool) $customer->activo,
             'updatedAtServer' => optional($customer->updated_at)->toIso8601String(),
         ])->values();

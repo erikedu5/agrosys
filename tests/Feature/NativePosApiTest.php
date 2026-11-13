@@ -46,9 +46,9 @@ class NativePosApiTest extends TestCase
         $company = Empresa::factory()->create();
         $this->branch = Sucursales::factory()->create(['id_empresa' => $company->id]);
         $this->user = User::factory()->create(['tipo' => 'vendedor', 'id_empresa' => $company->id, 'id_sucursal' => $this->branch->id, 'password' => Hash::make('test-password')]);
-        $this->customer = Clientes::factory()->create(['id_sucursal' => $this->branch->id, 'activo' => true, 'porcentaje_descuento' => 0]);
+        $this->customer = Clientes::factory()->create(['id_sucursal' => $this->branch->id, 'activo' => true]);
         $this->branch->update(['id_cliente_publico' => $this->customer->id]);
-        $this->product = Producto::factory()->create(['id_empresa' => $company->id, 'id_usuario' => $this->user->id, 'id_marca' => CatMarca::factory()->create()->id, 'id_clasificacion' => CatClasificacion::factory()->create()->id, 'tamano' => '1L', 'precio_unitario' => 50, 'precio_ieps' => 50]);
+        $this->product = Producto::factory()->create(['id_empresa' => $company->id, 'id_usuario' => $this->user->id, 'id_marca' => CatMarca::factory()->create()->id, 'id_clasificacion' => CatClasificacion::factory()->create()->id, 'tamano' => '1L', 'precio_unitario' => 50, 'precio_publico' => 50, 'precio_preferencial_1' => 50, 'precio_preferencial_2' => 50]);
         AltaInventario::create(['id_producto' => $this->product->id, 'id_sucursal' => $this->branch->id, 'id_usuario' => $this->user->id, 'cantidad_actual' => 10, 'cantidad_nueva' => 10]);
         $this->device = (string) Str::uuid();
     }
@@ -160,6 +160,60 @@ class NativePosApiTest extends TestCase
         $this->push([$sale])->assertOk()->assertJsonPath('results.0.status', 'conflict');
         $this->assertDatabaseCount('ventas', 0);
         $this->api('POST', 'cash/status', $this->context())->assertOk()->assertJsonPath('current.expected', '0.00');
+    }
+
+    public function test_web_sale_to_invoice_customer_requires_payment_form_and_exports_it(): void
+    {
+        $this->actingAs($this->user);
+        $this->customer->update(['requiereFactura' => true, 'rfc' => 'XAXX010101000']);
+        $body = ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Contado', 'total' => '100.00',
+            'producto_venta' => [['producto' => ['id' => $this->product->id], 'cantidad' => '2.00', 'precio_unitario' => '50.00', 'importe' => '100.00']]];
+        $this->postJson('/caja/open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00'])->assertOk();
+        $this->postJson('/venta', $body)->assertUnprocessable()->assertJsonValidationErrors('forma_pago');
+        $this->postJson('/venta', [...$body, 'forma_pago' => 'XX'])->assertUnprocessable()->assertJsonValidationErrors('forma_pago');
+        $this->postJson('/venta', [...$body, 'forma_pago' => '03'])->assertSuccessful();
+        $this->assertSame('03', \App\Models\Venta::firstOrFail()->forma_pago);
+        // Sin facturación automática la venta queda como factura pendiente y aparece en la pantalla.
+        $factura = \App\Models\Factura::firstOrFail();
+        $this->assertSame('pendiente', $factura->factura_status);
+        $this->get(route('facturas.index'))->assertOk()->assertInertia(fn ($page) => $page->component('Factura/Factura')
+            ->has('facturas.data', 1)->where('filtros.fechaFin', now()->toDateString()));
+        $this->get(route('facturas.index', ['fechaInicio' => 'Fri Nov 13 2026 10:00:00 GMT-0600 (hora estándar central)', 'fechaFin' => 'basura']))->assertOk();
+        $this->put(route('facturas.update', ['id' => $factura->id]))->assertRedirect();
+        $this->assertTrue((bool) $factura->fresh()->facturaCompleta);
+        \Maatwebsite\Excel\Facades\Excel::fake();
+        $this->get(route('facturas.export', ['fechaInicio' => now()->toDateString(), 'fechaFin' => now()->toDateString()]))->assertOk();
+        \Maatwebsite\Excel\Facades\Excel::assertDownloaded('facturas_'.now()->format('Ymd').'_'.now()->format('Ymd').'.xlsx',
+            fn ($export) => count($export->array()) === 1 && $export->array()[0][5] === '03 - Transferencia electrónica');
+    }
+
+    public function test_cash_cut_breaks_down_cash_sales_credit_sales_and_credit_payments(): void
+    {
+        $this->actingAs($this->user);
+        $items = ['producto_venta' => [['producto' => ['id' => $this->product->id], 'cantidad' => '2.00', 'precio_unitario' => '50.00', 'importe' => '100.00']]];
+        $this->postJson('/caja/open', ['operation_id' => (string) Str::uuid(), 'opening' => '0.00'])->assertOk();
+        $this->postJson('/venta', ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Contado', 'total' => '100.00', ...$items])->assertSuccessful();
+        $this->postJson('/venta', ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Credito', 'total' => '100.00', 'abono' => '30.00', ...$items])->assertSuccessful();
+        $this->postJson('/venta', ['id_cliente' => $this->customer->id, 'tipo_venta' => 'Credito', 'total' => '100.00', 'abono' => '0.00', ...$items])->assertSuccessful();
+        $this->put('/venta/'.$this->customer->id, ['id' => $this->customer->id, 'abono' => '20.00'])->assertRedirect();
+        $this->postJson('/caja/status')->assertOk()->assertJsonPath('current.expected', '150.00')
+            ->assertJsonPath('current.sales', ['cash' => '100.00', 'cashCount' => 1, 'credit' => '200.00', 'creditCount' => 2,
+                'total' => '300.00', 'creditInitial' => '30.00', 'creditPending' => '170.00', 'accountPayments' => '20.00']);
+    }
+
+    public function test_cash_cut_reports_respect_branch_scope_by_role(): void
+    {
+        $this->actingAs($this->user);
+        $this->postJson('/caja/open', ['operation_id' => (string) Str::uuid(), 'opening' => '50.00'])->assertOk();
+        $range = ['fechaInicio' => now()->toDateString(), 'fechaFin' => now()->toDateString()];
+        $this->user->update(['tipo' => 'admin']);
+        $this->get(route('reporte.cortesCaja', [...$range, 'alcance' => 'sucursal']))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->get(route('reporte.cortesCaja', [...$range, 'alcance' => 'todas']))->assertForbidden();
+        $this->user->update(['tipo' => 'superAdmin']);
+        $this->get(route('reporte.cortesCaja', [...$range, 'alcance' => 'todas']))->assertOk()->assertHeader('content-type', 'application/pdf');
+        $html = view('reportes/cortes_caja', ['titulo' => 'X', 'fechaInicio' => 'a', 'fechaFin' => 'b', 'todas' => true, 'generado' => 'c', 'usuario' => 'd',
+            'grupos' => [], 'totalGeneral' => array_fill_keys(['fondo', 'contado', 'credito', 'abonoInicial', 'abonos', 'entradas', 'salidas', 'reembolsos', 'esperado', 'contadoCaja', 'diferencia'], 0.0)])->render();
+        $this->assertStringContainsString('Total general', $html);
     }
 
     public function test_web_sale_requires_open_cash_and_closing_disables_new_sales(): void
@@ -326,7 +380,7 @@ class NativePosApiTest extends TestCase
     {
         return ['operation_id' => (string) Str::uuid(), 'nombre' => 'Nuevo insumo', 'tamano' => '2L',
             'id_clasificacion' => (string) $this->product->id_clasificacion, 'id_marca' => (string) $this->product->id_marca,
-            'precio_ieps' => '60.00', 'precio_unitario' => '40.00', 'ieps' => '50.25', 'barcode' => 'NEW-001', 'ingrediente_activo' => 'Prueba'];
+            'precio_publico' => '60.00', 'precio_preferencial_1' => '55.00', 'precio_unitario' => '40.00', 'barcode' => 'NEW-001', 'ingrediente_activo' => 'Prueba'];
     }
 
     public function test_native_inventory_create_edit_prices_and_retries_are_atomic(): void
@@ -340,7 +394,7 @@ class NativePosApiTest extends TestCase
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input])->assertOk()->assertExactJson($first->json());
         $this->assertSame(1, Producto::where('nombre', 'Nuevo insumo')->count());
         $this->assertSame(1, AltaInventario::where('id_producto', $id)->count());
-        $this->assertSame('50.25', (string) Producto::findOrFail($id)->ieps);
+        $this->assertEquals([60, 55, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'nombre' => 'Otro'])->assertConflict();
         $detail = $this->api('POST', "inventory/{$id}/detail", $this->context())->assertOk()->json('product');
         $edit = [...$input, 'operation_id' => (string) Str::uuid(), 'nombre' => 'Insumo editado', 'version' => $detail['version']];
@@ -352,9 +406,10 @@ class NativePosApiTest extends TestCase
         $prices = ['operation_id' => (string) Str::uuid(), 'version' => $version, 'precio_ieps' => '75.00'];
         $this->api('POST', "inventory/{$id}/prices", [...$this->context(), ...$prices])->assertOk();
         $this->api('POST', "inventory/{$id}/prices", [...$this->context(), ...$prices])->assertOk();
-        $this->assertEquals(75, Producto::findOrFail($id)->precio_ieps);
+        // precio_ieps: contrato de clientes POS anteriores, actualiza solo el precio público.
+        $this->assertEquals([75, 55, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'id_marca' => '999999'])->assertUnprocessable();
-        $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'precio_ieps' => '2.001'])->assertUnprocessable();
+        $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'precio_publico' => '2.001'])->assertUnprocessable();
         $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonCount(2, 'products');
     }
 
@@ -387,11 +442,10 @@ class NativePosApiTest extends TestCase
         $id = $this->product->id;
         $detail = $this->api('POST', "inventory/{$id}/detail", $this->context())->assertOk()->assertJsonMissingPath('product.precio_unitario')->json('product');
         $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonMissingPath('products.0.unitPrice');
-        $before = $this->product->ieps;
         $this->api('POST', "inventory/{$id}/prices", [...$this->context(), 'operation_id' => (string) Str::uuid(), 'version' => $detail['version'],
             'precio_ieps' => '70.00', 'precio_unitario' => '1.00', 'ieps' => '90.00'])->assertOk();
         $this->assertEquals(50, $this->product->fresh()->precio_unitario);
-        $this->assertEquals($before, $this->product->fresh()->ieps);
+        $this->assertEquals(70, $this->product->fresh()->precio_publico);
         $otherCompany = Empresa::factory()->create();
         $other = $this->product->replicate(); $other->id_empresa = $otherCompany->id; $other->save();
         $this->api('POST', "inventory/{$other->id}/add", [...$this->context(), 'operation_id' => (string) Str::uuid(), 'cantidad' => '1.00'])->assertNotFound();
@@ -602,8 +656,10 @@ class NativePosApiTest extends TestCase
     {
         $fixtures = json_decode(file_get_contents(base_path('tests/Fixtures/pos-sale-amounts.json')), true, flags: JSON_THROW_ON_ERROR);
         foreach ($fixtures['cases'] as $fixture) {
-            $this->customer->update(['porcentaje_descuento' => $fixture['discount']]);
-            $this->product->update(['precio_ieps' => $fixture['price']]);
+            if ($fixture['discount'] !== '0.00') {
+                continue; // ya no hay descuento por cliente
+            }
+            $this->product->update(['precio_publico' => $fixture['price']]);
             $amounts = app(\App\Services\Pos\SaleAmounts::class)->validate([
                 'saleType' => $fixture['saleType'], 'total' => $fixture['total'],
                 'items' => [['productId' => $this->product->id, 'quantity' => $fixture['quantity'], 'unitPrice' => $fixture['unitPrice'], 'total' => $fixture['total']]],
@@ -612,6 +668,23 @@ class NativePosApiTest extends TestCase
             $this->assertSame($fixture['balance'], \App\Services\Pos\Decimal::format($amounts['total'] - $amounts['payment']), $fixture['name']);
             $this->assertSame($fixture['paid'], $amounts['paid'], $fixture['name']);
         }
+    }
+
+    public function test_sale_uses_the_price_assigned_to_the_customer(): void
+    {
+        $this->product->update(['precio_publico' => 100, 'precio_preferencial_1' => 90, 'precio_preferencial_2' => 80]);
+        $sale = fn (string $price) => app(\App\Services\Pos\SaleAmounts::class)->validate([
+            'saleType' => 'Contado', 'total' => $price,
+            'items' => [['productId' => $this->product->id, 'quantity' => '1.00', 'unitPrice' => $price, 'total' => $price]],
+            'payments' => [['method' => 'cash', 'amount' => $price]],
+        ], $this->customer->fresh(), $this->branch, false);
+        $this->assertSame(10000, $sale('100.00')['total']);
+        foreach (['preferencial_1' => '90.00', 'preferencial_2' => '80.00'] as $tier => $price) {
+            $this->customer->update(['tipo_precio' => $tier]);
+            $this->assertSame((int) ($price * 100), $sale($price)['total']);
+        }
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $sale('100.00');
     }
 
     public function test_openapi_routes_match_registered_native_endpoints(): void

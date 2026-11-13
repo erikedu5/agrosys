@@ -11,6 +11,7 @@ import DialogModal from '@/Components/DialogModal.vue';
 import { notify } from '@/utils/notify';
 import { usePage } from '@inertiajs/vue3';
 import { purchaseDraft, purchaseKey } from '@/utils/purchaseDraft';
+import { TIPOS_PRECIO } from '@/utils/precios';
 
 const props = defineProps({
     compra: Object,
@@ -182,8 +183,9 @@ const productoForm = reactive({
     id_clasificacion: '',
     id_marca: '',
     precio_unitario: '',
-    ieps: '',
-    precio_ieps: '',
+    precio_publico: '',
+    precio_preferencial_1: '',
+    precio_preferencial_2: '',
     tamano: '',
     ingrediente_activo: '',
     barcode: '',
@@ -210,40 +212,13 @@ const closeProductoModal = () => {
     productoForm.id_clasificacion = '';
     productoForm.id_marca = '';
     productoForm.precio_unitario = '';
-    productoForm.ieps = '';
-    productoForm.precio_ieps = '';
+    productoForm.precio_publico = '';
+    productoForm.precio_preferencial_1 = '';
+    productoForm.precio_preferencial_2 = '';
     productoForm.tamano = '';
     productoForm.ingrediente_activo = '';
     productoForm.barcode = '';
     productoErrors.value = {};
-};
-
-const toNumberOrNull = (value) => {
-    const parsed = parseFloat(value);
-    return Number.isNaN(parsed) ? null : parsed;
-};
-
-const recalcularValoresProducto = (trigger) => {
-    const precioCompra = toNumberOrNull(productoForm.precio_unitario);
-    const margen = toNumberOrNull(productoForm.ieps);
-    const precioVenta = toNumberOrNull(productoForm.precio_ieps);
-
-    if (precioCompra !== null && margen !== null && trigger !== 'precio_ieps') {
-        productoForm.precio_ieps = (precioCompra * (1 + (margen / 100))).toFixed(2);
-        return;
-    }
-
-    if (precioVenta !== null && margen !== null && trigger !== 'precio_unitario') {
-        const divisor = 1 + (margen / 100);
-        if (divisor !== 0) {
-            productoForm.precio_unitario = (precioVenta / divisor).toFixed(2);
-        }
-        return;
-    }
-
-    if (precioCompra !== null && precioVenta !== null && trigger !== 'ieps' && precioCompra !== 0) {
-        productoForm.ieps = (((precioVenta - precioCompra) / precioCompra) * 100).toFixed(2);
-    }
 };
 
 const guardarProducto = () => {
@@ -560,23 +535,23 @@ const changeStatus = (event) => {
 
                     <div v-if="mostrarCamposPrecio">
                         <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
-                        <input type="number" step="0.01" @input="recalcularValoresProducto('precio_unitario')" class="form-input w-full rounded-md shadow-sm"
+                        <input type="number" step="0.01" min="0" class="form-input w-full rounded-md shadow-sm"
                             v-model="productoForm.precio_unitario">
                         <InputError class="mt-2" :message="productoErrors.precio_unitario" />
                         <br><br>
 
-                        <label class="block font-medium text-sm text-gray-700">Porcentaje de ganancia (%)</label>
-                        <input type="number" step="0.01" min="0" @input="recalcularValoresProducto('ieps')" class="form-input w-full rounded-md shadow-sm"
-                            v-model="productoForm.ieps">
-                        <InputError class="mt-2" :message="productoErrors.ieps" />
-                        <br>
-
-                        <label class="block font-medium text-sm text-gray-700">Precio Venta</label>
-                        <input type="number" step="0.01" @input="recalcularValoresProducto('precio_ieps')" class="form-input w-full rounded-md shadow-sm"
-                            v-model="productoForm.precio_ieps">
-                        <InputError class="mt-2" :message="productoErrors.precio_ieps" />
-                        <br><br>
                     </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo">
+                            <label class="block font-medium text-sm text-gray-700">Precio {{ tipo.label }}</label>
+                            <input type="number" step="0.01" min="0.01" class="form-input w-full rounded-md shadow-sm"
+                                v-model="productoForm[tipo.campo]">
+                            <InputError class="mt-2" :message="productoErrors[tipo.campo]" />
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Los precios preferenciales sin capturar toman el precio público.</p>
+                    <br>
 
                     <label class="block font-medium text-sm text-gray-700">Tamaño</label>
                     <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.tamano">

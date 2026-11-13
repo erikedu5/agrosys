@@ -60,6 +60,40 @@ class ControllerErrorRegressionTest extends TestCase
         ];
     }
 
+    public function test_company_can_be_saved_with_only_required_fields(): void
+    {
+        $this->post(route('empresa.store'), ['nombre' => 'Solo requeridos', 'direccion' => 'Calle 1',
+            'telefono' => '', 'email' => '', 'rfc' => '', 'aviso' => '', 'numero_sucursales' => ''])
+            ->assertRedirect(route('empresa.index'))->assertSessionHasNoErrors();
+        $empresa = Empresa::where('nombre', 'Solo requeridos')->firstOrFail();
+        $this->assertSame('', $empresa->aviso);
+        $this->post(route('empresa.store'), ['nombre' => 'Solo requeridos', 'direccion' => 'Calle 2'])->assertSessionHasErrors('nombre');
+        $this->put(route('empresa.update', $empresa), ['id' => $empresa->id, 'nombre' => 'Solo requeridos', 'direccion' => 'Calle 3',
+            'aviso' => null, 'numero_sucursales' => null])->assertRedirect(route('empresa.index'))->assertSessionHasNoErrors();
+        $this->assertSame('Calle 3', $empresa->fresh()->direccion);
+    }
+
+    public function test_accounts_payable_report_lists_only_purchases_with_pending_balance(): void
+    {
+        $base = ['fecha_compra' => now()->subDays(40)->toDateString(), 'id_sucursal' => $this->branch->id, 'id_empresa' => $this->branch->id_empresa];
+        $debt = Compras::create([...$base, 'proveedor' => 'Agroquímicos del Sur', 'total_compra' => 1000, 'total_credito' => 600,
+            'status' => 'adeudo', 'fecha_credito' => now()->subDays(10)->toDateString()]);
+        ComprasAbonos::create(['id_compra' => $debt->id, 'cantidad_abonada' => 400]);
+        Compras::create([...$base, 'proveedor' => 'Proveedor pagado', 'total_compra' => 500, 'total_credito' => 0,
+            'status' => 'pagado', 'fecha_credito' => now()->toDateString()]);
+
+        $captured = null;
+        \Illuminate\Support\Facades\View::composer('reportes/cuentas_por_pagar', function ($view) use (&$captured) { $captured = $view->getData(); });
+        $this->get(route('reporte.cuentasPorPagar'))->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->assertSame(1, $captured['totalCompras']);
+        $this->assertEquals(600, $captured['totalSaldo']);
+        $this->assertEquals(600, $captured['totalVencido']);
+        $row = $captured['grupos'][0]['filas'][0];
+        $this->assertSame([10, 400.0, 600.0], [$row['diasVencido'], $row['abonado'], $row['saldo']]);
+        $this->assertSame('Agroquímicos del Sur', $captured['proveedores'][0]['proveedor']);
+    }
+
     public function test_customer_delete_targets_only_the_route_customer(): void
     {
         $customer = Clientes::factory()->create(['id_sucursal' => $this->branch->id, 'activo' => true]);
@@ -75,7 +109,7 @@ class ControllerErrorRegressionTest extends TestCase
     public function test_missing_customer_update_returns_404(): void
     {
         $this->putJson(route('cliente.update', 999999), [
-            'nombre' => 'Cliente', 'porcentaje_descuento' => 0, 'requiereFactura' => false,
+            'nombre' => 'Cliente', 'requiereFactura' => false,
         ])->assertNotFound();
     }
 

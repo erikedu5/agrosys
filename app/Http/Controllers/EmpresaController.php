@@ -63,14 +63,24 @@ class EmpresaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required',
-            'direccion' => 'required',
+            'nombre' => ['required', 'string', 'max:255', Rule::unique('empresas', 'nombre')],
+            'direccion' => 'required|string|max:255',
+            // Opcionales en el formulario.
+            'telefono' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'rfc' => 'nullable|string|max:255',
+            'aviso' => 'nullable|string|max:5000',
+            'numero_sucursales' => 'nullable|integer|min:1',
             'mostrar_campos_precio' => 'nullable|boolean',
             'enviar_facturas_automaticas' => 'nullable|boolean',
             'ventas_bloqueadas' => 'nullable|boolean',
             'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
+            'nombre.unique' => 'Ya existe una empresa con ese nombre.',
+            'email.email' => 'El correo electrónico no tiene un formato válido.',
+            'numero_sucursales.integer' => 'El número de sucursales debe ser un número entero.',
+            'numero_sucursales.min' => 'El número de sucursales debe ser al menos 1.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
             'motivo_bloqueo.max' => 'El motivo de bloqueo debe tener máximo 500 caracteres.',
         ]);
@@ -81,7 +91,7 @@ class EmpresaController extends Controller
         $empresa->telefono = $request->telefono;
         $empresa->email = $request->email;
         $empresa->rfc = $request->rfc;
-        $empresa->aviso = $request->aviso;
+        $empresa->aviso = $request->aviso ?? ''; // columna NOT NULL
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
         if (in_array(Auth::user()->tipo, ['superAdmin', 'adminEmpresa'])) {
             $empresa->enviar_facturas_automaticas = $request->boolean('enviar_facturas_automaticas', false);
@@ -127,25 +137,35 @@ class EmpresaController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required',
-            'direccion' => 'required',
+            'nombre' => ['required', 'string', 'max:255', Rule::unique('empresas', 'nombre')->ignore($request->id)],
+            'direccion' => 'required|string|max:255',
+            // Opcionales en el formulario.
+            'telefono' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'rfc' => 'nullable|string|max:255',
+            'aviso' => 'nullable|string|max:5000',
+            'numero_sucursales' => 'nullable|integer|min:1',
             'mostrar_campos_precio' => 'nullable|boolean',
             'enviar_facturas_automaticas' => 'nullable|boolean',
             'ventas_bloqueadas' => 'nullable|boolean',
             'motivo_bloqueo' => 'nullable|string|max:500',
         ],[
             'nombre.required' => 'Agregar un nombre de empresa.',
+            'nombre.unique' => 'Ya existe una empresa con ese nombre.',
+            'email.email' => 'El correo electrónico no tiene un formato válido.',
+            'numero_sucursales.integer' => 'El número de sucursales debe ser un número entero.',
+            'numero_sucursales.min' => 'El número de sucursales debe ser al menos 1.',
             'direccion.required' => 'Agregar una dirección de la empresa.',
             'motivo_bloqueo.max' => 'El motivo de bloqueo debe tener máximo 500 caracteres.',
         ]);
 
-        $empresa = Empresa::find($request->id);
+        $empresa = Empresa::findOrFail($request->id);
         $empresa->nombre = $validated['nombre'];
         $empresa->direccion = $validated['direccion'];
         $empresa->telefono = $request->telefono;
         $empresa->email= $request->email;
         $empresa->rfc= $request->rfc;
-        $empresa->aviso = $request->aviso;
+        $empresa->aviso = $request->aviso ?? '';
         $empresa->mostrar_campos_precio = $request->boolean('mostrar_campos_precio', true);
         if (in_array(Auth::user()->tipo, ['superAdmin', 'adminEmpresa'])) {
             $empresa->enviar_facturas_automaticas = $request->boolean('enviar_facturas_automaticas', false);
@@ -158,7 +178,7 @@ class EmpresaController extends Controller
                 : null;
         }
         if (Auth::user()->tipo === 'superAdmin') {
-            $empresa->numero_sucursales = $request->numero_sucursales;
+            $empresa->numero_sucursales = $request->numero_sucursales ?? $empresa->numero_sucursales ?? 1;
         }
         $empresa->save();
 

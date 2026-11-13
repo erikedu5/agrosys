@@ -9,7 +9,19 @@ class Venta extends Model
 {
     use HasFactory;
 
+    /** Formas de pago (claves SAT) para ventas de clientes que requieren factura. */
+    public const FORMAS_PAGO = [
+        '01' => 'Efectivo',
+        '03' => 'Transferencia electrónica',
+        '04' => 'Tarjeta de crédito',
+        '28' => 'Tarjeta de débito',
+        '02' => 'Cheque nominativo',
+        '99' => 'Por definir',
+    ];
+
     protected $fillable = [
+        'forma_pago',
+        'cash_session_id',
         'total',
         'id_usuario',
         'id_cliente',

@@ -32,6 +32,8 @@
         },
         datesReportVenta: [],
         datesReportProfit: [],
+        datesReportCortesTodas: [],
+        datesReportCortesSucursal: [],
         tipoReporteVenta: 'marca',
         id_clasificacion: 0,
         id_marca:  0,
@@ -141,6 +143,23 @@
         const sucursalQuery = formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
         popup.location = '/reporte/ganancias-diarias?fechaInicio=' + fechaInicio + '&fechaFin=' + fechaFin + sucursalQuery;
         location.replace('/reporte');
+    }
+
+    // alcance: 'todas' (todas las sucursales) o 'sucursal' (una sucursal).
+    const generarReporteCortes = (alcance) => {
+        errors.value = [];
+        const fechas = alcance === 'todas' ? formReporte.datesReportCortesTodas : formReporte.datesReportCortesSucursal;
+        if (!fechas || fechas.length !== 2 || !fechas[0] || !fechas[1]) {
+            errors.value.push('Debe seleccionar un rango de fechas válido para el reporte de cortes de caja.');
+            return;
+        }
+        const sucursalQuery = alcance === 'sucursal' && formReporte.id_sucursal ? '&id_sucursal=' + formReporte.id_sucursal : '';
+        window.open('/reporte/cortes-caja?alcance=' + alcance + '&fechaInicio=' + fechas[0] + '&fechaFin=' + fechas[1] + sucursalQuery, '_blank');
+    }
+
+    const generarReporteCuentasPorPagar = () => {
+        errors.value = [];
+        window.open('/reporte/cuentas-por-pagar' + (formReporte.id_sucursal ? '?id_sucursal=' + formReporte.id_sucursal : ''), '_blank');
     }
 
     const generarReporteClientesAdeudo = () => {
@@ -312,6 +331,77 @@
 
                         <div class="mt-4 flex justify-end">
                             <button @click="generarReporteClientesAdeudo()" :class="primaryButtonClass">Generar reporte</button>
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="['vendedor', 'admin', 'adminEmpresa', 'superAdmin'].includes($page.props.auth.user.tipo)"
+                        :class="cardClass"
+                    >
+                        <div class="flex flex-col gap-1">
+                            <h3 :class="sectionTitleClass">Cuentas por pagar</h3>
+                            <p :class="sectionDescClass">Compras a proveedores con saldo pendiente: saldo por proveedor, vencimientos y adeudo vencido.</p>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div v-if="props.sucursales.length > 0">
+                                <label :class="labelClass">Sucursal (opcional)</label>
+                                <vue-single-select v-model="sucursalSeleccionada" :options="props.sucursales" option-key="id" option-label="nombre" placeholder="Todas las disponibles" class="w-full" />
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button @click="generarReporteCuentasPorPagar()" :class="primaryButtonClass">Generar reporte</button>
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="$page.props.auth.user.tipo == 'adminEmpresa' || $page.props.auth.user.tipo == 'superAdmin'"
+                        :class="cardClass"
+                    >
+                        <div class="flex flex-col gap-1">
+                            <h3 :class="sectionTitleClass">Cortes de caja · todas las sucursales</h3>
+                            <p :class="sectionDescClass">Cortes de todas las sucursales con resumen y totales: vendido de contado y a crédito, abonos, efectivo esperado, contado y diferencia.</p>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div>
+                                <label :class="labelClass">Rango de fechas</label>
+                                <VueDatePicker v-model="formReporte.datesReportCortesTodas" range model-type="yyyy-MM-dd" format="yyyy-MM-dd" class="w-full" />
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button @click="generarReporteCortes('todas')" :class="primaryButtonClass">Generar reporte</button>
+                        </div>
+                    </section>
+
+                    <section
+                        v-if="$page.props.auth.user.tipo == 'admin' || $page.props.auth.user.tipo == 'adminEmpresa' || $page.props.auth.user.tipo == 'superAdmin'"
+                        :class="cardClass"
+                    >
+                        <div class="flex flex-col gap-1">
+                            <h3 :class="sectionTitleClass">Cortes de caja · por sucursal</h3>
+                            <p :class="sectionDescClass">Cortes de cada cajero de una sucursal en el periodo.</p>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div v-if="props.sucursales.length > 0 && $page.props.auth.user.tipo != 'admin'">
+                                <label :class="labelClass">Sucursal</label>
+                                <vue-single-select v-model="sucursalSeleccionada" :options="props.sucursales" option-key="id" option-label="nombre" placeholder="Sucursal activa" class="w-full" />
+                            </div>
+                            <div v-else>
+                                <label :class="labelClass">Sucursal</label>
+                                <p class="mt-2 text-sm text-gray-900 dark:text-gray-100">{{ $page.props.sucursalActiva?.nombre }}</p>
+                            </div>
+                            <div>
+                                <label :class="labelClass">Rango de fechas</label>
+                                <VueDatePicker v-model="formReporte.datesReportCortesSucursal" range model-type="yyyy-MM-dd" format="yyyy-MM-dd" class="w-full" />
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button @click="generarReporteCortes('sucursal')" :class="primaryButtonClass">Generar reporte</button>
                         </div>
                     </section>
 

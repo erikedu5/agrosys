@@ -162,6 +162,10 @@ class FacturapiService
                 ? 'services.facturapi.default_payment_form_contado'
                 : 'services.facturapi.default_payment_form_credito'
         );
+        // De contado se factura con la forma de pago capturada en la venta; a crédito (PPD) el SAT exige "99".
+        if ($venta->tipo_venta === 'Contado' && $venta->forma_pago) {
+            $paymentForm = $venta->forma_pago;
+        }
         $paymentMethod = config(
             $venta->tipo_venta === 'Contado'
                 ? 'services.facturapi.default_payment_method_contado'

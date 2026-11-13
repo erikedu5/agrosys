@@ -14,6 +14,8 @@ import { rememberCashSession, rememberedCashSession } from '@/Offline/services/c
 import { getOrCreateDeviceId } from '@/Offline/services/device';
 import { SaleApplicationService } from '@/Domain/Sales/SaleApplicationService';
 import { printProvisionalTicket } from '@/Offline/services/provisionalTicket';
+import { etiquetaTipoPrecio, precioProducto } from '@/utils/precios';
+import { FORMAS_PAGO } from '@/utils/formasPago';
 
 const productoVenta = reactive([]);
 
@@ -193,7 +195,9 @@ const loadLocalProducts = async (query = '') => {
             tamano: product.size,
             barcode: product.barcode,
             precio_unitario: product.unitPrice,
-            precio_ieps: product.price,
+            precio_publico: product.prices?.publico ?? product.price,
+            precio_preferencial_1: product.prices?.preferencial_1 ?? product.price,
+            precio_preferencial_2: product.prices?.preferencial_2 ?? product.price,
             cantidad: product.stock?.estimatedQuantity ?? 0,
             offlineStock: product.stock,
         }));
@@ -253,11 +257,13 @@ const tipoVenta = ref('Contado');
 const isReprintingTicket = ref(false);
 
 const clienteActual = computed(() => form.cliente ?? {});
-const descuentoCliente = computed(() => Number(clienteActual.value?.porcentaje_descuento ?? 0));
 const esClientePublico = computed(() => !clienteActual.value?.id || clienteActual.value.id === props.clientePublicoDefault);
 
-const precioConDescuento = (producto) => (Number(producto.precio_ieps)
-    - ((Number(producto.precio_ieps) / 100) * descuentoCliente.value)).toFixed(2);
+// Precio del catálogo asignado al cliente (público en general por defecto).
+const tipoPrecioCliente = computed(() => clienteActual.value?.tipo_precio ?? 'publico');
+const precioBase = (producto) => precioProducto(producto, tipoPrecioCliente.value);
+
+const precioVenta = (producto) => precioBase(producto).toFixed(2);
 
 const recalcularLinea = (linea) => {
     linea.importe = (Number(linea.cantidad) * Number(linea.precio_unitario)).toFixed(2);
@@ -294,7 +300,7 @@ const agregarProducto = (producto, cantidad = 1) => {
     const linea = {
         producto: { ...producto, nombre: nombreProducto(producto) },
         cantidad: nuevaCantidad,
-        precio_unitario: precioConDescuento(producto),
+        precio_unitario: precioVenta(producto),
         importe: 0,
     };
     recalcularLinea(linea);
@@ -335,21 +341,40 @@ const vaciarVenta = () => {
     productoVenta.splice(0);
 };
 
-// Al cambiar de cliente, se recalculan los precios con su descuento.
-watch(descuentoCliente, () => {
+// Al cambiar de cliente, se recalculan los precios con su tipo de precio.
+watch(tipoPrecioCliente, () => {
     productoVenta.forEach((linea) => {
-        linea.precio_unitario = precioConDescuento(linea.producto);
+        linea.precio_unitario = precioVenta(linea.producto);
         recalcularLinea(linea);
     });
 });
 
-watch(esClientePublico, (publico) => {
-    if (publico) tipoVenta.value = 'Contado';
+// Si el cliente requiere factura, cada venta debe definir su forma de pago.
+const requiereFormaPago = computed(() => Boolean(clienteActual.value?.requiereFactura));
+const formaPago = ref('');
+watch(() => clienteActual.value?.id, () => { formaPago.value = ''; });
+
+// Restricción de crédito: plazo vencido o límite de crédito alcanzado => solo contado.
+const saldoCliente = computed(() => Math.max(0, Number(clienteActual.value?.balance ?? 0)));
+const limiteCredito = computed(() => {
+    const limite = clienteActual.value?.limite_credito;
+    return limite === null || limite === undefined || limite === '' ? null : Number(limite);
+});
+const creditoDisponible = computed(() => limiteCredito.value === null ? null : Math.max(0, limiteCredito.value - saldoCliente.value));
+const creditoRestringido = computed(() => {
+    if (esClientePublico.value) return null;
+    if (clienteActual.value?.credito_vencido) return clienteActual.value.credito_vencido;
+    if (creditoDisponible.value !== null && creditoDisponible.value <= 0) {
+        return `El cliente alcanzó su límite de crédito de ${formatCurrency(limiteCredito.value)}.`;
+    }
+    return null;
 });
 
-const subtotalVenta = computed(() => productoVenta.reduce((sum, linea) => sum + Number(linea.producto.precio_ieps) * Number(linea.cantidad || 0), 0));
+watch([esClientePublico, creditoRestringido], ([publico, restringido]) => {
+    if (publico || restringido) tipoVenta.value = 'Contado';
+});
+
 const totalVenta = computed(() => Number(productoVenta.reduce((sum, linea) => sum + Number(linea.importe || 0), 0).toFixed(2)));
-const descuentoVenta = computed(() => Math.max(0, subtotalVenta.value - totalVenta.value));
 const unidadesVenta = computed(() => productoVenta.reduce((sum, linea) => sum + Number(linea.cantidad || 0), 0));
 const resumenArticulos = computed(() => {
     if (productoVenta.length === 0) return 'Sin productos';
@@ -392,6 +417,8 @@ const montoIngresado = computed(() => {
 const esCredito = computed(() => tipoVenta.value === 'Credito');
 const cambio = computed(() => montoIngresado.value === null ? null : montoIngresado.value - totalVenta.value);
 const saldoCredito = computed(() => Math.max(0, totalVenta.value - Number(form.abono || 0)));
+const excedeLimiteCredito = computed(() => esCredito.value && creditoDisponible.value !== null
+    && Number((saldoCredito.value - creditoDisponible.value).toFixed(2)) > 0);
 
 const montosRapidos = computed(() => {
     const total = totalVenta.value;
@@ -421,9 +448,10 @@ const elegirMontoRapido = (monto) => {
 
 const puedeConfirmar = computed(() => {
     if (!cashReady.value || productoVenta.length === 0 || isCompletingSale.value) return false;
+    if (requiereFormaPago.value && !formaPago.value) return false;
     if (esCredito.value) {
         const abono = Number(form.abono || 0);
-        return abono >= 0 && abono <= totalVenta.value;
+        return abono >= 0 && abono <= totalVenta.value && !excedeLimiteCredito.value;
     }
     return montoIngresado.value === null || montoIngresado.value >= totalVenta.value;
 });
@@ -524,6 +552,7 @@ const finalizeSale = async () => {
             customerName: form.cliente.nombre,
             sellerName: page.props.auth.user.name,
             saleType: tipoVenta.value,
+            paymentForm: requiereFormaPago.value ? formaPago.value : null,
             total: Number(totalVenta.value),
             items: productoVenta.map(item => ({ productId: String(item.producto.id), name: item.producto.nombre, quantity: Number(item.cantidad), unitPrice: Number(item.precio_unitario), total: Number(item.importe) })),
             payments: [{ id: crypto.randomUUID(), method: 'cash', amount: tipoVenta.value === 'Contado' ? Number(totalVenta.value) : Number(form.abono ?? 0) }],
@@ -574,6 +603,7 @@ const submitLegacySale = () => {
             'total': totalVenta.value,
             'producto_venta': productoVenta,
             'tipo_venta': tipoVenta.value + "",
+            'forma_pago': requiereFormaPago.value ? formaPago.value : null,
             'abono': form.abono
         }),
         {
@@ -712,7 +742,7 @@ const resultadosSucursales = computed(() => {
                 nombre: fila.nombre,
                 tamano: fila.tamano,
                 marca: fila.marca,
-                precio: fila.precio_ieps,
+                precio: precioProducto(fila, tipoPrecioCliente.value),
                 existenciaLocal: local ? existencia(local) : 0,
                 sucursales: [],
             });
@@ -896,7 +926,7 @@ onUnmounted(() => {
                     <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(176px,1fr))] sm:gap-3">
                         <button v-for="producto in productosVisibles" :key="producto.id" type="button"
                             @click="agregarProducto(producto)"
-                            :aria-label="existencia(producto) > 0 ? `Agregar ${nombreProducto(producto)}, ${formatCurrency(producto.precio_ieps)}` : `${nombreProducto(producto)} agotado. Ver otras sucursales`"
+                            :aria-label="existencia(producto) > 0 ? `Agregar ${nombreProducto(producto)}, ${formatCurrency(precioBase(producto))}` : `${nombreProducto(producto)} agotado. Ver otras sucursales`"
                             class="relative flex min-h-[136px] flex-col gap-1.5 rounded-xl border-2 p-3 text-left text-gray-900 transition active:scale-[.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:text-gray-100 sm:min-h-[148px] sm:p-3.5"
                             :class="existencia(producto) <= 0
                                 ? 'border-dashed border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800'
@@ -917,7 +947,7 @@ onUnmounted(() => {
                                 Ver en otras sucursales
                             </span>
                             <span class="flex items-end justify-between gap-2">
-                                <span class="text-xl font-extrabold">{{ formatCurrency(producto.precio_ieps) }}</span>
+                                <span class="text-xl font-extrabold">{{ formatCurrency(precioBase(producto)) }}</span>
                                 <span class="whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-bold"
                                     :class="existencia(producto) <= 0 ? 'bg-gray-200 text-gray-700' : existencia(producto) <= 5 ? 'bg-amber-100 text-amber-800' : 'bg-green-50 text-green-800'">
                                     {{ existencia(producto) <= 0 ? 'Agotado aquí' : existencia(producto) <= 5 ? `Quedan ${formatQuantity(existencia(producto))}` : `${formatQuantity(existencia(producto))} en exist.` }}
@@ -971,7 +1001,7 @@ onUnmounted(() => {
                                 <span class="block text-xs text-gray-600 dark:text-gray-400">Cliente</span>
                                 <span class="block truncate font-semibold">{{ clienteActual.nombre ?? 'Selecciona un cliente' }}</span>
                             </span>
-                            <span v-if="descuentoCliente > 0" class="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-[13px] font-bold text-green-800">−{{ descuentoCliente }}%</span>
+                            <span v-if="tipoPrecioCliente !== 'publico'" class="shrink-0 rounded-md bg-blue-100 px-2 py-0.5 text-[13px] font-bold text-blue-800">{{ etiquetaTipoPrecio(tipoPrecioCliente) }}</span>
                             <span class="shrink-0 text-sm font-semibold text-blue-700 dark:text-blue-400">Cambiar</span>
                         </button>
                     </div>
@@ -1023,18 +1053,15 @@ onUnmounted(() => {
                                 :class="tipoVenta === 'Contado' ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-300'">
                                 Contado
                             </button>
-                            <button type="button" role="radio" :aria-checked="tipoVenta === 'Credito'" @click="tipoVenta = 'Credito'" :disabled="esClientePublico"
+                            <button type="button" role="radio" :aria-checked="tipoVenta === 'Credito'" @click="tipoVenta = 'Credito'" :disabled="esClientePublico || !!creditoRestringido"
                                 class="h-12 flex-1 rounded-lg text-base font-semibold transition disabled:text-gray-400"
                                 :class="tipoVenta === 'Credito' ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white' : 'text-gray-700 dark:text-gray-300'">
                                 Crédito
                             </button>
                         </div>
                         <p v-if="esClientePublico" class="-mt-1.5 text-[13px] text-gray-600 dark:text-gray-400">Para vender a crédito, elige un cliente registrado.</p>
-
-                        <div class="flex flex-col gap-1.5 text-[15px]">
-                            <div class="flex justify-between text-gray-600 dark:text-gray-400"><span>Subtotal</span><span>{{ formatCurrency(subtotalVenta) }}</span></div>
-                            <div v-if="descuentoVenta > 0.004" class="flex justify-between text-green-800 dark:text-green-400"><span>Descuento cliente ({{ descuentoCliente }}%)</span><span>−{{ formatCurrency(descuentoVenta) }}</span></div>
-                        </div>
+                        <p v-else-if="creditoRestringido" class="-mt-1.5 text-[13px] font-semibold text-red-700 dark:text-red-400">{{ creditoRestringido }} Solo contado.</p>
+                        <p v-else-if="creditoDisponible !== null" class="-mt-1.5 text-[13px] text-gray-600 dark:text-gray-400">Crédito disponible: {{ formatCurrency(creditoDisponible) }}</p>
 
                         <button type="button" @click="abrirCobro" :disabled="productoVenta.length === 0"
                             class="flex h-16 w-full items-center justify-between gap-3 rounded-xl bg-blue-600 px-5 text-lg font-bold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:bg-gray-300 disabled:text-gray-600">
@@ -1082,7 +1109,7 @@ onUnmounted(() => {
                                 {{ cliente.id === clientePublicoDefault ? 'Solo contado' : (Number(cliente.balance ?? 0) > 0 ? `Saldo pendiente ${formatCurrency(cliente.balance)}` : 'Sin adeudo') }}
                             </span>
                         </span>
-                        <span v-if="Number(cliente.porcentaje_descuento) > 0" class="shrink-0 rounded-md bg-green-100 px-2 py-0.5 text-[13px] font-bold text-green-800">−{{ cliente.porcentaje_descuento }}%</span>
+                        <span v-if="(cliente.tipo_precio ?? 'publico') !== 'publico'" class="shrink-0 rounded-md bg-blue-100 px-2 py-0.5 text-[13px] font-bold text-blue-800">{{ etiquetaTipoPrecio(cliente.tipo_precio) }}</span>
                     </button>
                     <p v-if="clientesFiltrados.length === 0" class="py-6 text-center text-gray-600">No hay clientes con ese nombre.</p>
                 </div>
@@ -1110,6 +1137,16 @@ onUnmounted(() => {
                     <p class="text-sm text-gray-600 dark:text-gray-400">Total a pagar · {{ clienteActual.nombre }}</p>
                     <p class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{{ formatCurrency(totalVenta) }}</p>
                 </div>
+
+                <label v-if="requiereFormaPago" class="flex flex-col gap-1.5">
+                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Forma de pago para factura <span class="text-red-600">*</span></span>
+                    <select v-model="formaPago" required
+                        class="h-[52px] rounded-xl border-2 px-4 text-base font-semibold text-gray-900 focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-900 dark:text-gray-100"
+                        :class="formaPago ? 'border-gray-300 dark:border-gray-600' : 'border-red-400'">
+                        <option value="" disabled>Selecciona la forma de pago</option>
+                        <option v-for="forma in FORMAS_PAGO" :key="forma.value" :value="forma.value">{{ forma.label }}</option>
+                    </select>
+                </label>
 
                 <label v-if="!esCredito" class="flex flex-col gap-1.5">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Efectivo recibido (opcional)</span>
@@ -1141,6 +1178,7 @@ onUnmounted(() => {
                     <span class="font-semibold">{{ cambio >= 0 ? 'Cambio' : 'Falta' }}</span>
                     <span class="text-2xl font-extrabold">{{ formatCurrency(Math.abs(cambio)) }}</span>
                 </div>
+                <p v-if="excedeLimiteCredito" class="-mt-2 text-sm font-semibold text-red-700">El saldo a crédito excede el crédito disponible ({{ formatCurrency(creditoDisponible) }}). Aumenta el abono.</p>
                 <p v-if="esCredito && Number(form.abono || 0) > totalVenta" class="-mt-2 text-sm font-semibold text-red-700">El abono no puede ser mayor al total.</p>
 
                 <button type="button" @click="finalizeSale" :disabled="!puedeConfirmar"

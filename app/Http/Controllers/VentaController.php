@@ -84,7 +84,7 @@ class VentaController extends Controller
                             'tamano' => $product->tamano,
                             'barcode' => $product->barcode,
                             'marca' => $product->marca,
-                            'precio_ieps' => $product->precio_ieps,
+                            ...$product->only(array_values(Producto::PRECIOS)),
                             'sucursal' => ['id' => $otraSucursal->id, 'nombre' => $otraSucursal->nombre],
                             'cantidad' => $cantidad,
                         ];
@@ -118,6 +118,9 @@ class VentaController extends Controller
         $clientes = Clientes::where('id_sucursal', $sucursal)
             ->where('activo', true)
             ->get();
+        // Motivo de bloqueo de crédito por plazo vencido; el límite se valida contra el saldo de cada venta.
+        $clientes->each(fn (Clientes $cliente) => $cliente->credito_vencido = $cliente->creditoVencidoDesde()
+            ? $cliente->restriccionCredito() : null);
 
         // Obtener la sucursal actual para acceder al cliente público por defecto
         $clientePublicoId = $sucursalInfo ? $sucursalInfo->id_cliente_publico : null;
@@ -190,6 +193,12 @@ class VentaController extends Controller
             ])->all(),
             'payments' => [['method' => 'cash', 'amount' => $request->tipo_venta === 'Contado' ? $request->total : ($request->abono ?? '0.00')]],
         ], $customer, $sucursalInfo, false);
+        if ($customer->requiereFactura && ! isset(Venta::FORMAS_PAGO[(string) $request->input('forma_pago')])) {
+            throw ValidationException::withMessages(['forma_pago' => 'El cliente requiere factura: selecciona la forma de pago.']);
+        }
+        if ($request->tipo_venta === 'Credito' && ($restriccion = $customer->restriccionCredito(($amounts['total'] - $amounts['payment']) / 100))) {
+            throw ValidationException::withMessages(['tipo_venta' => $restriccion.' Solo se le puede vender de contado.']);
+        }
         $total = \App\Services\Pos\Decimal::format($amounts['total']);
         $abonoInput = \App\Services\Pos\Decimal::format($amounts['payment']);
         $productosSanitizados = $request->producto_venta;
@@ -205,7 +214,7 @@ class VentaController extends Controller
         ]);
 
         try {
-            return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $sucursal, $sucursalInfo, $amounts, $total, $abonoInput, $productosSanitizados, $logger, $facturacionAutomaticaEmpresa) {
+            return \Illuminate\Support\Facades\DB::transaction(function () use ($request, $sucursal, $sucursalInfo, $customer, $amounts, $total, $abonoInput, $productosSanitizados, $logger, $facturacionAutomaticaEmpresa) {
                 $cash = app(\App\Services\CashRegister::class);
                 $cashSession = $cash->requireSaleSession((int) $request->user()->id, (int) $sucursal);
                 $id_usuario = Auth::user()->id;
@@ -222,6 +231,8 @@ class VentaController extends Controller
                     'device_id' => $request->input('device_id'),
                     'occurred_at' => $request->input('occurred_at', now()),
                     'id_cliente' => $request->id_cliente,
+                    'cash_session_id' => $cashSession->id,
+                    'forma_pago' => $customer->requiereFactura ? (string) $request->input('forma_pago') : null,
                     'total' => $total,
                     'id_usuario' => $id_usuario,
                     'tipo_venta' => $request->tipo_venta,
@@ -306,8 +317,8 @@ class VentaController extends Controller
                     'balance_nuevo' => $cliente->balance,
                 ]);
 
-                if ($facturacionAutomaticaEmpresa && $cliente->requiereFactura) {
-                    $logger->step('Iniciando facturación automática');
+                if ($cliente->requiereFactura) {
+                    $logger->step($facturacionAutomaticaEmpresa ? 'Iniciando facturación automática' : 'Registrando factura pendiente');
                     Log::info('Iniciando proceso de facturación automática para venta', [
                         'venta_id' => $venta->id,
                         'cliente_id' => $cliente->id,
@@ -587,11 +598,8 @@ class VentaController extends Controller
         $empresa = $sucursal?->empresa;
 
         if (!$empresa || !$empresa->enviar_facturas_automaticas) {
-            Log::info('Facturación automática deshabilitada para la empresa', [
-                'venta_id' => $venta->id,
-                'cliente_id' => $cliente->id,
-                'empresa_id' => $empresa?->id,
-            ]);
+            // Sin facturación automática: queda pendiente para facturarse a mano desde la pantalla de facturas.
+            Factura::create(['facturaCompleta' => false, 'id_venta' => $venta->id, 'id_cliente' => $cliente->id, 'factura_status' => 'pendiente']);
             return;
         }
 
@@ -686,7 +694,9 @@ class VentaController extends Controller
                 'productos.barcode',
                 'productos.tamano',
                 'productos.precio_unitario',
-                'productos.precio_ieps',
+                'productos.precio_publico',
+                'productos.precio_preferencial_1',
+                'productos.precio_preferencial_2',
                 'cat_marcas.nombre as marca',
                 'cat_clasificacions.nombre as clasificacion'
             )

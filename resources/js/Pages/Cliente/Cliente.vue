@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
+import { etiquetaTipoPrecio } from '@/utils/precios';
 
 defineProps({
     clientes: {
@@ -55,8 +56,16 @@ const desactivar = (id) => {
                     <div class="font-semibold text-gray-900">{{ cliente.nombre }}</div>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
                         <div>
-                            <div class="text-gray-500">Porcentaje de descuento</div>
-                            <div>{{ cliente.porcentaje_descuento }}</div>
+                            <div class="text-gray-500">Precio asignado</div>
+                            <div>{{ etiquetaTipoPrecio(cliente.tipo_precio) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Límite de crédito</div>
+                            <div>{{ cliente.limite_credito != null ? `$ ${cliente.limite_credito}` : 'Sin límite' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500">Plazo de crédito</div>
+                            <div>{{ cliente.plazo_credito_dias != null ? `${cliente.plazo_credito_dias} días` : 'Sin plazo' }}</div>
                         </div>
                         <div>
                             <div class="text-gray-500">Requiere factura</div>
@@ -95,7 +104,9 @@ const desactivar = (id) => {
                         <tr class="[&>th]:px-4 [&>th]:py-3">
                             <th>Id</th>
                             <th>Nombre del cliente</th>
-                            <th>Porcentaje de descuento</th>
+                            <th>Precio asignado</th>
+                            <th>Límite de crédito</th>
+                            <th>Plazo de crédito</th>
                             <th>Requiere factura</th>
                             <th>RFC</th>
                             <th>Acciones</th>
@@ -105,7 +116,9 @@ const desactivar = (id) => {
                         <tr v-for="cliente in clientes.data" :key="cliente.id" class="border-b">
                             <td class="whitespace-nowrap"> {{ cliente.id }}</td>
                             <td class="font-medium text-gray-900"> {{ cliente.nombre }} </td>
-                            <td class="whitespace-nowrap"> {{ cliente.porcentaje_descuento }} % </td>
+                            <td class="whitespace-nowrap"> {{ etiquetaTipoPrecio(cliente.tipo_precio) }} </td>
+                            <td class="whitespace-nowrap"> {{ cliente.limite_credito != null ? `$ ${cliente.limite_credito}` : 'Sin límite' }} </td>
+                            <td class="whitespace-nowrap"> {{ cliente.plazo_credito_dias != null ? `${cliente.plazo_credito_dias} días` : 'Sin plazo' }} </td>
                             <td class="whitespace-nowrap"> {{ cliente.requiereFactura == 0 ? 'No' : 'Si' }}</td>
                             <td class="whitespace-nowrap"> {{ cliente.rfc }}</td>
                             <td class="whitespace-nowrap">

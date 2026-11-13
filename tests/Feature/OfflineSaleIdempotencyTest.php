@@ -27,10 +27,10 @@ class OfflineSaleIdempotencyTest extends TestCase
         $empresa = Empresa::factory()->create();
         $branch = Sucursales::factory()->create(['id_empresa' => $empresa->id]);
         $user = User::factory()->create(['tipo' => 'vendedor', 'id_sucursal' => $branch->id, 'id_empresa' => $empresa->id]);
-        $customer = Clientes::factory()->create(['id_sucursal' => $branch->id, 'activo' => true, 'porcentaje_descuento' => 0]);
+        $customer = Clientes::factory()->create(['id_sucursal' => $branch->id, 'activo' => true]);
         $brand = CatMarca::factory()->create();
         $classification = CatClasificacion::factory()->create();
-        $product = Producto::factory()->create(['id_empresa' => $empresa->id, 'id_usuario' => $user->id, 'id_marca' => $brand->id, 'id_clasificacion' => $classification->id, 'tamano' => '1 L', 'precio_ieps' => 125]);
+        $product = Producto::factory()->create(['id_empresa' => $empresa->id, 'id_usuario' => $user->id, 'id_marca' => $brand->id, 'id_clasificacion' => $classification->id, 'tamano' => '1 L', 'precio_publico' => 125, 'precio_preferencial_1' => 125, 'precio_preferencial_2' => 125]);
         AltaInventario::create(['cantidad_actual' => 10, 'cantidad_nueva' => 10, 'id_usuario' => $user->id, 'id_producto' => $product->id, 'id_sucursal' => $branch->id]);
         $deviceId = (string) Str::uuid();
         OfflineDevice::create(['id' => $deviceId, 'user_id' => $user->id, 'branch_id' => $branch->id, 'authorized' => true, 'last_sequence' => 0, 'offline_expires_at' => now()->addDays(7)]);

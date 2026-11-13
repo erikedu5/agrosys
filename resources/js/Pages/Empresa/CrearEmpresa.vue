@@ -94,6 +94,7 @@ const props = defineProps({
                             <input type="email"
                                 class="form-input w-full rounded-md shadow-sm"
                                 v-model="form.email">
+                            <InputError class="mt-2" :message="form.errors.email" />
                             <br>
                             <br>
 
@@ -118,7 +119,7 @@ const props = defineProps({
                                     class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
                                     v-model="form.mostrar_campos_precio">
                                 <span class="ml-2 text-sm text-gray-700">
-                                    Mostrar precio de compra y porcentaje de ganancia en productos
+                                    Mostrar precio de compra en productos
                                 </span>
                             </label>
                             <br>
@@ -170,9 +171,11 @@ const props = defineProps({
 
                             <div v-if="!all">
                             <label class="block font-medium text-sm text-gray-700">Máximo número de sucursales</label>
-                            <input type="number" step="0.01"
+                            <input type="number" step="1" min="1"
                                 class="form-input w-full rounded-md shadow-sm"
+                                :class="{'border-red-500': form.errors.numero_sucursales}"
                                 v-model="form.numero_sucursales">
+                            <InputError class="mt-2" :message="form.errors.numero_sucursales" />
                             <br>
                             <br>
                             </div>

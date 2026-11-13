@@ -224,6 +224,14 @@ Route::get('/reporte/ganancias-diarias', [App\Http\Controllers\ReporteController
     ->name('reporte.gananciasDiarias')
     ->middleware(['auth:sanctum', 'hasRoles:adminEmpresa-superAdmin']);
 
+Route::get('/reporte/cuentas-por-pagar', [App\Http\Controllers\ReporteController::class, 'cuentasPorPagar'])
+    ->name('reporte.cuentasPorPagar')
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
+
+Route::get('/reporte/cortes-caja', [App\Http\Controllers\ReporteController::class, 'cortesCaja'])
+    ->name('reporte.cortesCaja')
+    ->middleware(['auth:sanctum', 'hasRoles:admin-superAdmin-adminEmpresa']);
+
 // Versiones para impresión térmica (80mm)
 Route::get('/reporte/venta-ticket', [App\Http\Controllers\ReporteController::class, 'ventaTicket'])
     ->name('reporte.ventaTicket')
@@ -263,6 +271,10 @@ Route::get('/facturas/index', [\App\Http\Controllers\FacturaController::class, '
     ->name("facturas.index")
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
 
+
+Route::get('/facturas/export', [\App\Http\Controllers\FacturaController::class, 'export'])
+    ->name("facturas.export")
+    ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);
 
 Route::put('/facturas/update', [\App\Http\Controllers\FacturaController::class, 'update'])
     ->name("facturas.update")

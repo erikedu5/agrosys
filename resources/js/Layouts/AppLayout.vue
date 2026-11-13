@@ -208,7 +208,7 @@ const navItems = computed(() => {
             condition: ['vendedor', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo),
             children: [
                 { label: 'Clientes', route: 'cliente.index' },
-                { label: 'Facturas de ventas', route: 'facturas.index', params: { fechaInicio, fechaFin } },
+                { label: 'Facturas de ventas', route: 'facturas.index' },
             ],
         },
         {

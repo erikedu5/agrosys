@@ -207,7 +207,6 @@ class OnboardingController extends Controller
 
             $clientePublico = Clientes::create([
                 'nombre' => 'Publico en general',
-                'porcentaje_descuento' => '0',
                 'adeudo_total' => 0,
                 'abono_total' => 0,
                 'balance' => 0,
@@ -233,7 +232,12 @@ class OnboardingController extends Controller
         session(['sucursal_activa' => $sucursal->id]);
         session(['sucursal_nombre' => $sucursal->nombre]);
 
-        Mail::to($user->email)->send(new TrialStartedMail($empresa, $user));
+        // La cuenta ya quedó creada: si el servidor de correo falla, no se debe romper el registro.
+        try {
+            Mail::to($user->email)->send(new TrialStartedMail($empresa, $user));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return redirect()
             ->route('subscription.onboarding', ['step' => 2])
