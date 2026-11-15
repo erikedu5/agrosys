@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import { useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
@@ -178,96 +179,81 @@ const submit = () => {
 </script>
 
 <template>
-    <AppLayout title="CrearProducto">
+    <AppLayout title="Producto">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ props.producto ? 'Editar Producto' : 'Crear Nuevo Producto' }}
-            </h2>
+            <PageHeader :title="props.producto ? 'Editar producto' : 'Nuevo producto'" subtitle="Datos, precios y código" :back="route('inventario.index')" />
         </template>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow-lg bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre *</label>
-                            <input type="text" class="form-input w-full rounded-md shadow-sm"
-                                :class="{ 'border-red-500': form.errors.nombre }" v-model="form.nombre"
-                                @blur="form.nombre && form.clearErrors('nombre')" required>
-                            <InputError class="mt-2" :message="form.errors.nombre" />
-                            <br>
-                            <br>
+        <div class="ui-page ui-page-narrow">
+            <form class="flex flex-col gap-4" @submit.prevent="submit">
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Producto</h2>
+                    <div class="ui-field">
+                        <label class="ui-label">Nombre *</label>
+                        <input type="text" class="ui-input" :class="{ 'ui-input-error': form.errors.nombre }" v-model="form.nombre"
+                            @blur="form.nombre && form.clearErrors('nombre')" required>
+                        <InputError :message="form.errors.nombre" />
+                    </div>
 
-                            <label class="block font-medium text-sm text-gray-700">Clasificación *</label>
-                            <vue-single-select v-model="clasificacionSeleccionada" :options="clasificaciones"
-                                option-key="id" option-label="nombre" placeholder="Seleccione una clasificación"
-                                class="w-full" />
-                            <InputError class="mt-2" :message="form.errors.id_clasificacion" />
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Marca *</label>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Clasificación *</label>
+                            <vue-single-select v-model="clasificacionSeleccionada" :options="clasificaciones" option-key="id"
+                                option-label="nombre" placeholder="Seleccione una clasificación" class="w-full" />
+                            <InputError :message="form.errors.id_clasificacion" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Marca *</label>
                             <vue-single-select v-model="marcaSeleccionada" :options="marcas" option-key="id"
                                 option-label="nombre" placeholder="Seleccione una marca" class="w-full" />
-                            <InputError class="mt-2" :message="form.errors.id_marca" />
-                            <br>
-
-                            <div v-if="mostrarCamposPrecio">
-                                <label class="block font-medium text-sm text-gray-700">Precio Compra (opcional)</label>
-                                <input type="number" step="0.01" min="0"
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{ 'border-red-500': form.errors.precio_unitario }"
-                                    v-model="form.precio_unitario">
-                                <InputError class="mt-2" :message="form.errors.precio_unitario" />
-                                <br>
-                                <br>
-
-                            </div>
-
-                            <div class="grid gap-4 sm:grid-cols-3">
-                                <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo">
-                                    <label class="block font-medium text-sm text-gray-700">Precio {{ tipo.label }} *</label>
-                                    <input type="number" step="0.01" min="0.01" @input="copiarPrecioPublico(tipo.campo)"
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="{ 'border-red-500': form.errors[tipo.campo] }" v-model="form[tipo.campo]"
-                                        required>
-                                    <InputError class="mt-2" :message="form.errors[tipo.campo]" />
-                                </div>
-                            </div>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Tamaño * (Agrega unidad al tamaño
-                                ejemplo:
-                                "kg", "g", "ml", "l", etc.)</label>
-                            <input type="text" class="form-input w-full rounded-md shadow-sm"
-                                :class="{ 'border-red-500': form.errors.tamano }" v-model="form.tamano"
-                                @blur="form.tamano && form.clearErrors('tamano')" required>
-                            <InputError class="mt-2" :message="form.errors.tamano" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Ingrediente activo</label>
-                            <input type="text" class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.ingrediente_activo">
-                            <InputError class="mt-2" :message="form.errors.ingrediente_activo" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Código de barras</label>
-                            <input type="text" class="form-input w-full rounded-md shadow-sm" v-model="form.barcode">
-                            <InputError class="mt-2" :message="form.errors.barcode" />
-                            <br>
-                            <br>
-
-                            <button type="submit" :disabled="form.processing" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md
-                                       hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-                                       disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span v-if="form.processing">Guardando...</span>
-                                <span v-else>{{ props.producto ? 'Actualizar Producto' : 'Crear Producto' }}</span>
-                            </button>
-                        </form>
+                            <InputError :message="form.errors.id_marca" />
+                        </div>
                     </div>
-                </div>
-            </div>
+
+                    <div class="ui-field">
+                        <label class="ui-label">Tamaño *</label>
+                        <input type="text" class="ui-input" :class="{ 'ui-input-error': form.errors.tamano }" v-model="form.tamano"
+                            @blur="form.tamano && form.clearErrors('tamano')" required>
+                        <p class="ui-help">Agrega la unidad al tamaño, por ejemplo: “kg”, “g”, “ml”, “l”.</p>
+                        <InputError :message="form.errors.tamano" />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Ingrediente activo</label>
+                            <input type="text" class="ui-input" v-model="form.ingrediente_activo">
+                            <InputError :message="form.errors.ingrediente_activo" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Código de barras</label>
+                            <input type="text" class="ui-input" v-model="form.barcode">
+                            <InputError :message="form.errors.barcode" />
+                        </div>
+                    </div>
+                </section>
+
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Precios</h2>
+                    <div v-if="mostrarCamposPrecio" class="ui-field">
+                        <label class="ui-label">Precio de compra (opcional)</label>
+                        <input type="number" step="0.01" min="0" class="ui-input" :class="{ 'ui-input-error': form.errors.precio_unitario }" v-model="form.precio_unitario">
+                        <InputError :message="form.errors.precio_unitario" />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
+                            <label class="ui-label">Precio {{ tipo.label }} *</label>
+                            <input type="number" step="0.01" min="0.01" @input="copiarPrecioPublico(tipo.campo)" class="ui-input"
+                                :class="{ 'ui-input-error': form.errors[tipo.campo] }" v-model="form[tipo.campo]" required>
+                            <InputError :message="form.errors[tipo.campo]" />
+                        </div>
+                    </div>
+                </section>
+
+                <button type="submit" :disabled="form.processing" class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end">
+                    {{ form.processing ? 'Guardando...' : (props.producto ? 'Actualizar producto' : 'Crear producto') }}
+                </button>
+            </form>
         </div>
     </AppLayout>
 </template>

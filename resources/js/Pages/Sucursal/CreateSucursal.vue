@@ -1,6 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
+    import PageHeader from '@/Components/PageHeader.vue';
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
@@ -53,89 +54,64 @@
     }
 </script>
 <template>
-    <AppLayout title="CrearSucursal">
+    <AppLayout title="Sucursal">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Sucursales
-            </h2>
+            <PageHeader :title="sucursal ? 'Editar sucursal' : 'Nueva sucursal'" subtitle="Datos de contacto y configuración" :back="route('sucursal.index')" />
         </template>
 
-        <hr class="my-6">
+        <div class="ui-page ui-page-narrow">
+            <form class="ui-card flex flex-col gap-4 p-4 sm:p-5" @submit.prevent="submit">
+                <div class="ui-field">
+                    <label class="ui-label">Empresa</label>
+                    <vue-single-select v-model="empresaSeleccionada" :options="empresas" option-key="id" option-label="nombre" placeholder="Seleccione una empresa" class="w-full" />
+                    <InputError :message="form.errors.id_empresa" />
+                </div>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
+                <div class="ui-field">
+                    <label class="ui-label">Nombre</label>
+                    <input type="text" class="ui-input" v-model="form.nombre">
+                    <InputError :message="form.errors.nombre" />
+                </div>
 
-                            <label class="block font-medium text-sm text-gray-700">Empresa</label>
-                            <vue-single-select v-model="empresaSeleccionada" :options="empresas" option-key="id" option-label="nombre" placeholder="Seleccione una empresa" class="w-full" />
-                            <InputError class="mt-2" :message="form.errors.id_empresa" />
+                <div class="ui-field">
+                    <label class="ui-label">Dirección</label>
+                    <input type="text" class="ui-input" v-model="form.direccion">
+                    <InputError :message="form.errors.direccion" />
+                </div>
 
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.nombre">
-                            <InputError class="mt-2" :message="form.errors.nombre" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Dirección</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.direccion">
-                            <InputError class="mt-2" :message="form.errors.direccion" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Telefono</label>
-                            <input type="tel"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.telefono">
-                            <InputError class="mt-2" :message="form.errors.telefono" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Email</label>
-                            <input type="email"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.email">
-                            <InputError class="mt-2" :message="form.errors.email" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Es Matriz</label>
-                            <input type="checkbox" class="form-input rounded-md shadow-sm"
-                                v-model="form.es_matriz">
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Es Bodega</label>
-                            <input type="checkbox" class="form-input rounded-md shadow-sm"
-                                v-model="form.es_bodega">
-                                <span class="text-xs text-gray-500 ml-2">(Permite realizar transferencias desde esta ubicación)</span>
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Ancho de Ticket (mm)</label>
-                            <vue-single-select v-model="ticketSeleccionado" :options="ticketOptions" option-key="value" option-label="label" placeholder="Seleccione" class="w-full" />
-                            <InputError class="mt-2" :message="form.errors.ticket_width_mm" />
-                            <br>
-                            <br>
-
-                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="ui-field">
+                        <label class="ui-label">Teléfono</label>
+                        <input type="tel" class="ui-input" v-model="form.telefono">
+                        <InputError :message="form.errors.telefono" />
+                    </div>
+                    <div class="ui-field">
+                        <label class="ui-label">Email</label>
+                        <input type="email" class="ui-input" v-model="form.email">
+                        <InputError :message="form.errors.email" />
                     </div>
                 </div>
-            </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="ui-check">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.es_matriz">
+                        Es matriz
+                    </label>
+                    <label class="ui-check">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.es_bodega">
+                        Es bodega
+                    </label>
+                </div>
+                <p class="ui-help -mt-2">Una bodega permite realizar transferencias desde esta ubicación.</p>
+
+                <div class="ui-field">
+                    <label class="ui-label">Ancho de ticket (mm)</label>
+                    <vue-single-select v-model="ticketSeleccionado" :options="ticketOptions" option-key="value" option-label="label" placeholder="Seleccione" class="w-full" />
+                    <InputError :message="form.errors.ticket_width_mm" />
+                </div>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>

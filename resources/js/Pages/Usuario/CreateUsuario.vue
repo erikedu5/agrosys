@@ -1,6 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
+    import PageHeader from '@/Components/PageHeader.vue';
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
@@ -84,78 +85,58 @@
 </script>
 
 <template>
-    <AppLayout title="CrearUsuario">
+    <AppLayout title="Usuario">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Crear Usuario
-            </h2>
+            <PageHeader :title="usuario ? 'Editar usuario' : 'Nuevo usuario'" subtitle="Acceso y permisos" :back="route('usuario.index')" />
         </template>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.name">
-                            <InputError class="mt-2" :message="form.errors.name" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">{{ props.usuario ? 'Password (opcional)' : 'Password' }}</label>
-                            <PasswordInput 
-                                v-model="form.password"
-                                :placeholder="props.usuario ? 'Dejar vacío para conservar la contraseña actual' : 'Ingrese la contraseña'"
-                                input-class="form-input w-full rounded-md shadow-sm"
-                                autocomplete="new-password"
-                                :required="!props.usuario" />
-                            <InputError class="mt-2" :message="form.errors.password" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Email</label>
-                            <input type="email"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.email">
-                            <InputError class="mt-2" :message="form.errors.email" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Tipo de usuario</label>
-                            <vue-single-select v-model="tipoSeleccionado" :options="tipoOptions" option-label="label" placeholder="Selecione" class="w-full" />
-                            <InputError class="mt-2" :message="form.errors.tipo" />
-
-                            <br>
-
-                            <!-- Selector de Empresa (solo para adminEmpresa) -->
-                            <div v-if="mostrarEmpresa">
-                                <label class="block font-medium text-sm text-gray-700">Empresa</label>
-                                <vue-single-select v-model="empresaSeleccionada" :options="empresas" option-label="nombre" placeholder="Seleccione una empresa" class="w-full" />
-                                <InputError class="mt-2" :message="form.errors.id_empresa" />
-                                <br>
-                            </div>
-
-                            <!-- Selector de Sucursal (para otros tipos de usuario) -->
-                            <div v-if="mostrarSucursal">
-                                <label class="block font-medium text-sm text-gray-700">Sucursal</label>
-                                <vue-single-select v-model="sucursalSeleccionada" :options="sucursales" option-label="nombre" placeholder="Seleccione una sucursal" class="w-full" />
-                                <InputError class="mt-2" :message="form.errors.id_sucursal" />
-                                <br>
-                            </div>
-                            <br>
-
-                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
-                    </div>
+        <div class="ui-page ui-page-narrow">
+            <form class="ui-card flex flex-col gap-4 p-4 sm:p-5" @submit.prevent="submit">
+                <div class="ui-field">
+                    <label class="ui-label">Nombre</label>
+                    <input type="text" class="ui-input" v-model="form.name">
+                    <InputError :message="form.errors.name" />
                 </div>
-            </div>
+
+                <div class="ui-field">
+                    <label class="ui-label">Email</label>
+                    <input type="email" class="ui-input" v-model="form.email">
+                    <InputError :message="form.errors.email" />
+                </div>
+
+                <div class="ui-field">
+                    <label class="ui-label">{{ props.usuario ? 'Contraseña (opcional)' : 'Contraseña' }}</label>
+                    <PasswordInput
+                        v-model="form.password"
+                        :placeholder="props.usuario ? 'Dejar vacío para conservar la contraseña actual' : 'Ingrese la contraseña'"
+                        input-class="ui-input"
+                        autocomplete="new-password"
+                        :required="!props.usuario" />
+                    <InputError :message="form.errors.password" />
+                </div>
+
+                <div class="ui-field">
+                    <label class="ui-label">Tipo de usuario</label>
+                    <vue-single-select v-model="tipoSeleccionado" :options="tipoOptions" option-label="label" placeholder="Seleccione" class="w-full" />
+                    <InputError :message="form.errors.tipo" />
+                </div>
+
+                <!-- Selector de Empresa (solo para adminEmpresa) -->
+                <div v-if="mostrarEmpresa" class="ui-field">
+                    <label class="ui-label">Empresa</label>
+                    <vue-single-select v-model="empresaSeleccionada" :options="empresas" option-label="nombre" placeholder="Seleccione una empresa" class="w-full" />
+                    <InputError :message="form.errors.id_empresa" />
+                </div>
+
+                <!-- Selector de Sucursal (para otros tipos de usuario) -->
+                <div v-if="mostrarSucursal" class="ui-field">
+                    <label class="ui-label">Sucursal</label>
+                    <vue-single-select v-model="sucursalSeleccionada" :options="sucursales" option-label="nombre" placeholder="Seleccione una sucursal" class="w-full" />
+                    <InputError :message="form.errors.id_sucursal" />
+                </div>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>

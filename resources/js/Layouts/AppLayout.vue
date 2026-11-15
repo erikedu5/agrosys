@@ -264,7 +264,7 @@ const searchItems = computed(() => {
 
 <template>
     <DeviceSessionGate />
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Head :title="title" />
 
         <Banner />
@@ -570,10 +570,8 @@ const searchItems = computed(() => {
                 ]"
                 class="transition-all duration-300 ease-in-out">
                 <!-- Encabezado de la página -->
-                <header v-if="$slots.header" class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        <slot name="header" />
-                    </div>
+                <header v-if="$slots.header" class="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+                    <slot name="header" />
                 </header>
 
                 <!-- Contenido de la página -->

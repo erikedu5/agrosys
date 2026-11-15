@@ -1,5 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import SearchField from '@/Components/SearchField.vue';
+import EmptyState from '@/Components/EmptyState.vue';
 import { ref, watch, computed } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue';
@@ -64,93 +67,36 @@ const completar = (id) => {
 <template>
     <AppLayout title="Pedidos">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Pedidos
-            </h2>
-            <br>
-            <input type="text" v-model="q" class="form-input rounded-md shadow-sm w-full" placeholder="Buscar..." />
+            <PageHeader title="Pedidos" subtitle="Solicitudes de producto por sucursal" />
         </template>
 
-        <hr class="my-6" />
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 justify-end">
-            <vue-single-select v-model="estadoSeleccionado" :options="estadoOptions" option-key="value" option-label="label" placeholder="Todos" class="w-48" />
-        </div>
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-3">
-            <!-- Vista en tarjetas -->
-            <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <template v-for="g in groupedPedidos" :key="g.uuid">
-                    <div class="bg-gray-100">
-                        <td colspan="7" class="px-4 py-2 font-semibold">
-                            Pedido {{ g.uuid }} - Sucursal: {{ g.items[0].sucursal.nombre }} -
-                            Solicitante: {{ g.items[0].nombre_solicitante }} ({{
-                                g.items[0].numero_solicitante }})
-                        </td>
-                    </div>
-                    <div v-for="p in g.items" :key="p.id">
-                        <div class="text-sm text-gray-500">Producto</div>
-                        <div class="font-semibold text-gray-900">{{ nombreProducto(p.producto) }}</div>
-                        <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                                <div class="text-gray-500">Cantidad</div>
-                                <div>{{ p.cantidad }}</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-500">Estado</div>
-                                <div>
-                                    <span v-if="p.completado" class="text-green-600">Completado</span>
-                                    <span v-else class="text-yellow-600">Pendiente</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex justify-end mt-3">
-                            <button v-if="!p.completado" @click="completar(p.id)"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Completar
-                            </button>
-                        </div>
-                    </div>
-                </template>
-                <Pagination class="mt-6" :links="pedidos.links" :prefix="''" />
+        <div class="ui-page">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <SearchField v-model="q" placeholder="Buscar pedido" class="flex-1" />
+                <vue-single-select v-model="estadoSeleccionado" :options="estadoOptions" option-key="value" option-label="label" placeholder="Todos" class="w-full sm:w-56" />
             </div>
-            <!-- Vista en tabla (md y arriba) -->
-            <div class="relative overflow-x-auto hidden md:block w-full">
-                <table class="w-full table-auto text-sm text-left text-gray-600">
-                    <thead class="text-xs uppercase bg-gray-50">
-                        <tr class="[&>th]:px-4 [&>th]:py-3">
-                            <th class="px-4 py-2">Producto</th>
-                            <th class="px-4 py-2">Cantidad</th>
-                            <th class="px-4 py-2">Estado</th>
-                            <th class="px-4 py-2">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="[&>tr>:is(td)]:px-4 [&>tr>:is(td)]:py-2">
-                        <template v-for="g in groupedPedidos" :key="g.uuid">
-                            <tr class="bg-gray-100">
-                                <td colspan="7" class="px-4 py-2 font-semibold">
-                                    Pedido {{ g.uuid }} - Sucursal: {{ g.items[0].sucursal.nombre }} -
-                                    Solicitante: {{ g.items[0].nombre_solicitante }} ({{
-                                        g.items[0].numero_solicitante }})
-                                </td>
-                            </tr>
-                            <tr v-for="p in g.items" :key="p.id" class="border-b">
-                                <td class="px-4 py-2">{{ nombreProducto(p.producto) }}</td>
-                                <td class="px-4 py-2">{{ p.cantidad }}</td>
-                                <td class="px-4 py-2">
-                                    <span v-if="p.completado" class="text-green-600">Completado</span>
-                                    <span v-else class="text-yellow-600">Pendiente</span>
-                                </td>
-                                <td class="px-4 py-2">
-                                    <button v-if="!p.completado" @click="completar(p.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                        Completar
-                                    </button>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-                <Pagination class="mt-6" :links="pedidos.links" :prefix="''" />
+
+            <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <section v-for="g in groupedPedidos" :key="g.uuid" class="ui-card overflow-hidden">
+                    <header class="flex items-start justify-between gap-3 p-4">
+                        <div class="min-w-0">
+                            <p class="truncate text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">Pedido {{ g.uuid }}</p>
+                            <h2 class="text-[17px] font-bold leading-snug">{{ g.items[0].nombre_solicitante }}</h2>
+                            <p class="ui-muted">{{ g.items[0].numero_solicitante }} · Sucursal {{ g.items[0].sucursal?.nombre }}</p>
+                        </div>
+                        <span class="ui-badge shrink-0">{{ g.items.length === 1 ? '1 producto' : `${g.items.length} productos` }}</span>
+                    </header>
+                    <div v-for="p in g.items" :key="p.id" class="ui-row flex-wrap">
+                        <span class="min-w-0 flex-1 font-semibold">{{ nombreProducto(p.producto) }}</span>
+                        <span class="ui-badge">{{ p.cantidad }} uds.</span>
+                        <span class="ui-badge" :class="p.completado ? 'ui-badge-green' : 'ui-badge-amber'">{{ p.completado ? 'Completado' : 'Pendiente' }}</span>
+                        <button v-if="!p.completado" type="button" class="ui-btn" @click="completar(p.id)">Completar</button>
+                    </div>
+                </section>
             </div>
+
+            <EmptyState v-if="!groupedPedidos.length" title="No hay pedidos" text="No hay pedidos con los filtros seleccionados." />
+            <Pagination :links="pedidos.links" :prefix="''" />
         </div>
     </AppLayout>
 </template>

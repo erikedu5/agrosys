@@ -1,5 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import RecordCard from '@/Components/RecordCard.vue';
+import { formatFecha } from '@/utils/formato';
 import { ref, watch, defineProps, onMounted } from 'vue';
 import { usePersistedForm } from '@/stores/formStore';
 import Pagination from '@/Components/Pagination.vue'
@@ -99,158 +102,87 @@ const onInventarioSuccess = () => {
 </script>
 
 <template>
-    <AppLayout title="CrearProducto">
+    <AppLayout title="Solución">
         <template #header>
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                        Crear solucion para el producto: {{ props.producto.nombre }}
-                    </h2>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Stock actual:
-                        <span
-                            :class="(props.producto.cantidad || 0) > 0 ? 'font-bold text-blue-600' : 'font-bold text-red-600'">
-                            {{ props.producto.cantidad || 0 }}
-                        </span>
-                        unidades
-                        <span v-if="(props.producto.cantidad || 0) === 0" class="text-red-500 text-xs ml-2">
-                            (Sin stock disponible)
-                        </span>
-                    </p>
-                </div>
-                <button @click="openInventarioModal"
-                    class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:bg-blue-700 active:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Agregar Inventario
+            <PageHeader :title="`Soluciones de ${props.producto.nombre}`"
+                :subtitle="(props.producto.cantidad || 0) > 0 ? `Existencia actual: ${props.producto.cantidad} unidades` : 'Sin existencia disponible'"
+                :back="route('inventario.index')">
+                <button type="button" @click="openInventarioModal" class="ui-btn ui-btn-primary w-full sm:w-auto">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    Agregar inventario
                 </button>
-            </div>
+            </PageHeader>
         </template>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grow">
+        <div class="ui-page">
+            <div class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                <div>
+                    <h2 class="ui-section-title">{{ props.solucion ? 'Editar solución' : 'Nueva solución' }}</h2>
+                    <p class="ui-help">Los campos marcados con * son obligatorios.</p>
+                </div>
 
-                <div class="md-col-span-2 mt-5 md:mt-0">
+                <div class="ui-field">
+                    <label class="ui-label">Enfermedad y flor que afecta <span class="text-red-600" title="Campo obligatorio">*</span></label>
+                    <vue-single-select id="solucion" placeholder="Seleccione enfermedad"
+                        v-model="form.id_enfermedad_tipo_flor" option-key="id" option-label="nombre"
+                        :options="enfermedadesFlor">
+                    </vue-single-select>
+                    <InputError :message="form.errors.id_enfermedad_tipo_flor" />
+                    <p v-if="clientErrors.id_enfermedad_tipo_flor" class="text-sm text-red-600">{{ clientErrors.id_enfermedad_tipo_flor }}</p>
+                </div>
 
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <p class="text-xs text-red-600 mb-3">Los campos marcados con * son obligatorios.</p>
-                        <label class="block font-medium text-sm text-gray-700">
-                            Enfermedad y flor que afecta
-                            <span class="text-red-500" title="Campo obligatorio"> *</span>
-                        </label>
-                        <vue-single-select id="solucion" placeholder="Seleccione enfermedad"
-                            v-model="form.id_enfermedad_tipo_flor" option-key="id" option-label="nombre"
-                            :options="enfermedadesFlor">
-                        </vue-single-select>
-                        <InputError class="mt-2" :message="form.errors.id_enfermedad_tipo_flor" />
-                        <p v-if="clientErrors.id_enfermedad_tipo_flor" class="text-xs text-red-600 mt-1">
-                            {{ clientErrors.id_enfermedad_tipo_flor }}
-                        </p>
-                        <br>
+                <form class="flex flex-col gap-4" @submit.prevent="submit">
+                    <div class="ui-field">
+                        <label class="ui-label">Condiciones de aplicación</label>
+                        <textarea class="ui-input" v-model="form.condiciones"></textarea>
+                        <InputError :message="form.errors.condiciones" />
+                    </div>
 
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Condiciones de aplicación</label>
-                            <textarea class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.condiciones"></textarea>
-                            <InputError class="mt-2" :message="form.errors.condiciones" />
-                            <br>
-                            <br>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Dosis por bomba en ml/gr <span class="text-red-600" title="Campo obligatorio">*</span></label>
+                            <input type="number" step="0.01" min="0" class="ui-input" :class="{ 'ui-input-error': clientErrors.dosis_bomba_ml }"
+                                v-model="form.dosis_bomba_ml" placeholder="Ej: 25.5">
+                            <InputError :message="form.errors.dosis_bomba_ml" />
+                            <p v-if="clientErrors.dosis_bomba_ml" class="text-sm text-red-600">{{ clientErrors.dosis_bomba_ml }}</p>
+                            <p class="ui-help">Dosis recomendada por bomba de 20 litros</p>
+                        </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block font-medium text-sm text-gray-700">Dosis por bomba en
-                                        Ml/Gr. <span class="text-red-500" title="Campo obligatorio"> *</span></label>
-                                    <input type="number" step="0.01" min="0"
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="clientErrors.dosis_bomba_ml ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        v-model="form.dosis_bomba_ml"
-                                        placeholder="Ej: 25.5">
-                                    <InputError class="mt-2" :message="form.errors.dosis_bomba_ml" />
-                                    <p v-if="clientErrors.dosis_bomba_ml" class="text-xs text-red-600 mt-1">
-                                        {{ clientErrors.dosis_bomba_ml }}
-                                    </p>
-                                    <p class="text-xs text-gray-500 mt-1">Dosis recomendada por bomba de 20 litros</p>
-                                </div>
-
-                                <div>
-                                    <label class="block font-medium text-sm text-gray-700">Dosis por tambo en
-                                        Ml/Gr. <span class="text-red-500" title="Campo obligatorio"> *</span></label>
-                                    <input type="number" step="0.01" min="0"
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="clientErrors.dosis_tambo_ml ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''"
-                                        v-model="form.dosis_tambo_ml"
-                                        placeholder="Ej: 375">
-                                    <InputError class="mt-2" :message="form.errors.dosis_tambo_ml" />
-                                    <p v-if="clientErrors.dosis_tambo_ml" class="text-xs text-red-600 mt-1">
-                                        {{ clientErrors.dosis_tambo_ml }}
-                                    </p>
-                                    <p class="text-xs text-gray-500 mt-1">Dosis recomendada por tambo de 300 litros</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                <p class="text-sm text-blue-700">
-                                    <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    Los campos de dosis son obligatorios para guardar la solucion. Ingrese cada valor segun las recomendaciones especificas del producto.
-                                </p>
-                            </div>
-                            <br>
-                            <br>
-
-                            <button
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
-
-                        <hr class="my-6">
-
-                        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                <thead
-                                    class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                    <tr>
-                                        <th>Id</th>
-                                        <th>Nombre del producto</th>
-                                        <th>Enfermedad en planta</th>
-                                        <th>Dosis en ml por bomba</th>
-                                        <th>Dosis en ml por tambo</th>
-                                        <th>Condiciones de aplicación</th>
-                                        <th>Ultima actualización</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="solucionByProduct in solucionesByProduct.data"
-                                        :value="solucionByProduct.nombre" :key="solucionByProduct.id">
-                                        <td class="px-4 py-2"> {{ solucionByProduct.id }}</td>
-                                        <td class="px-4 py-2"> {{ props.producto.nombre }} </td>
-                                        <td class="px-4 py-2"> {{ solucionByProduct.enfermedad.nombre }} en {{
-                                            solucionByProduct.tipoFlor.nombre }} </td>
-                                        <td class="px-4 py-2"> {{ solucionByProduct.dosis_bomba_ml }} </td>
-                                        <td class="px-4 py-2"> {{ solucionByProduct.dosis_tambo_ml }} </td>
-                                        <td class="px-4 py-2"> {{ solucionByProduct.condiciones }} </td>
-                                        <td class="px-4 py-2"> {{ solucionByProduct.updated_at }} </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div name="Pagination">
-
-                                <Pagination class="mt-6" :links="solucionesByProduct.links"
-                                    :prefix="'&id_producto=' + props.producto.id" />
-                            </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Dosis por tambo en ml/gr <span class="text-red-600" title="Campo obligatorio">*</span></label>
+                            <input type="number" step="0.01" min="0" class="ui-input" :class="{ 'ui-input-error': clientErrors.dosis_tambo_ml }"
+                                v-model="form.dosis_tambo_ml" placeholder="Ej: 375">
+                            <InputError :message="form.errors.dosis_tambo_ml" />
+                            <p v-if="clientErrors.dosis_tambo_ml" class="text-sm text-red-600">{{ clientErrors.dosis_tambo_ml }}</p>
+                            <p class="ui-help">Dosis recomendada por tambo de 300 litros</p>
                         </div>
                     </div>
-                </div>
+
+                    <div class="ui-alert ui-alert-blue">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <p>Los campos de dosis son obligatorios para guardar la solución. Ingrese cada valor según las recomendaciones específicas del producto.</p>
+                    </div>
+
+                    <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+                </form>
             </div>
+
+            <h2 class="ui-section-title">Soluciones registradas</h2>
+            <div class="ui-grid">
+                <RecordCard v-for="solucionByProduct in solucionesByProduct.data" :key="solucionByProduct.id"
+                    :eyebrow="`#${solucionByProduct.id}`"
+                    :title="`${solucionByProduct.enfermedad?.nombre ?? '—'} en ${solucionByProduct.tipoFlor?.nombre ?? '—'}`"
+                    :fields="[
+                        { label: 'Dosis por bomba', value: solucionByProduct.dosis_bomba_ml },
+                        { label: 'Dosis por tambo', value: solucionByProduct.dosis_tambo_ml },
+                        { label: 'Condiciones de aplicación', value: solucionByProduct.condiciones, wide: true },
+                        { label: 'Última actualización', value: formatFecha(solucionByProduct.updated_at), wide: true },
+                    ]" />
+            </div>
+            <p v-if="!solucionesByProduct.data?.length" class="ui-muted">Este producto aún no tiene soluciones registradas.</p>
+            <Pagination :links="solucionesByProduct.links" :prefix="'&id_producto=' + props.producto.id" />
         </div>
 
         <!-- Modal de agregar inventario -->

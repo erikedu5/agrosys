@@ -531,14 +531,15 @@ export default defineComponent ({
 .search-input {
     display: block;
     width: 100%;
-    padding: 0.375em 0.75em;
-    font-size: 1em;
+    min-height: 3rem;
+    padding: 0.625rem 2.5rem 0.625rem 1rem;
+    font-size: 1rem;
     line-height: 1.5;
-    color: #495057;
+    color: #111827;
     background-color: #fff;
     background-clip: padding-box;
-    border: 1px solid #ced4da;
-    border-radius: 0.25em;
+    border: 2px solid #d1d5db;
+    border-radius: 0.75rem;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     box-sizing: border-box;
 }
@@ -555,7 +556,6 @@ export default defineComponent ({
 }
 .single-select-wrapper {
     position: relative;
-    margin-bottom: 0.5em;
 }
 .required {
     _color: #721c24;
@@ -570,8 +570,8 @@ export default defineComponent ({
     0 2px 4px 0 rgba(0, 0, 0, 0.08);
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.08);
     background-color: #fff;
-    color: #606f7b;
-    border-radius: 0.25em;
+    color: #374151;
+    border-radius: 0.75rem;
     line-height: 1.25;
     text-align: left;
 }

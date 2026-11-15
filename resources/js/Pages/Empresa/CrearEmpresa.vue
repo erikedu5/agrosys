@@ -1,6 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
+    import PageHeader from '@/Components/PageHeader.vue';
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
@@ -53,143 +54,89 @@ const props = defineProps({
 </script>
 
 <template>
-    <AppLayout title="CrearEmpresa">
+    <AppLayout title="Empresa">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Empresa
-            </h2>
+            <PageHeader :title="empresa ? 'Editar empresa' : 'Nueva empresa'" subtitle="Datos fiscales y configuración" :back="route('empresa.index')" />
         </template>
 
-        <hr class="my-6">
-
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.nombre">
-                            <InputError class="mt-2" :message="form.errors.nombre" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Dirección</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.direccion">
-                            <InputError class="mt-2" :message="form.errors.direccion" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Telefono</label>
-                            <input type="tel"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.telefono">
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Email</label>
-                            <input type="email"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.email">
-                            <InputError class="mt-2" :message="form.errors.email" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">RFC</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.rfc">
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Aviso</label>
-                            <textarea
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.aviso"
-                                rows="6">
-                            </textarea>
-                            <br>
-                            <br>
-
-                            <label class="inline-flex items-center">
-                                <input type="checkbox"
-                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                                    v-model="form.mostrar_campos_precio">
-                                <span class="ml-2 text-sm text-gray-700">
-                                    Mostrar precio de compra en productos
-                                </span>
-                            </label>
-                            <br>
-                            <br>
-                            <div v-if="isSuperAdmin || all">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox"
-                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                                        v-model="form.enviar_facturas_automaticas">
-                                    <span class="ml-2 text-sm text-gray-700">
-                                        Enviar facturas automáticamente al generar ventas
-                                    </span>
-                                </label>
-                                <p class="mt-1 text-xs text-gray-500">
-                                    Al activar esta opción se intentará timbrar y enviar el CFDI en cada venta con cliente que requiera factura.
-                                </p>
-                                <br>
-                                <br>
-                            </div>
-
-                            <div v-if="isSuperAdmin">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox"
-                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                                        v-model="form.ventas_bloqueadas">
-                                    <span class="ml-2 text-sm text-gray-700">
-                                        Bloqueo de funcionalidades de venta e inventario
-                                    </span>
-                                </label>
-                                <InputError class="mt-2" :message="form.errors.ventas_bloqueadas" />
-                                <br>
-                                <br>
-                                <div>
-                                    <label class="block font-medium text-sm text-gray-700">
-                                        Motivo del bloqueo
-                                    </label>
-                                    <textarea
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="{ 'bg-gray-100 cursor-not-allowed': !form.ventas_bloqueadas }"
-                                        rows="3"
-                                        v-model="form.motivo_bloqueo"
-                                        :disabled="!form.ventas_bloqueadas"
-                                    ></textarea>
-                                    <InputError class="mt-2" :message="form.errors.motivo_bloqueo" />
-                                </div>
-                                <br>
-                                <br>
-                            </div>
-
-                            <div v-if="!all">
-                            <label class="block font-medium text-sm text-gray-700">Máximo número de sucursales</label>
-                            <input type="number" step="1" min="1"
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{'border-red-500': form.errors.numero_sucursales}"
-                                v-model="form.numero_sucursales">
-                            <InputError class="mt-2" :message="form.errors.numero_sucursales" />
-                            <br>
-                            <br>
-                            </div>
-
-                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
+        <div class="ui-page ui-page-narrow">
+            <form class="flex flex-col gap-4" @submit.prevent="submit">
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Datos de la empresa</h2>
+                    <div class="ui-field">
+                        <label class="ui-label">Nombre</label>
+                        <input type="text" class="ui-input" v-model="form.nombre">
+                        <InputError :message="form.errors.nombre" />
                     </div>
-                </div>
-            </div>
+
+                    <div class="ui-field">
+                        <label class="ui-label">Dirección</label>
+                        <input type="text" class="ui-input" v-model="form.direccion">
+                        <InputError :message="form.errors.direccion" />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Teléfono</label>
+                            <input type="tel" class="ui-input" v-model="form.telefono">
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Email</label>
+                            <input type="email" class="ui-input" v-model="form.email">
+                            <InputError :message="form.errors.email" />
+                        </div>
+                    </div>
+
+                    <div class="ui-field">
+                        <label class="ui-label">RFC</label>
+                        <input type="text" class="ui-input" v-model="form.rfc">
+                    </div>
+
+                    <div class="ui-field">
+                        <label class="ui-label">Aviso</label>
+                        <textarea class="ui-input" v-model="form.aviso" rows="6"></textarea>
+                    </div>
+                </section>
+
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Configuración</h2>
+                    <label class="ui-check">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.mostrar_campos_precio">
+                        Mostrar precio de compra en productos
+                    </label>
+
+                    <div v-if="isSuperAdmin || all" class="ui-field">
+                        <label class="ui-check">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.enviar_facturas_automaticas">
+                            Enviar facturas automáticamente al generar ventas
+                        </label>
+                        <p class="ui-help">Al activar esta opción se intentará timbrar y enviar el CFDI en cada venta con cliente que requiera factura.</p>
+                    </div>
+
+                    <template v-if="isSuperAdmin">
+                        <div class="ui-field">
+                            <label class="ui-check">
+                                <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.ventas_bloqueadas">
+                                Bloqueo de funcionalidades de venta e inventario
+                            </label>
+                            <InputError :message="form.errors.ventas_bloqueadas" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Motivo del bloqueo</label>
+                            <textarea class="ui-input" rows="3" v-model="form.motivo_bloqueo" :disabled="!form.ventas_bloqueadas"></textarea>
+                            <InputError :message="form.errors.motivo_bloqueo" />
+                        </div>
+                    </template>
+
+                    <div v-if="!all" class="ui-field">
+                        <label class="ui-label">Máximo número de sucursales</label>
+                        <input type="number" step="1" min="1" class="ui-input" :class="{ 'ui-input-error': form.errors.numero_sucursales }" v-model="form.numero_sucursales">
+                        <InputError :message="form.errors.numero_sucursales" />
+                    </div>
+                </section>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>

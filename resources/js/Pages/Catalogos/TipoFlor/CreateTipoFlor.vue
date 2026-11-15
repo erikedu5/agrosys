@@ -1,48 +1,40 @@
 <template>
-    <AppLayout title="CrearTipoFlor">
+    <AppLayout title="Tipo de flor">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Tipo de flor
-            </h2>
+            <PageHeader :title="tipoFlor ? 'Editar tipo de flor' : 'Nuevo tipo de flor'" subtitle="Catálogo de tipos de flor" :back="route('tipoFlor.index')" />
         </template>
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8  mt-5">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.nombre">
-                            <InputError class="mt-2" :message="form.errors.nombre" />
-                                <br>
-                                <label class="block font-medium text-sm text-gray-700">Enfermedades</label>
-                                <vue-single-select v-model="enfermedadSeleccionada" :options="enfermedades" option-key="id" option-label="nombre" placeholder="Seleccione una enfermedad" @input="agregarEnfermedad" class="w-full" />
-                                <div class="mt-2 flex flex-wrap gap-2">
-                                    <span v-for="(e, idx) in form.selectedOptions" :key="idx" class="bg-gray-200 px-2 py-1 rounded">
-                                        {{ e }}
-                                        <button type="button" class="ml-1" @click="form.selectedOptions.splice(idx,1)">x</button>
-                                    </span>
-                                </div>
-                                <InputError class="mt-2" :message="form.errors.selectedOptions" />
-                                <br>
-                            <button
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
-                    </div>
+
+        <div class="ui-page ui-page-narrow">
+            <form class="ui-card flex flex-col gap-4 p-4 sm:p-5" @submit.prevent="submit">
+                <div class="ui-field">
+                    <label class="ui-label">Nombre</label>
+                    <input type="text" class="ui-input" v-model="form.nombre">
+                    <InputError :message="form.errors.nombre" />
                 </div>
-            </div>
+
+                <div class="ui-field">
+                    <label class="ui-label">Enfermedades</label>
+                    <vue-single-select v-model="enfermedadSeleccionada" :options="enfermedades" option-key="id" option-label="nombre" placeholder="Seleccione una enfermedad" @input="agregarEnfermedad" class="w-full" />
+                    <div v-if="form.selectedOptions.length" class="flex flex-wrap gap-2 pt-1">
+                        <span v-for="(e, idx) in form.selectedOptions" :key="idx" class="inline-flex h-9 items-center gap-1 rounded-full border border-gray-300 bg-white pl-3 pr-1 text-sm font-semibold text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+                            {{ e }}
+                            <button type="button" class="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-red-700 dark:hover:bg-gray-700" :aria-label="`Quitar ${e}`" @click="form.selectedOptions.splice(idx,1)">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </span>
+                    </div>
+                    <InputError :message="form.errors.selectedOptions" />
+                </div>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>
 
 <script setup>
 import AppLayout from'@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
 import { usePersistedForm } from '@/stores/formStore';
 import { ref } from 'vue';
 import InputError from '@/Components/InputError.vue';

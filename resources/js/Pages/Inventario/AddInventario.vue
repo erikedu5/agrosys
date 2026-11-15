@@ -1,6 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
+    import PageHeader from '@/Components/PageHeader.vue';
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
 
@@ -22,48 +23,26 @@
 </script>
 
 <template>
-    <AppLayout title="AgregarInventarioProducto">
+    <AppLayout title="Agregar inventario">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Agregar producto al inventario
-            </h2>
+            <PageHeader title="Agregar al inventario" :subtitle="form.nombre" :back="route('inventario.index')" />
         </template>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" readonly
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.nombre">
-                                <br>
-                                <br>
-
-
-                            <label class="block font-medium text-sm text-gray-700">Actualmente en stock hay: {{ props.producto.cantidad }}</label>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Cantidad de productos a agregar</label>
-                            <input type="number" min="1" step="0.01"
-                                class="form-input w-full rounded-md shadow-sm"
-                                v-model="form.cantidad">
-                            <InputError class="mt-2" :message="form.errors.cantidad" />
-                                <br>
-                                <br>
-
-                            <button
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
-                    </div>
+        <div class="ui-page ui-page-narrow">
+            <form class="ui-card flex flex-col gap-4 p-4 sm:p-5" @submit.prevent="submit">
+                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center dark:border-gray-700 dark:bg-gray-900">
+                    <p class="ui-muted">Actualmente en existencia · {{ form.nombre }}</p>
+                    <p class="text-4xl font-extrabold text-gray-900 dark:text-gray-100">{{ props.producto.cantidad }}</p>
                 </div>
-            </div>
+
+                <div class="ui-field">
+                    <label class="ui-label">Cantidad a agregar</label>
+                    <input type="number" min="1" step="0.01" class="ui-input text-right text-2xl font-bold" v-model="form.cantidad">
+                    <InputError :message="form.errors.cantidad" />
+                </div>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>

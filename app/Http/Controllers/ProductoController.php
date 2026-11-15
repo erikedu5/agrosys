@@ -33,8 +33,26 @@ class ProductoController extends Controller
                 ->orWhere('barcode', 'LIKE', "%$request->q%")
                 ->orWhere('ingrediente_activo', 'LIKE', "%$request->q%");
         })
+            ->when($request->filled('marca'), fn ($query) => $query->where('id_marca', $request->integer('marca')))
+            ->when(in_array($request->existencia, ['normal', 'baja', 'agotado'], true), function ($query) use ($request, $sucursalId) {
+                // Existencia = cantidad_nueva del último movimiento del producto en la sucursal (igual que la que se muestra).
+                $ultima = AltaInventario::select('cantidad_nueva')
+                    ->whereColumn('id_producto', $query->getModel()->getTable() . '.id')
+                    ->where('id_sucursal', $sucursalId)
+                    ->orderBy('created_at', 'desc')
+                    ->limit(1);
+                $stock = "COALESCE(CAST(({$ultima->toSql()}) AS DECIMAL(14,2)), 0)";
+                $condicion = [
+                    'agotado' => "$stock <= 0",
+                    'baja' => "$stock > 0 AND $stock <= 5",
+                    'normal' => "$stock > 5",
+                ][$request->existencia];
+                $veces = substr_count($condicion, $stock);
+                $query->whereRaw("($condicion)", array_merge(...array_fill(0, $veces, $ultima->getBindings())));
+            })
             ->latest()
-            ->paginate(10);
+            ->paginate(12)
+            ->withQueryString();
 
         foreach ($productos as $producto) {
             $marca = CatMarca::where('id', $producto->id_marca)->first();
@@ -47,6 +65,12 @@ class ProductoController extends Controller
 
         return Inertia::render('Inventario/Inventario', [
             'productos' => $productos,
+            'marcas' => CatMarca::orderBy('nombre')->get(['id', 'nombre']),
+            'filtros' => [
+                'q' => (string) $request->q,
+                'marca' => $request->filled('marca') ? $request->integer('marca') : null,
+                'existencia' => in_array($request->existencia, ['normal', 'baja', 'agotado'], true) ? $request->existencia : null,
+            ],
             'ventasBloqueadas' => $ventasBloqueadas,
             'motivoBloqueo' => $motivoBloqueo,
         ]);

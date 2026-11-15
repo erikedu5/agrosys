@@ -1,5 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import SearchField from '@/Components/SearchField.vue';
+import RecordCard from '@/Components/RecordCard.vue';
+import EmptyState from '@/Components/EmptyState.vue';
+import { formatFecha, formatMoneda } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
 import Pagination from '@/Components/Pagination.vue'
@@ -32,113 +37,35 @@ watch(q, (value) => {
 </script>
 
 <template>
-    <AppLayout title="Dashboard">
+    <AppLayout title="Compras a proveedores">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Compras a proveedores
-            </h2>
-            <br>
-            <div class="flex justify-between">
-                <input type="text" class="form-input rounded-md shadow-sm w-full bg-white text-gray-900 border-gray-300 placeholder-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:border-gray-500 dark:placeholder-gray-400" v-model="q"
-                    placeholder="Buscar compra...">
-
-            </div>
+            <PageHeader title="Compras a proveedores" subtitle="Compras, créditos y abonos">
+                <Link :href="route('compra.create')" class="ui-btn ui-btn-primary w-full sm:w-auto">Nueva compra</Link>
+            </PageHeader>
         </template>
 
-        <hr class="my-6 border-gray-200 dark:border-gray-600">
-        <div class="flex justify-end max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
-            <Link :href="route('compra.create')"
-                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                       hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                       focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                       dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-            Nueva compra
-            </Link>
-        </div>
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2">
+        <div class="ui-page">
+            <SearchField v-model="q" placeholder="Buscar compra o proveedor" />
 
-            <!-- Vista en tarjetas -->
-            <div class="md:hidden grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <div v-for="compra in compras.data" :key="compra.id" class="rounded-lg border border-gray-200 dark:border-gray-600 p-4 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-lg w-full">
-                    <div class="text-sm text-gray-600 dark:text-gray-300">Proveedor</div>
-                    <div class="font-semibold text-gray-900 dark:text-white">{{ compra.proveedor }}</div>
-                    <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                            <div class="text-gray-600 dark:text-gray-300">Fecha de compra</div>
-                            <div>{{ compra.fecha_compra }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-600 dark:text-gray-300">Total de la compra</div>
-                            <div>{{ compra.total_compra }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-600 dark:text-gray-300">Fecha limite de credito</div>
-                            <div>{{ compra.fecha_credito }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-600 dark:text-gray-300">Total del credito</div>
-                            <div>{{ compra.total_credito }}</div>
-                        </div>
-                        <div>
-                            <div class="text-gray-600 dark:text-gray-300">Estatus de la compra</div>
-                            <span :class="'px-2 py-1 rounded-full text-xs capitalize ' + statusClass(compra.status)">{{ compra.status }}</span>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex justify-end">
-                         <div class="inline-flex rounded-md shadow-sm" role="group">
-                                    <Link :href="route('compra.show', compra.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Detalle
-                                    </Link>
-                                </div>
-                    </div>
-                </div>
-                <div name="Pagination">
-                    <Pagination class="mt-6" :links="compras.links" />
-                </div>
-            </div>
-            <div class="relative overflow-x-auto hidden md:block w-full">
-                <table class="w-full text-sm text-left text-gray-700 dark:text-gray-100">
-                    <thead class="text-xs font-semibold uppercase bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100">
-                        <tr class="[&>th]:px-4 [&>th]:py-3">
-                            <th>Id</th>
-                            <th>Proveedor</th>
-                            <th>Fecha de compra</th>
-                            <th>Total de la compra</th>
-                            <th>Fecha limite de credito</th>
-                            <th>Total del credito</th>
-                            <th>Estatus de la compra</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="[&>tr>:is(td)]:px-4 [&>tr>:is(td)]:py-2">
-                        <tr v-for="compra in compras.data" :key="compra.id" class="border-b border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700">
-                            <td class="px-4 py-2"> {{ compra.id }}</td>
-                            <td class="px-4 py-2"> {{ compra.proveedor }} </td>
-                            <td class="px-4 py-2"> {{ compra.fecha_compra }} </td>
-                            <td class="px-4 py-2"> {{ compra.total_compra }}</td>
-                            <td class="px-4 py-2"> {{ compra.fecha_credito }} </td>
-                            <td class="px-4 py-2"> {{ compra.total_credito }}</td>
-                            <td class="px-4 py-2">
-                                <span :class="'px-2 py-1 rounded-full text-xs capitalize ' + statusClass(compra.status)">{{ compra.status }}</span>
-                            </td>
-                            <td class="px-4 py-2">
-                                <div class="inline-flex rounded-md shadow-sm" role="group">
-                                    <Link :href="route('compra.show', compra.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                    Detalle
-                                    </Link>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div name="Pagination">
-                    <Pagination class="mt-6" :links="compras.links" />
-                </div>
+            <div class="ui-grid">
+                <RecordCard v-for="compra in compras.data" :key="compra.id" :eyebrow="`Compra #${compra.id}`" :title="compra.proveedor"
+                    :fields="[
+                        { label: 'Fecha de compra', value: formatFecha(compra.fecha_compra) },
+                        { label: 'Límite de crédito', value: formatFecha(compra.fecha_credito) },
+                        { label: 'Saldo a crédito', value: formatMoneda(compra.total_credito), wide: true },
+                    ]">
+                    <template #badge>
+                        <span class="ui-badge capitalize" :class="statusClass(compra.status)">{{ compra.status }}</span>
+                    </template>
+                    <p class="text-xl font-extrabold">{{ formatMoneda(compra.total_compra) }}</p>
+                    <template #actions>
+                        <Link :href="route('compra.show', compra.id)" class="ui-btn flex-1">Ver detalle</Link>
+                    </template>
+                </RecordCard>
             </div>
 
-
+            <EmptyState v-if="!compras.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay compras'" text="Registra una compra a proveedor para verla aquí." />
+            <Pagination :links="compras.links" />
         </div>
     </AppLayout>
 </template>

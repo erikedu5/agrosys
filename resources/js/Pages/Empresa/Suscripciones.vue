@@ -1,5 +1,9 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import SearchField from '@/Components/SearchField.vue';
+import RecordCard from '@/Components/RecordCard.vue';
+import EmptyState from '@/Components/EmptyState.vue';
 import Pagination from '@/Components/Pagination.vue';
 import InputError from '@/Components/InputError.vue';
 import { computed, ref, watch } from 'vue';
@@ -104,179 +108,90 @@ const formatDate = (value) => {
 <template>
     <AppLayout title="Panel de Suscripciones">
         <template #header>
-            <div class="flex items-center justify-between gap-4">
-                <div>
-                    <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                        Panel de Suscripciones (SuperAdmin)
-                    </h2>
-                    <p class="text-sm text-gray-500 mt-1">
-                        Control manual para empresas con pagos fuera de Stripe.
-                    </p>
-                </div>
-                <Link
-                    :href="route('empresa.index')"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700"
-                >
-                    Volver a empresas
-                </Link>
-            </div>
-            <br>
-            <input
-                type="text"
-                class="form-input rounded-md shadow-sm w-full"
-                v-model="q"
-                placeholder="Buscar empresa..."
-            >
+            <PageHeader title="Suscripciones" subtitle="Control manual para empresas con pagos fuera de Stripe" :back="route('empresa.index')" />
         </template>
 
-        <hr class="my-6">
+        <div class="ui-page">
+            <SearchField v-model="q" placeholder="Buscar empresa" />
 
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="xl:col-span-2 bg-white rounded-lg shadow p-4 overflow-x-auto">
-                <table class="w-full text-sm text-left text-gray-500">
-                    <thead class="text-xs uppercase bg-gray-50">
-                        <tr class="[&>th]:px-3 [&>th]:py-3">
-                            <th>Empresa</th>
-                            <th>Plan</th>
-                            <th>Inicio suscripción</th>
-                            <th>Vencimiento</th>
-                            <th>Estado</th>
-                            <th>Acceso</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="empresa in empresas.data" :key="empresa.id" class="border-b">
-                            <td class="px-3 py-2">
-                                <div class="font-semibold text-gray-900">{{ empresa.nombre }}</div>
-                                <div class="text-xs text-gray-500">ID: {{ empresa.id }}</div>
-                            </td>
-                            <td class="px-3 py-2">
-                                {{ displayPlan(empresa) }}
-                            </td>
-                            <td class="px-3 py-2">{{ formatDate(empresa.manual_subscription_starts_at) }}</td>
-                            <td class="px-3 py-2">{{ formatDate(empresa.manual_subscription_ends_at) }}</td>
-                            <td class="px-3 py-2">
-                                <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700">
-                                    {{ empresa.status }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2">
-                                <span
-                                    class="px-2 py-1 rounded text-xs font-semibold"
-                                    :class="empresa.can_access ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
-                                >
-                                    {{ empresa.can_access ? 'Habilitada' : 'Bloqueada' }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2">
-                                <button
-                                    type="button"
-                                    class="px-3 py-2 text-xs font-medium text-gray-900 bg-white border border-gray-200 rounded hover:bg-gray-100 hover:text-blue-700"
-                                    @click="selectEmpresa(empresa)"
-                                >
-                                    Configurar
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
+                <div class="flex min-w-0 flex-col gap-4">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <RecordCard v-for="empresa in empresas.data" :key="empresa.id" :eyebrow="`ID ${empresa.id}`" :title="empresa.nombre"
+                            :subtitle="displayPlan(empresa)" :selected="selectedEmpresa?.id === empresa.id"
+                            :fields="[
+                                { label: 'Inicio de suscripción', value: formatDate(empresa.manual_subscription_starts_at) },
+                                { label: 'Vencimiento', value: formatDate(empresa.manual_subscription_ends_at) },
+                                { label: 'Estado', value: empresa.status, wide: true },
+                            ]">
+                            <template #badge>
+                                <span class="ui-badge" :class="empresa.can_access ? 'ui-badge-green' : 'ui-badge-red'">{{ empresa.can_access ? 'Habilitada' : 'Bloqueada' }}</span>
+                            </template>
+                            <template #actions>
+                                <button type="button" class="ui-btn flex-1" @click="selectEmpresa(empresa)">Configurar</button>
+                            </template>
+                        </RecordCard>
+                    </div>
 
-                <Pagination class="mt-6" :links="empresas.links" />
-            </div>
-
-            <div class="bg-white rounded-lg shadow p-4">
-                <h3 class="text-lg font-semibold text-gray-900">{{ selectedEmpresaTitle }}</h3>
-                <p class="text-sm text-gray-500 mt-1">
-                    Define vigencia manual cuando la empresa ya pagó fuera de Stripe.
-                </p>
-
-                <div v-if="!selectedEmpresa" class="mt-4 text-sm text-gray-600">
-                    Selecciona una empresa desde la tabla para editar su vigencia.
+                    <EmptyState v-if="!empresas.data?.length" title="No hay empresas" />
+                    <Pagination :links="empresas.links" />
                 </div>
 
-                <form v-else class="mt-4 space-y-4" @submit.prevent="save">
+                <aside class="ui-card flex flex-col gap-4 p-5 xl:sticky xl:top-24">
                     <div>
-                        <label class="block font-medium text-sm text-gray-700">Plan</label>
-                        <select
-                            class="form-select w-full rounded-md shadow-sm"
-                            v-model="form.plan_code"
-                        >
-                            <option :value="null">Sin plan (legacy)</option>
-                            <option
-                                v-for="planOption in plans"
-                                :key="planOption.code"
-                                :value="planOption.code"
-                            >
-                                {{ planOption.name }}
-                            </option>
-                        </select>
-                        <InputError class="mt-2" :message="form.errors.plan_code" />
+                        <h2 class="ui-section-title">{{ selectedEmpresaTitle }}</h2>
+                        <p class="ui-muted">Define vigencia manual cuando la empresa ya pagó fuera de Stripe.</p>
                     </div>
 
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Ciclo</label>
-                        <select
-                            class="form-select w-full rounded-md shadow-sm"
-                            v-model="form.plan_cycle"
-                            :disabled="!form.plan_code"
-                        >
-                            <option value="monthly">Mensual</option>
-                            <option value="yearly" :disabled="!selectedPlan?.has_yearly">Anual</option>
-                        </select>
-                        <InputError class="mt-2" :message="form.errors.plan_cycle" />
-                    </div>
+                    <p v-if="!selectedEmpresa" class="rounded-xl border-2 border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-600 dark:border-gray-600 dark:text-gray-400">
+                        Elige “Configurar” en una empresa para editar su vigencia.
+                    </p>
 
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Fecha inicio</label>
-                        <input
-                            type="datetime-local"
-                            class="form-input w-full rounded-md shadow-sm"
-                            v-model="form.manual_subscription_starts_at"
-                            :disabled="form.clear_manual_dates"
-                        >
-                        <InputError class="mt-2" :message="form.errors.manual_subscription_starts_at" />
-                    </div>
+                    <form v-else class="flex flex-col gap-4" @submit.prevent="save">
+                        <div class="ui-field">
+                            <label class="ui-label">Plan</label>
+                            <select class="ui-input" v-model="form.plan_code">
+                                <option :value="null">Sin plan (legacy)</option>
+                                <option v-for="planOption in plans" :key="planOption.code" :value="planOption.code">{{ planOption.name }}</option>
+                            </select>
+                            <InputError :message="form.errors.plan_code" />
+                        </div>
 
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Fecha vencimiento</label>
-                        <input
-                            type="datetime-local"
-                            class="form-input w-full rounded-md shadow-sm"
-                            v-model="form.manual_subscription_ends_at"
-                            :disabled="form.clear_manual_dates"
-                        >
-                        <InputError class="mt-2" :message="form.errors.manual_subscription_ends_at" />
-                    </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Ciclo</label>
+                            <select class="ui-input" v-model="form.plan_cycle" :disabled="!form.plan_code">
+                                <option value="monthly">Mensual</option>
+                                <option value="yearly" :disabled="!selectedPlan?.has_yearly">Anual</option>
+                            </select>
+                            <InputError :message="form.errors.plan_cycle" />
+                        </div>
 
-                    <label class="inline-flex items-center">
-                        <input
-                            type="checkbox"
-                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
-                            v-model="form.clear_manual_dates"
-                        >
-                        <span class="ml-2 text-sm text-gray-700">Limpiar fechas manuales</span>
-                    </label>
+                        <div class="ui-field">
+                            <label class="ui-label">Fecha inicio</label>
+                            <input type="datetime-local" class="ui-input" v-model="form.manual_subscription_starts_at" :disabled="form.clear_manual_dates">
+                            <InputError :message="form.errors.manual_subscription_starts_at" />
+                        </div>
 
-                    <label class="inline-flex items-center">
-                        <input
-                            type="checkbox"
-                            class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500"
-                            v-model="form.manual_subscription_blocked"
-                        >
-                        <span class="ml-2 text-sm text-gray-700">Bloquear empresa manualmente</span>
-                    </label>
+                        <div class="ui-field">
+                            <label class="ui-label">Fecha vencimiento</label>
+                            <input type="datetime-local" class="ui-input" v-model="form.manual_subscription_ends_at" :disabled="form.clear_manual_dates">
+                            <InputError :message="form.errors.manual_subscription_ends_at" />
+                        </div>
 
-                    <InputError class="mt-2" :message="form.errors.manual_subscription_blocked" />
+                        <label class="ui-check">
+                            <input type="checkbox" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500" v-model="form.clear_manual_dates">
+                            Limpiar fechas manuales
+                        </label>
 
-                    <button
-                        type="submit"
-                        class="w-full px-4 py-2 text-sm font-medium text-white bg-gray-900 border border-gray-900 rounded hover:bg-black disabled:opacity-50"
-                        :disabled="form.processing"
-                    >
-                        Guardar configuración
-                    </button>
-                </form>
+                        <label class="ui-check">
+                            <input type="checkbox" class="rounded border-gray-300 text-red-600 shadow-sm focus:ring-red-500" v-model="form.manual_subscription_blocked">
+                            Bloquear empresa manualmente
+                        </label>
+                        <InputError :message="form.errors.manual_subscription_blocked" />
+
+                        <button type="submit" class="ui-btn ui-btn-primary ui-btn-lg w-full" :disabled="form.processing">Guardar configuración</button>
+                    </form>
+                </aside>
             </div>
         </div>
     </AppLayout>

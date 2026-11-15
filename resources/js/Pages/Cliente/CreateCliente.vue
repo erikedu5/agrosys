@@ -1,6 +1,7 @@
 
 <script setup>
     import AppLayout from'@/Layouts/AppLayout.vue';
+    import PageHeader from '@/Components/PageHeader.vue';
     import { usePersistedForm } from '@/stores/formStore';
     import Checkbox from '@/Components/Checkbox.vue';
     import InputError from '@/Components/InputError.vue';
@@ -106,130 +107,97 @@
 </script>
 
 <template>
-    <AppLayout title="Crear Cliente">
+    <AppLayout title="Cliente">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                    Crear Cliente
-            </h2>
+            <PageHeader :title="cliente ? 'Editar cliente' : 'Nuevo cliente'" subtitle="Precio, crédito y facturación" :back="route('cliente.index')" />
         </template>
 
-        <div class="flex max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="grow">
-                <div class="md-col-span-2 mt-5 md:mt-0">
-                    <div class="shadow-lg bg-white md:rounded-md p-4">
-                        <form @submit.prevent="submit">
-                            <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                            <input type="text" required
-                                class="form-input w-full rounded-md shadow-sm"
-                                :class="{'border-red-500': form.errors.nombre}"
-                                v-model="form.nombre">
-                            <InputError class="mt-2" :message="form.errors.nombre" />
-                            <br>
-                            <br>
-
-                            <label class="block font-medium text-sm text-gray-700">Precio asignado</label>
-                            <select class="form-input w-full rounded-md shadow-sm"
-                                :class="{'border-red-500': form.errors.tipo_precio}"
-                                v-model="form.tipo_precio">
-                                <option v-for="tipo in TIPOS_PRECIO" :key="tipo.value" :value="tipo.value">{{ tipo.label }}</option>
-                            </select>
-                            <p class="mt-1 text-xs text-gray-500">Precio del catálogo de productos que se usará en las ventas de este cliente.</p>
-                            <InputError class="mt-2" :message="form.errors.tipo_precio" />
-                            <br>
-                            <br>
-
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label class="block font-medium text-sm text-gray-700">Límite de crédito ($)</label>
-                                    <input type="number" step="0.01" min="0" placeholder="Sin límite"
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="{'border-red-500': form.errors.limite_credito}"
-                                        v-model="form.limite_credito">
-                                    <InputError class="mt-2" :message="form.errors.limite_credito" />
-                                </div>
-                                <div>
-                                    <label class="block font-medium text-sm text-gray-700">Plazo de crédito (días)</label>
-                                    <input type="number" step="1" min="1" placeholder="Sin plazo"
-                                        class="form-input w-full rounded-md shadow-sm"
-                                        :class="{'border-red-500': form.errors.plazo_credito_dias}"
-                                        v-model="form.plazo_credito_dias">
-                                    <InputError class="mt-2" :message="form.errors.plazo_credito_dias" />
-                                </div>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">Si el adeudo excede el límite o la venta a crédito sin pagar más antigua rebasa el plazo, al cliente solo se le podrá vender de contado. Vacío = sin restricción.</p>
-                            <br>
-                            <label class="block font-medium text-sm text-gray-700">
-                                <checkbox v-model:checked="form.requiereFactura" />
-                                <span class="ml-2 text-sm">Requiere factura</span>
-                            </label><br>
-
-                            <div v-if="form.requiereFactura">
-                                <label class="block font-medium text-sm text-gray-700">RFC</label>
-                                <input :required="form.requiereFactura"
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{'border-red-500': form.errors.rfc}"
-                                    v-model="form.rfc">
-                                <InputError class="mt-2" :message="form.errors.rfc" />
-                                <br>
-                                <br>
-
-                                <label class="block font-medium text-sm text-gray-700">Régimen fiscal</label>
-                                <select :required="form.requiereFactura"
-                                    class="form-select w-full rounded-md shadow-sm"
-                                    :class="{'border-red-500': form.errors.regimen_fiscal}"
-                                    v-model="form.regimen_fiscal">
-                                    <option value="" disabled>Seleccione una opción</option>
-                                    <option v-for="regimen in regimenesFiscales" :key="regimen.value" :value="regimen.value">
-                                        {{ regimen.label }}
-                                    </option>
-                                </select>
-                                <InputError class="mt-2" :message="form.errors.regimen_fiscal" />
-                                <br>
-                                <br>
-
-                                <label class="block font-medium text-sm text-gray-700">Código postal</label>
-                                <input :required="form.requiereFactura"
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{'border-red-500': form.errors.codigo_postal}"
-                                    v-model="form.codigo_postal">
-                                <InputError class="mt-2" :message="form.errors.codigo_postal" />
-                                <br>
-                                <br>
-
-                                <label class="block font-medium text-sm text-gray-700">Uso CFDI</label>
-                                <select :required="form.requiereFactura"
-                                    class="form-select w-full rounded-md shadow-sm"
-                                    :class="{'border-red-500': form.errors.uso_cfdi}"
-                                    v-model="form.uso_cfdi">
-                                    <option value="" disabled>Seleccione una opción</option>
-                                    <option v-for="uso in usosCfdi" :key="uso.value" :value="uso.value">
-                                        {{ uso.label }}
-                                    </option>
-                                </select>
-                                <InputError class="mt-2" :message="form.errors.uso_cfdi" />
-                                <br>
-                                <br>
-
-                                <label class="block font-medium text-sm text-gray-700">Correo para facturación (opcional)</label>
-                                <input type="email"
-                                    class="form-input w-full rounded-md shadow-sm"
-                                    :class="{'border-red-500': form.errors.email_facturacion}"
-                                    v-model="form.email_facturacion">
-                                <InputError class="mt-2" :message="form.errors.email_facturacion" />
-                                <br>
-                                <br>
-                            </div>
-
-                            <button class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded
-                                            hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                            focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                            dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Guardar
-                            </button>
-                        </form>
+        <div class="ui-page ui-page-narrow">
+            <form class="flex flex-col gap-4" @submit.prevent="submit">
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Datos del cliente</h2>
+                    <div class="ui-field">
+                        <label class="ui-label">Nombre</label>
+                        <input type="text" required class="ui-input" :class="{ 'ui-input-error': form.errors.nombre }" v-model="form.nombre">
+                        <InputError :message="form.errors.nombre" />
                     </div>
-                </div>
-            </div>
+
+                    <div class="ui-field">
+                        <label class="ui-label">Precio asignado</label>
+                        <select class="ui-input" :class="{ 'ui-input-error': form.errors.tipo_precio }" v-model="form.tipo_precio">
+                            <option v-for="tipo in TIPOS_PRECIO" :key="tipo.value" :value="tipo.value">{{ tipo.label }}</option>
+                        </select>
+                        <p class="ui-help">Precio del catálogo de productos que se usará en las ventas de este cliente.</p>
+                        <InputError :message="form.errors.tipo_precio" />
+                    </div>
+                </section>
+
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Crédito</h2>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Límite de crédito ($)</label>
+                            <input type="number" step="0.01" min="0" placeholder="Sin límite" class="ui-input" :class="{ 'ui-input-error': form.errors.limite_credito }" v-model="form.limite_credito">
+                            <InputError :message="form.errors.limite_credito" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Plazo de crédito (días)</label>
+                            <input type="number" step="1" min="1" placeholder="Sin plazo" class="ui-input" :class="{ 'ui-input-error': form.errors.plazo_credito_dias }" v-model="form.plazo_credito_dias">
+                            <InputError :message="form.errors.plazo_credito_dias" />
+                        </div>
+                    </div>
+                    <p class="ui-help">Si el adeudo excede el límite o la venta a crédito sin pagar más antigua rebasa el plazo, al cliente solo se le podrá vender de contado. Vacío = sin restricción.</p>
+                </section>
+
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Facturación</h2>
+                    <label class="ui-check">
+                        <Checkbox v-model:checked="form.requiereFactura" />
+                        Requiere factura
+                    </label>
+
+                    <template v-if="form.requiereFactura">
+                        <div class="ui-field">
+                            <label class="ui-label">RFC</label>
+                            <input :required="form.requiereFactura" class="ui-input" :class="{ 'ui-input-error': form.errors.rfc }" v-model="form.rfc">
+                            <InputError :message="form.errors.rfc" />
+                        </div>
+
+                        <div class="ui-field">
+                            <label class="ui-label">Régimen fiscal</label>
+                            <select :required="form.requiereFactura" class="ui-input" :class="{ 'ui-input-error': form.errors.regimen_fiscal }" v-model="form.regimen_fiscal">
+                                <option value="" disabled>Seleccione una opción</option>
+                                <option v-for="regimen in regimenesFiscales" :key="regimen.value" :value="regimen.value">{{ regimen.label }}</option>
+                            </select>
+                            <InputError :message="form.errors.regimen_fiscal" />
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="ui-field">
+                                <label class="ui-label">Código postal</label>
+                                <input :required="form.requiereFactura" class="ui-input" :class="{ 'ui-input-error': form.errors.codigo_postal }" v-model="form.codigo_postal">
+                                <InputError :message="form.errors.codigo_postal" />
+                            </div>
+                            <div class="ui-field">
+                                <label class="ui-label">Uso CFDI</label>
+                                <select :required="form.requiereFactura" class="ui-input" :class="{ 'ui-input-error': form.errors.uso_cfdi }" v-model="form.uso_cfdi">
+                                    <option value="" disabled>Seleccione una opción</option>
+                                    <option v-for="uso in usosCfdi" :key="uso.value" :value="uso.value">{{ uso.label }}</option>
+                                </select>
+                                <InputError :message="form.errors.uso_cfdi" />
+                            </div>
+                        </div>
+
+                        <div class="ui-field">
+                            <label class="ui-label">Correo para facturación (opcional)</label>
+                            <input type="email" class="ui-input" :class="{ 'ui-input-error': form.errors.email_facturacion }" v-model="form.email_facturacion">
+                            <InputError :message="form.errors.email_facturacion" />
+                        </div>
+                    </template>
+                </section>
+
+                <button class="ui-btn ui-btn-primary ui-btn-lg w-full sm:w-auto sm:self-end" :disabled="form.processing">Guardar</button>
+            </form>
         </div>
     </AppLayout>
 </template>

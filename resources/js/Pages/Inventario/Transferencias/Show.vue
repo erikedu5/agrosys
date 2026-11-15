@@ -1,5 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import { formatFecha } from '@/utils/formato';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -46,144 +48,69 @@ const nombreProducto = (producto) => {
 <template>
     <AppLayout title="Detalle Transferencia">
         <template #header>
-            <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Transferencia {{ transferencia.folio || '#' + transferencia.id }}
-                </h2>
-                <Link :href="route('transferencias.index')" class="text-indigo-600 hover:text-indigo-900 text-sm">
-                    &larr; Volver al listado
-                </Link>
-            </div>
+            <PageHeader :title="`Transferencia ${transferencia.folio || '#' + transferencia.id}`"
+                :subtitle="`${transferencia.sucursal_origen?.nombre ?? '—'} → ${transferencia.sucursal_destino?.nombre ?? '—'}`"
+                :back="route('transferencias.index')">
+                <a v-if="transferencia.status === 'completado'" :href="route('transferencias.recibo', transferencia.id)" target="_blank" class="ui-btn w-full sm:w-auto">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" /></svg>
+                    Imprimir recibo
+                </a>
+            </PageHeader>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <!-- Header Info -->
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-6 p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Folio</p>
-                            <p class="text-lg font-bold text-gray-900">{{ transferencia.folio || 'N/A' }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Sucursal Origen</p>
-                            <p class="text-lg font-bold text-gray-900">{{ transferencia.sucursal_origen?.nombre }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Sucursal Destino</p>
-                            <p class="text-lg font-bold text-gray-900">{{ transferencia.sucursal_destino?.nombre }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Estado</p>
-                            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full mt-1" :class="statusColor(transferencia.status)">
-                                {{ transferencia.status.charAt(0).toUpperCase() + transferencia.status.slice(1) }}
-                            </span>
-                        </div>
-                        
-                        <!-- Usuario que envía -->
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Enviado por</p>
-                            <p class="text-gray-900">{{ transferencia.usuario_envia?.name || 'N/A' }}</p>
-                            <p class="text-xs text-gray-500" v-if="transferencia.fecha_envio">
-                                {{ new Date(transferencia.fecha_envio).toLocaleString() }}
-                            </p>
-                        </div>
-                        
-                        <!-- Usuario que recibe -->
-                        <div>
-                            <p class="text-sm text-gray-500 font-medium">Recibido por</p>
-                            <p class="text-gray-900">{{ transferencia.usuario_recibe?.name || 'Pendiente' }}</p>
-                            <p class="text-xs text-gray-500" v-if="transferencia.fecha_recepcion">
-                                {{ new Date(transferencia.fecha_recepcion).toLocaleString() }}
-                            </p>
-                        </div>
-                        
-                        <div class="col-span-1 md:col-span-2 lg:col-span-4" v-if="transferencia.observaciones">
-                            <p class="text-sm text-gray-500 font-medium">Observaciones</p>
-                            <p class="text-gray-700 bg-gray-50 p-2 rounded mt-1">{{ transferencia.observaciones }}</p>
-                        </div>
-                    </div>
+        <div class="ui-page">
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div class="ui-card p-4">
+                    <p class="ui-muted">Folio</p>
+                    <p class="text-lg font-bold">{{ transferencia.folio || 'N/A' }}</p>
                 </div>
-
-                <!-- Botón Recibir -->
-                <div v-if="canReceive" class="mb-6">
-                    <button 
-                        @click="recibir"
-                        :disabled="form.processing"
-                        class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <span v-if="!form.processing">✓ Confirmar Recepción de Mercancía</span>
-                        <span v-else>Procesando...</span>
-                    </button>
-                    <p class="text-sm text-gray-600 mt-2 text-center">
-                        Al confirmar, se deducirá el stock de la sucursal origen y se agregará al inventario de esta sucursal.
-                    </p>
+                <div class="ui-card p-4">
+                    <p class="ui-muted">Estado</p>
+                    <span class="ui-badge mt-1 text-sm capitalize" :class="statusColor(transferencia.status)">{{ transferencia.status }}</span>
                 </div>
-
-                <!-- Botón Imprimir Recibo (solo si está completado) -->
-                <div v-if="transferencia.status === 'completado'" class="mb-6">
-                    <a 
-                        :href="route('transferencias.recibo', transferencia.id)"
-                        target="_blank"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors inline-flex items-center justify-center"
-                    >
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                        </svg>
-                        Imprimir Recibo de Transferencia
-                    </a>
+                <div class="ui-card p-4">
+                    <p class="ui-muted">Sucursal origen</p>
+                    <p class="text-lg font-bold">{{ transferencia.sucursal_origen?.nombre }}</p>
                 </div>
-
-                <!-- Action Button Removed: Automatic Transfers -->
-
-                <!-- Products Table -->
-                <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                        <h3 class="text-lg font-medium text-gray-900">Detalles de Productos</h3>
-                    </div>
-                    <!-- Vista móvil en tarjetas -->
-                    <div class="md:hidden p-4 grid grid-cols-1 gap-4">
-                        <div v-for="detalle in transferencia.detalles" :key="detalle.id" class="rounded-lg border p-4 bg-white shadow-sm">
-                            <div class="text-sm text-gray-500">Producto</div>
-                            <div class="font-semibold text-gray-900">{{ nombreProducto(detalle.producto) }}</div>
-                            <div class="mt-2 text-sm text-gray-500" v-if="detalle.lote_origen_id">Lote ID: {{ detalle.lote_origen_id }}</div>
-                            <div class="mt-3">
-                                <div class="text-sm text-gray-500">Cantidad Transferida</div>
-                                <div class="text-lg font-bold text-gray-900">{{ detalle.cantidad }}</div>
-                            </div>
-                        </div>
-                        <div v-if="!transferencia.detalles || transferencia.detalles.length === 0" class="text-center text-gray-500">
-                            No hay productos en esta transferencia.
-                        </div>
-                    </div>
-
-                    <!-- Tabla desktop -->
-                    <div class="hidden md:block p-0 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad Transferida</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="detalle in transferencia.detalles" :key="detalle.id">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">{{ nombreProducto(detalle.producto) }}</div>
-                                        <div class="text-xs text-gray-500" v-if="detalle.lote_origen_id">Lote ID: {{ detalle.lote_origen_id }}</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">
-                                        {{ detalle.cantidad }}
-                                    </td>
-                                </tr>
-                                <tr v-if="!transferencia.detalles || transferencia.detalles.length === 0">
-                                    <td colspan="2" class="px-6 py-4 text-center text-gray-500">No hay productos en esta transferencia.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="ui-card p-4">
+                    <p class="ui-muted">Sucursal destino</p>
+                    <p class="text-lg font-bold">{{ transferencia.sucursal_destino?.nombre }}</p>
+                </div>
+                <div class="ui-card col-span-2 p-4">
+                    <p class="ui-muted">Enviado por</p>
+                    <p class="font-bold">{{ transferencia.usuario_envia?.name || 'N/A' }}</p>
+                    <p v-if="transferencia.fecha_envio" class="text-[13px] text-gray-600 dark:text-gray-400">{{ formatFecha(transferencia.fecha_envio, true) }}</p>
+                </div>
+                <div class="ui-card col-span-2 p-4">
+                    <p class="ui-muted">Recibido por</p>
+                    <p class="font-bold">{{ transferencia.usuario_recibe?.name || 'Pendiente' }}</p>
+                    <p v-if="transferencia.fecha_recepcion" class="text-[13px] text-gray-600 dark:text-gray-400">{{ formatFecha(transferencia.fecha_recepcion, true) }}</p>
+                </div>
+                <div v-if="transferencia.observaciones" class="ui-card col-span-2 p-4 lg:col-span-4">
+                    <p class="ui-muted">Observaciones</p>
+                    <p class="mt-1">{{ transferencia.observaciones }}</p>
                 </div>
             </div>
+
+            <div v-if="canReceive" class="flex flex-col gap-2">
+                <button type="button" @click="recibir" :disabled="form.processing" class="ui-btn ui-btn-success ui-btn-lg h-16 w-full text-lg">
+                    <svg v-if="!form.processing" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
+                    {{ form.processing ? 'Procesando...' : 'Confirmar recepción de mercancía' }}
+                </button>
+                <p class="ui-help text-center">Al confirmar, se deducirá el stock de la sucursal origen y se agregará al inventario de esta sucursal.</p>
+            </div>
+
+            <section class="ui-card overflow-hidden">
+                <h2 class="ui-section-title p-4">Productos</h2>
+                <div v-for="detalle in transferencia.detalles" :key="detalle.id" class="ui-row">
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold">{{ nombreProducto(detalle.producto) }}</p>
+                        <p v-if="detalle.lote_origen_id" class="text-[13px] text-gray-600 dark:text-gray-400">Lote ID: {{ detalle.lote_origen_id }}</p>
+                    </div>
+                    <span class="text-lg font-extrabold">{{ detalle.cantidad }}</span>
+                </div>
+                <p v-if="!transferencia.detalles || transferencia.detalles.length === 0" class="ui-row ui-muted">No hay productos en esta transferencia.</p>
+            </section>
         </div>
     </AppLayout>
 </template>

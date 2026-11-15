@@ -1,6 +1,8 @@
 <script setup>
 import { ref, reactive, watch, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import PageHeader from '@/Components/PageHeader.vue';
+import { formatMoneda } from '@/utils/formato';
 import { usePersistedForm } from '@/stores/formStore';
 import 'v-calendar/style.css';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
@@ -272,161 +274,104 @@ const changeStatus = (event) => {
 </script>
 
 <template>
-    <AppLayout title="CrearCompra">
+    <AppLayout title="Compra">
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Crear Compra
-            </h2>
+            <PageHeader :title="props.compra ? `Compra #${props.compra.id}` : 'Nueva compra'" subtitle="Productos, total y abonos" :back="route('compra.index')" />
         </template>
-        <div class="max-full mx-auto px-4 sm:px-6 lg:px-8 mt-5">
-            <div class="p-4 bg-white border border-gray-200 rounded-md shadow-sm dark:bg-gray-800 dark:border-gray-700">
-                <form @submit.prevent="submit">
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label class="block font-medium text-sm text-gray-700">Nombre del proveedor</label>
-                            <input type="text" :disabled="props.compra !== undefined"
-                                class="form-input w-full rounded-md shadow-sm" v-model="form.proveedor">
-                            <InputError class="mt-2" :message="form.errors.proveedor" />
+
+        <div class="ui-page">
+            <form class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start" @submit.prevent="submit">
+                <div class="flex min-w-0 flex-col gap-4">
+                    <section class="ui-card p-4 sm:p-5">
+                        <div class="ui-field">
+                            <label class="ui-label">Nombre del proveedor</label>
+                            <input type="text" :disabled="props.compra !== undefined" class="ui-input" v-model="form.proveedor">
+                            <InputError :message="form.errors.proveedor" />
                         </div>
-                        <div class="flex flex-col">
-                            <label class="block font-medium text-sm text-gray-700">Productos</label>
-                            <button type="button" @click="openAddProductoModal" 
-                                :disabled="form.status !== ''"
-                                :class="[
-                                    'mt-1 px-4 py-2 text-sm font-medium border border-gray-200 rounded-md focus:z-10 focus:ring-2',
-                                    form.status !== '' 
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300' 
-                                        : 'text-gray-900 bg-white hover:bg-gray-100 hover:text-blue-700 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white'
-                                ]"
+                    </section>
+
+                    <section class="ui-card overflow-hidden">
+                        <div class="flex items-center justify-between gap-3 p-4">
+                            <div class="min-w-0">
+                                <h2 class="ui-section-title">Productos</h2>
+                                <p class="ui-muted">{{ form.productos.length === 1 ? '1 producto' : `${form.productos.length} productos` }}</p>
+                            </div>
+                            <button type="button" @click="openAddProductoModal" :disabled="form.status !== ''" class="ui-btn ui-btn-primary"
                                 v-tooltip="form.status !== '' ? 'Esta compra ya se cambió de status, por lo que no se le pueden agregar más productos' : ''">
                                 Agregar producto
                             </button>
                         </div>
-                    </div>
-
-                    <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
-                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead
-                                class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th>Nombre del producto</th>
-                                    <th>Cantidad del pedido</th>
-                                    <th>Precio compra</th>
-                                    <th>Subtotal</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
-                                    <td class="px-4 py-2"> {{ producto.nombre }} </td>
-                                    <td class="px-4 py-2"> {{ producto.cantidad }}</td>
-                                    <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
-                                    <td class="px-4 py-2"> {{ producto.subtotal }}</td>
-                                    <td class="px-4 py-2">
-                                        <div class="inline-flex rounded-md shadow-sm" role="group">
-                                            <button :disabled="props.compra !== undefined"
-                                                @click.prevent="eliminarProducto(producto.id)"
-                                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <hr class="my-6">
-
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label class="block font-medium text-sm text-gray-700">Fecha de la compra</label>
-                            <VDatePicker class="form-input w-full rounded-md shadow-sm"
-                                :max-date="props.compra !== undefined ? form.fecha_compra : null"
-                                :min-date="props.compra !== undefined ? form.fecha_compra : null"
-                                v-model="form.fecha_compra" expanded />
-                            <InputError class="mt-2" :message="form.errors.fecha_compra" />
-                        </div>
-                        <div>
-                            <label class="block font-medium text-sm text-gray-700">Total de la compra</label>
-                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_compra"
-                                disabled>
-                            <InputError class="mt-2" :message="form.errors.total_compra" />
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-4 mt-6">
-                        <div>
-                            <label class="block font-medium text-sm text-gray-700">Total de credito</label>
-                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm" v-model="form.total_credito"
-                                disabled>
-                            <InputError class="mt-2" :message="form.errors.total_credito" />
-                        </div>
-                        <div>
-                            <label class="block font-medium text-sm text-gray-700">Estatus de la compra</label>
-                            <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value" 
-                                class="mt-1 w-full" :disabled="form.status == 'pagada'" placeholder="Selecione" />
-                            <InputError class="mt-2" :message="form.errors.status" />
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-4 mt-6">
-                        <div v-if="props.compra !== undefined || form.status == 'adeudo'">
-                            <label class="block font-medium text-sm text-gray-700">Abonar a credito</label>
-                            <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                                :disabled="form.status == 'pagada'"
-                                v-model="form.abono">
-                        </div>
-                        <div class="flex items-end">
-                            <button @click.prevent="agregarAbono()"
-                                :disabled="form.status == 'pagada'"
-                                class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                        hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                        focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                        dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                Abonar
+                        <div v-for="producto in form.productos" :key="producto.id" class="ui-row">
+                            <div class="min-w-0 flex-1">
+                                <p class="font-semibold">{{ producto.nombre }}</p>
+                                <p class="text-[13px] text-gray-600 dark:text-gray-400">{{ producto.cantidad }} × {{ formatMoneda(producto.precio_compra) }}</p>
+                            </div>
+                            <p class="whitespace-nowrap text-[17px] font-bold">{{ formatMoneda(producto.subtotal) }}</p>
+                            <button type="button" :disabled="props.compra !== undefined" @click="eliminarProducto(producto.id)" :aria-label="`Eliminar ${producto.nombre}`"
+                                class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-700 disabled:opacity-40 dark:hover:bg-gray-700">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                         </div>
+                        <p v-if="!form.productos.length" class="ui-row ui-muted">Aún no hay productos en esta compra.</p>
+                    </section>
+
+                    <section class="ui-card overflow-hidden">
+                        <div class="flex flex-col gap-4 p-4">
+                            <h2 class="ui-section-title">Abonos</h2>
+                            <div v-if="props.compra !== undefined || form.status == 'adeudo'" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <div class="ui-field flex-1">
+                                    <label class="ui-label">Abonar a crédito</label>
+                                    <input type="number" step="0.01" class="ui-input text-right text-xl font-bold" :disabled="form.status == 'pagada'" v-model="form.abono">
+                                </div>
+                                <button type="button" @click="agregarAbono()" :disabled="form.status == 'pagada'" class="ui-btn ui-btn-success h-12">Abonar</button>
+                            </div>
+                        </div>
+                        <div v-for="abono in form.abonos" :key="abono.id" class="ui-row">
+                            <span class="ui-muted min-w-0 flex-1">{{ abono.created_at }}</span>
+                            <span class="font-bold">{{ formatMoneda(abono.cantidad_abonada) }}</span>
+                        </div>
+                        <p v-if="!form.abonos.length" class="ui-row ui-muted">Sin abonos registrados.</p>
+                    </section>
+                </div>
+
+                <aside class="ui-card flex flex-col gap-4 p-4 sm:p-5 lg:sticky lg:top-24">
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center dark:border-gray-700 dark:bg-gray-900">
+                        <p class="ui-muted">Total de la compra</p>
+                        <p class="text-4xl font-extrabold">{{ formatMoneda(form.total_compra) }}</p>
+                    </div>
+                    <InputError :message="form.errors.total_compra" />
+
+                    <div class="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3.5 text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                        <span class="font-semibold">Saldo a crédito</span>
+                        <span class="text-2xl font-extrabold">{{ formatMoneda(form.total_credito) }}</span>
+                    </div>
+                    <InputError :message="form.errors.total_credito" />
+
+                    <div class="ui-field">
+                        <label class="ui-label">Estatus de la compra</label>
+                        <vue-single-select v-model="statusSeleccionado" :options="statusOptions" option-key="value"
+                            class="w-full" :disabled="form.status == 'pagada'" placeholder="Seleccione" />
+                        <InputError :message="form.errors.status" />
                     </div>
 
-                    <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-6">
-                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead
-                                class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                <tr>
-                                    <th>Fecha abono</th>
-                                    <th>Cantidad abono</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="abono in form.abonos" :key="abono.id" class="border-b dark:border-gray-700">
-                                    <td class="px-4 py-2"> {{ abono.created_at }}</td>
-                                    <td class="px-4 py-2"> {{ abono.cantidad_abonada }} </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="ui-field">
+                        <span class="ui-label">Fecha de la compra</span>
+                        <VDatePicker
+                            :max-date="props.compra !== undefined ? form.fecha_compra : null"
+                            :min-date="props.compra !== undefined ? form.fecha_compra : null"
+                            v-model="form.fecha_compra" expanded />
+                        <InputError :message="form.errors.fecha_compra" />
                     </div>
 
-                    <hr class="my-6">
-
-                    <div class="flex justify-end gap-3">
-                        <button v-if="props.compra === undefined" type="button" :disabled="form.processing"
-                            class="px-4 py-2 text-sm border rounded-md" @click="discardDraft">
-                            Descartar borrador
-                        </button>
-                        <button
-                            :disabled="form.processing || (props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial)"
-                            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                    hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                    focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                    dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                            Guardar
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    <button :disabled="form.processing || (props.compra !== undefined && form.status != 'adeudo' && form.pagadaInicial)"
+                        class="ui-btn ui-btn-primary ui-btn-lg h-16 w-full text-lg">
+                        {{ form.processing ? 'Guardando…' : 'Guardar compra' }}
+                    </button>
+                    <button v-if="props.compra === undefined" type="button" :disabled="form.processing" class="ui-btn ui-btn-danger w-full" @click="discardDraft">
+                        Descartar borrador
+                    </button>
+                </aside>
+            </form>
         </div>
 
         <DialogModal :show="showAddProductoModal" @close="closeAddProductoModal">
@@ -435,149 +380,117 @@ const changeStatus = (event) => {
             </template>
 
             <template #content>
-                <div class="mt-4">    
-                    
-                    <div class="flex justify-end">       
-                        <button type="button" @click="openProductoModal"
-                            class="align-right mt-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                            Crear producto
-                        </button>
-                    </div>
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Nombre del producto</label>
+                <div class="mt-2 flex flex-col gap-4">
+                    <div class="ui-field">
+                        <div class="flex items-center justify-between gap-3">
+                            <label class="ui-label">Nombre del producto</label>
+                            <button type="button" @click="openProductoModal" class="ui-btn h-9 px-3">Crear producto</button>
+                        </div>
                         <vue-single-select placeholder="Seleccione un producto" v-model="form.producto" option-key="barcode"
                             option-label="nombre" :options="productoOptions">
                         </vue-single-select>
                     </div>
-                    <br>
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Cantidad de pedido</label>
-                        <input type="number" min="1" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                            v-model="form.cantidad_pedido">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Cantidad de pedido</label>
+                            <input type="number" min="1" step="0.01" class="ui-input" v-model="form.cantidad_pedido">
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Precio de compra</label>
+                            <input type="number" step="0.01" class="ui-input" v-model="form.precio_compra">
+                        </div>
                     </div>
-                    <br>
-                    <div>
-                        <label class="block font-medium text-sm text-gray-700">Precio de compra</label>
-                        <input type="number" step="0.01" class="form-input w-full rounded-md shadow-sm"
-                            v-model="form.precio_compra">  
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" @click="closeAddProductoModal" class="ui-btn ui-btn-lg">Cerrar</button>
+                        <button type="button" @click="handleAddProducto" class="ui-btn ui-btn-primary ui-btn-lg">Agregar</button>
                     </div>
-                </div>
-                
-                <div class="flex justify-end gap-3 mt-4">
-                    <button type="button" @click="closeAddProductoModal"
-                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                        Cerrar
-                    </button>
-                    <button type="button" @click="handleAddProducto"
-                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                        Agregar
-                    </button>
                 </div>
             </template>
             <template #footer>
-            <div class="relative overflow-x-auto w-full shadow-md sm:rounded-lg mt-4">
-                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead
-                        class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th>Nombre del producto</th>
-                            <th>Cantidad del pedido</th>
-                            <th>Precio compra</th>
-                            <th>Subtotal</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="producto in form.productos" :key="producto.id" class="border-b dark:border-gray-700">
-                            <td class="px-4 py-2"> {{ producto.nombre }} </td>
-                            <td class="px-4 py-2"> {{ producto.cantidad }}</td>
-                            <td class="px-4 py-2"> {{ producto.precio_compra }}</td>
-                            <td class="px-4 py-2"> {{ producto.subtotal }}</td>
-                            <td class="px-4 py-2">
-                                <div class="inline-flex rounded-md shadow-sm" role="group">
-                                    <button :disabled="props.compra !== undefined"
-                                        @click.prevent="eliminarProducto(producto.id)"
-                                        class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md
-                                                hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700
-                                                focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white
-                                                dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="ui-card w-full overflow-hidden text-left">
+                    <div v-for="producto in form.productos" :key="producto.id" class="ui-row first:border-t-0">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold">{{ producto.nombre }}</p>
+                            <p class="text-[13px] text-gray-600 dark:text-gray-400">{{ producto.cantidad }} × {{ formatMoneda(producto.precio_compra) }}</p>
+                        </div>
+                        <p class="whitespace-nowrap font-bold">{{ formatMoneda(producto.subtotal) }}</p>
+                        <button type="button" :disabled="props.compra !== undefined" @click="eliminarProducto(producto.id)" :aria-label="`Eliminar ${producto.nombre}`"
+                            class="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-red-700 disabled:opacity-40 dark:hover:bg-gray-700">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                    </div>
+                    <p v-if="!form.productos.length" class="ui-row ui-muted first:border-t-0">Aún no hay productos en esta compra.</p>
+                </div>
             </template>
         </DialogModal>
+
         <DialogModal :show="showProductoModal" @close="closeProductoModal">
             <template #title>
                 Crear producto
             </template>
 
             <template #content>
-                <div class="mt-4">
-                    <label class="block font-medium text-sm text-gray-700">Nombre</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.nombre">
-                    <InputError class="mt-2" :message="productoErrors.nombre" />
-                    <br><br>
+                <div class="mt-2 flex flex-col gap-4">
+                    <div class="ui-field">
+                        <label class="ui-label">Nombre</label>
+                        <input class="ui-input" v-model="productoForm.nombre">
+                        <InputError :message="productoErrors.nombre" />
+                    </div>
 
-                    <label class="block font-medium text-sm text-gray-700">Clasificacion</label>
-                    <vue-single-select v-model="productoClasificacionSeleccionada" :options="clasificaciones" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
-                    <InputError class="mt-2" :message="productoErrors.id_clasificacion" />
-                    <br>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Clasificación</label>
+                            <vue-single-select v-model="productoClasificacionSeleccionada" :options="clasificaciones" option-key="id" option-label="nombre" placeholder="Seleccione" class="w-full" />
+                            <InputError :message="productoErrors.id_clasificacion" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Marca</label>
+                            <vue-single-select v-model="productoMarcaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Seleccione" class="w-full" />
+                            <InputError :message="productoErrors.id_marca" />
+                        </div>
+                    </div>
 
-                    <label class="block font-medium text-sm text-gray-700">Marca</label>
-                    <vue-single-select v-model="productoMarcaSeleccionada" :options="marcas" option-key="id" option-label="nombre" placeholder="Selecione" class="w-full" />
-                    <InputError class="mt-2" :message="productoErrors.id_marca" />
-                    <br>
-
-                    <div v-if="mostrarCamposPrecio">
-                        <label class="block font-medium text-sm text-gray-700">Precio Compra</label>
-                        <input type="number" step="0.01" min="0" class="form-input w-full rounded-md shadow-sm"
-                            v-model="productoForm.precio_unitario">
-                        <InputError class="mt-2" :message="productoErrors.precio_unitario" />
-                        <br><br>
-
+                    <div v-if="mostrarCamposPrecio" class="ui-field">
+                        <label class="ui-label">Precio de compra</label>
+                        <input type="number" step="0.01" min="0" class="ui-input" v-model="productoForm.precio_unitario">
+                        <InputError :message="productoErrors.precio_unitario" />
                     </div>
 
                     <div class="grid gap-4 sm:grid-cols-3">
-                        <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo">
-                            <label class="block font-medium text-sm text-gray-700">Precio {{ tipo.label }}</label>
-                            <input type="number" step="0.01" min="0.01" class="form-input w-full rounded-md shadow-sm"
-                                v-model="productoForm[tipo.campo]">
-                            <InputError class="mt-2" :message="productoErrors[tipo.campo]" />
+                        <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
+                            <label class="ui-label">Precio {{ tipo.label }}</label>
+                            <input type="number" step="0.01" min="0.01" class="ui-input" v-model="productoForm[tipo.campo]">
+                            <InputError :message="productoErrors[tipo.campo]" />
                         </div>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500">Los precios preferenciales sin capturar toman el precio público.</p>
-                    <br>
+                    <p class="ui-help -mt-2">Los precios preferenciales sin capturar toman el precio público.</p>
 
-                    <label class="block font-medium text-sm text-gray-700">Tamaño</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.tamano">
-                    <InputError class="mt-2" :message="productoErrors.tamano" />
-                    <br><br>
+                    <div class="ui-field">
+                        <label class="ui-label">Tamaño</label>
+                        <input class="ui-input" v-model="productoForm.tamano">
+                        <InputError :message="productoErrors.tamano" />
+                    </div>
 
-                    <label class="block font-medium text-sm text-gray-700">Ingrediente activo</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.ingrediente_activo">
-                    <InputError class="mt-2" :message="productoErrors.ingrediente_activo" />
-                    <br><br>
-
-                    <label class="block font-medium text-sm text-gray-700">Código de barras</label>
-                    <input class="form-input w-full rounded-md shadow-sm" v-model="productoForm.barcode">
-                    <InputError class="mt-2" :message="productoErrors.barcode" />
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Ingrediente activo</label>
+                            <input class="ui-input" v-model="productoForm.ingrediente_activo">
+                            <InputError :message="productoErrors.ingrediente_activo" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Código de barras</label>
+                            <input class="ui-input" v-model="productoForm.barcode">
+                            <InputError :message="productoErrors.barcode" />
+                        </div>
+                    </div>
                 </div>
             </template>
 
             <template #footer>
-                <button @click="closeProductoModal"
-                    class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                    Cancelar
-                </button>
-                <button @click="guardarProducto"
-                    class="ml-3 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white">
-                    Guardar
-                </button>
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="closeProductoModal" class="ui-btn">Cancelar</button>
+                    <button type="button" @click="guardarProducto" class="ui-btn ui-btn-primary">Guardar</button>
+                </div>
             </template>
         </DialogModal>
     </AppLayout>

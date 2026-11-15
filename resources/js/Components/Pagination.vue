@@ -23,11 +23,11 @@ defineProps({
 
 <template>
     <div v-if="links.length > 3">
-        <div class="flex flex-wrap mt-8">
+        <div class="flex flex-wrap gap-2">
             <template v-for="(link, key) in links" :key="key">
                 <div
                     v-if="link.url === null"
-                    class="mr-1 mb-1 px-4 py-3 text-sm leading-4 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded"
+                    class="inline-flex h-11 min-w-11 items-center justify-center rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-400 dark:border-gray-700 dark:text-gray-500"
                     v-html="link.label === 'pagination.previous'
                             ? 'Anterior' : link.label === 'pagination.next'
                             ? 'Siguiente' : link.label"
@@ -35,8 +35,8 @@ defineProps({
 
                 <Link
                     v-else
-                    class="mr-1 mb-1 px-4 py-3 text-sm leading-4 border border-gray-300 dark:border-gray-600 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
-                    :class="link.active ? 'bg-blue-700 text-white' : 'bg-white text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'"
+                    class="inline-flex h-11 min-w-11 items-center justify-center rounded-lg border px-3 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    :class="link.active ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'"
                     :href="link.url + prefix"
                     v-html="link.label === 'pagination.previous'
                             ? 'Anterior' : link.label === 'pagination.next'
