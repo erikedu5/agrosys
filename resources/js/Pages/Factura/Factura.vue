@@ -6,7 +6,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha, formatMoneda } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { etiquetaFormaPago } from '@/utils/formasPago';
@@ -100,7 +100,7 @@ const estatus = (factura) => {
             </div>
 
             <EmptyState v-if="!facturas.data?.length" title="No hay ventas por facturar" text="No hay ventas por facturar en el rango seleccionado." />
-            <Pagination :links="facturas.links" />
+            <PaginationBar :paginator="facturas" />
         </div>
     </AppLayout>
 </template>

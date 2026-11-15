@@ -14,7 +14,7 @@ class CatClasificacionController extends Controller
         return Inertia::render('Catalogos/Clasificacion/Clasificacion', [
             'clasificaciones' => CatClasificacion::where('nombre', 'LIKE', "%$request->q%")
             ->latest()
-            ->paginate(10)
+            ->paginate(12)
         ]);
     }
 

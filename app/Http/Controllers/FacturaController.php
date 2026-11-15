@@ -32,7 +32,7 @@ class FacturaController extends Controller
             ->whereBetween('ventas.created_at', [$fechaInicio, $fechaFin])
             ->where('ventas.id_sucursal', SucursalService::getSucursalActiva())
             ->orderByDesc('facturas.id')
-            ->paginate(10)
+            ->paginate(12)
             ->withQueryString();
 
         foreach ($facturas as $factura) {

@@ -5,7 +5,7 @@ import RecordCard from '@/Components/RecordCard.vue';
 import { formatFecha } from '@/utils/formato';
 import { ref, watch, defineProps, onMounted } from 'vue';
 import { usePersistedForm } from '@/stores/formStore';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import AddInventarioModal from '@/Components/AddInventarioModal.vue';
@@ -182,7 +182,7 @@ const onInventarioSuccess = () => {
                     ]" />
             </div>
             <p v-if="!solucionesByProduct.data?.length" class="ui-muted">Este producto aún no tiene soluciones registradas.</p>
-            <Pagination :links="solucionesByProduct.links" :prefix="'&id_producto=' + props.producto.id" />
+            <PaginationBar :paginator="solucionesByProduct" :prefix="'&id_producto=' + props.producto.id" />
         </div>
 
         <!-- Modal de agregar inventario -->

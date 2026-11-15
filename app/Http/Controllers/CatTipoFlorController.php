@@ -17,7 +17,7 @@ class CatTipoFlorController extends Controller
     {
         $catTipoFlores = CatTipoFlor::where('nombre', 'LIKE', "%$request->q%")
         ->latest('created_at')
-        ->paginate(10);
+        ->paginate(12);
 
         foreach ($catTipoFlores as $tipoFlor) {
             $relacion = EnfermedadesTipoFlor::where('id_tipo_flor', $tipoFlor->id)->get();

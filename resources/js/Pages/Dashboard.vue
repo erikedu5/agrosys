@@ -2,7 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue';
+import PaginationBar from '@/Components/PaginationBar.vue';
 import StatTile from '@/Components/Dashboard/StatTile.vue';
 import ChartCard from '@/Components/Dashboard/ChartCard.vue';
 import ColumnChart from '@/Components/Dashboard/ColumnChart.vue';
@@ -47,13 +47,19 @@ const loadLocalProducts = async (query = '') => {
     }
 };
 
+// Espera 300 ms tras la última tecla antes de buscar, para no consultar por cada letra.
+let busquedaTimer = null;
 watch(q, (value) => {
-    if (isOfflineCatalog.value) {
-        loadLocalProducts(value);
-        return;
-    }
-    router.get(route('dashboard', { q: value, periodo: periodo.value }), {}, { preserveState: true, preserveScroll: true, only: ['solucionesByProduct'] });
+    clearTimeout(busquedaTimer);
+    busquedaTimer = setTimeout(() => {
+        if (isOfflineCatalog.value) {
+            loadLocalProducts(value);
+            return;
+        }
+        router.get(route('dashboard', { q: value, periodo: periodo.value }), {}, { preserveState: true, preserveScroll: true, only: ['solucionesByProduct'] });
+    }, value ? 300 : 0);
 });
+onUnmounted(() => clearTimeout(busquedaTimer));
 
 watch(() => connectivity.isUsableOnline, enLinea => {
     if (!enLinea) loadLocalProducts(q.value);
@@ -397,11 +403,6 @@ const itemsAdeudo = computed(() => (m.value?.clientesAdeudo ?? []).map((c) => ({
                         </div>
                     </div>
                 </div>
-
-                <!-- Paginación -->
-                <div name="Pagination">
-                    <Pagination class="mt-4" :links="solucionesByProduct.links" :prefix="''" />
-                </div>
             </div>
 
             <!-- Vista en tabla (md y arriba) -->
@@ -432,12 +433,10 @@ const itemsAdeudo = computed(() => (m.value?.clientesAdeudo ?? []).map((c) => ({
                         </tr>
                     </tbody>
                 </table>
-
-                <!-- Paginación -->
-                <div name="Pagination">
-                    <Pagination class="mt-6" :links="solucionesByProduct.links" :prefix="''" />
-                </div>
             </div>
+
+            <!-- Paginación: fuera de los contenedores con scroll para que quede fija al pie -->
+            <PaginationBar v-if="!isOfflineCatalog" class="mt-4" :paginator="solucionesByProduct" />
 
                 </div>
             </div>

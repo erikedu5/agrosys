@@ -4,7 +4,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import SearchField from '@/Components/SearchField.vue';
 import RecordCard from '@/Components/RecordCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
-import Pagination from '@/Components/Pagination.vue';
+import PaginationBar from '@/Components/PaginationBar.vue';
 import InputError from '@/Components/InputError.vue';
 import { computed, ref, watch } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
@@ -134,7 +134,7 @@ const formatDate = (value) => {
                     </div>
 
                     <EmptyState v-if="!empresas.data?.length" title="No hay empresas" />
-                    <Pagination :links="empresas.links" />
+                    <PaginationBar :paginator="empresas" />
                 </div>
 
                 <aside class="ui-card flex flex-col gap-4 p-5 xl:sticky xl:top-24">

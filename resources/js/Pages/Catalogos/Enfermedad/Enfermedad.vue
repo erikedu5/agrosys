@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 
 defineProps({
     enfermedades: {
@@ -54,7 +54,7 @@ const destroy = (id) => {
             </div>
 
             <EmptyState v-if="!enfermedades.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay enfermedades'" text="Revisa la escritura o agrega una enfermedad nueva." />
-            <Pagination :links="enfermedades.links" />
+            <PaginationBar :paginator="enfermedades" />
         </div>
     </AppLayout>
 </template>

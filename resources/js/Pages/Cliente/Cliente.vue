@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatMoneda } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 import { etiquetaTipoPrecio } from '@/utils/precios';
 
 defineProps({
@@ -61,7 +61,7 @@ const desactivar = (id) => {
             </div>
 
             <EmptyState v-if="!clientes.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay clientes'" text="Revisa la escritura o crea un cliente nuevo." />
-            <Pagination :links="clientes.links" />
+            <PaginationBar :paginator="clientes" />
         </div>
     </AppLayout>
 </template>

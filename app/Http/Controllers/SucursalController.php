@@ -31,7 +31,7 @@ class SucursalController extends Controller
         }
 
         $sucursales = $query->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         $count = $query->get()->count();
 

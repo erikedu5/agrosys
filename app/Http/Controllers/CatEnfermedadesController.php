@@ -16,7 +16,7 @@ class CatEnfermedadesController extends Controller
         return Inertia::render('Catalogos/Enfermedad/Enfermedad', [
             'enfermedades' => CatEnfermedades::where('nombre', 'LIKE', "%$request->q%")
             ->latest()
-            ->paginate(10)
+            ->paginate(12)
         ]);
     }
 

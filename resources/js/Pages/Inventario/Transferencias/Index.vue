@@ -5,7 +5,7 @@ import RecordCard from '@/Components/RecordCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha } from '@/utils/formato';
 import { Link } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue';
+import PaginationBar from '@/Components/PaginationBar.vue';
 
 const props = defineProps({
     transferencias: {
@@ -58,7 +58,7 @@ const statusClass = (status) => {
             </div>
 
             <EmptyState v-if="transferencias.data.length === 0" title="No hay transferencias registradas" text="Crea una transferencia para mover inventario a otra sucursal." />
-            <Pagination :links="transferencias.links" />
+            <PaginationBar :paginator="transferencias" />
         </div>
     </AppLayout>
 </template>

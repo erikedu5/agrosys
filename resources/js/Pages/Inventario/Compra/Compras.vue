@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha, formatMoneda } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 
 defineProps({
     compras: {
@@ -65,7 +65,7 @@ watch(q, (value) => {
             </div>
 
             <EmptyState v-if="!compras.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay compras'" text="Registra una compra a proveedor para verla aquí." />
-            <Pagination :links="compras.links" />
+            <PaginationBar :paginator="compras" />
         </div>
     </AppLayout>
 </template>

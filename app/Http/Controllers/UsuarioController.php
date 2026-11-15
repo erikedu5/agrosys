@@ -39,7 +39,7 @@ class UsuarioController extends Controller
         }
 
         $usuarios = $query->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         return Inertia::render('Usuario/Usuario', [
             'usuarios' => $usuarios,

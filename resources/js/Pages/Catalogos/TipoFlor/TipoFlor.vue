@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 
 defineProps({
     tipoFlor: {
@@ -55,7 +55,7 @@ const destroy = (id) => {
             </div>
 
             <EmptyState v-if="!tipoFlor.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay tipos de flor'" text="Revisa la escritura o agrega un tipo de flor nuevo." />
-            <Pagination :links="tipoFlor.links" />
+            <PaginationBar :paginator="tipoFlor" />
         </div>
     </AppLayout>
 </template>

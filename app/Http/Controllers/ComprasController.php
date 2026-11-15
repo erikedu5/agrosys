@@ -26,7 +26,7 @@ class ComprasController extends Controller
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
             ->where('id_sucursal', SucursalService::getSucursalActiva())
             ->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,
@@ -101,7 +101,7 @@ class ComprasController extends Controller
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
             ->where('id_sucursal', SucursalService::getSucursalActiva())
             ->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,
@@ -176,7 +176,7 @@ class ComprasController extends Controller
         $compras = Compras::where('proveedor', 'LIKE', "%$request->q%")
             ->where('id_sucursal', SucursalService::getSucursalActiva())
             ->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         return Inertia::render('Inventario/Compra/Compras', [
             'compras' => $compras,

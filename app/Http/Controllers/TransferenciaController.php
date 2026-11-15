@@ -30,7 +30,7 @@ class TransferenciaController extends Controller
                     ->orWhere('id_sucursal_destino', $sucursalActiva);
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(12);
 
         return Inertia::render('Inventario/Transferencias/Index', [
             'transferencias' => $transferencias

@@ -6,7 +6,7 @@ import RecordCard from '@/Components/RecordCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 const props = defineProps({
     sucursales: {
         type: Array,
@@ -79,7 +79,7 @@ const restaurar = (id) => {
             </div>
 
             <EmptyState v-if="!sucursales.data?.length" :title="q ? `No encontramos “${q}”` : 'No hay sucursales en esta vista'" />
-            <Pagination :links="sucursales.links" />
+            <PaginationBar :paginator="sucursales" />
         </div>
     </AppLayout>
 </template>

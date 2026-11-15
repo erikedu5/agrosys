@@ -5,7 +5,7 @@
     import EmptyState from '@/Components/EmptyState.vue';
     import { formatFecha, formatMoneda } from '@/utils/formato';
     import{ useForm }from'@inertiajs/vue3';
-    import Pagination from '@/Components/Pagination.vue';
+    import PaginationBar from '@/Components/PaginationBar.vue';
     import { notify } from '@/utils/notify';
 
     const props = defineProps({
@@ -78,7 +78,7 @@
                         </div>
                     </article>
                     <EmptyState v-if="!props.ventas.data.length" title="Sin notas a crédito" text="Este cliente no tiene ventas a crédito pendientes." />
-                    <Pagination :links="props.ventas.links" :prefix="''" />
+                    <PaginationBar :paginator="props.ventas" :prefix="''" />
                 </section>
 
                 <section class="ui-card overflow-hidden">

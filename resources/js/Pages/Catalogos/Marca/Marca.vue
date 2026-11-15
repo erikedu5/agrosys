@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 
 defineProps({
     marcas: {
@@ -52,7 +52,7 @@ const destroy = (id) => {
             </div>
 
             <EmptyState v-if="!marcas.data?.length" :title="q ? `No encontramos “${q}”` : 'Aún no hay marcas'" text="Revisa la escritura o agrega una marca nueva." />
-            <Pagination :links="marcas.links" />
+            <PaginationBar :paginator="marcas" />
         </div>
     </AppLayout>
 </template>

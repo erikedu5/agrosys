@@ -5,7 +5,7 @@ import SearchField from '@/Components/SearchField.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { ref, watch, computed } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue';
+import PaginationBar from '@/Components/PaginationBar.vue';
 import VueSingleSelect from '@/Components/VueSingleSelect.vue';
 
 const props = defineProps({
@@ -96,7 +96,7 @@ const completar = (id) => {
             </div>
 
             <EmptyState v-if="!groupedPedidos.length" title="No hay pedidos" text="No hay pedidos con los filtros seleccionados." />
-            <Pagination :links="pedidos.links" :prefix="''" />
+            <PaginationBar :paginator="pedidos" :prefix="''" />
         </div>
     </AppLayout>
 </template>

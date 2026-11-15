@@ -37,7 +37,7 @@ class EmpresaController extends Controller
             $query->onlyTrashed();
         }
 
-        $empresas = $query->latest()->paginate(10);
+        $empresas = $query->latest()->paginate(12);
 
         return Inertia::render('Empresa/Empresa', [
             'empresas' => $empresas,
@@ -219,7 +219,7 @@ class EmpresaController extends Controller
                 $query->where('type', 'default')->latest();
             }])
             ->latest()
-            ->paginate(15)
+            ->paginate(12)
             ->withQueryString();
 
         $empresas->through(function (Empresa $empresa) use ($planNames) {

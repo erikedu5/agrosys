@@ -14,7 +14,7 @@ class CatMarcaController extends Controller
         return Inertia::render('Catalogos/Marca/Marca', [
             'marcas' => CatMarca::where('nombre', 'LIKE', "%$request->q%")
             ->latest()
-            ->paginate(10)
+            ->paginate(12)
         ]);
     }
 

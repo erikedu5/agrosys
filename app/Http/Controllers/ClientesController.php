@@ -26,7 +26,7 @@ class ClientesController extends Controller
             ->where('id_sucursal', SucursalService::getSucursalActiva())
             ->where('activo', true)
             ->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         return Inertia::render('Cliente/Cliente', [
             'clientes' => $clientes,

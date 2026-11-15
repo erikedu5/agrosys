@@ -6,7 +6,7 @@ import RecordCard from '@/Components/RecordCard.vue';
 import EmptyState from '@/Components/EmptyState.vue';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 
 const props = defineProps({
     empresas: {
@@ -93,7 +93,7 @@ const restaurar = (id) => {
             </div>
 
             <EmptyState v-if="!empresas.data?.length" :title="q ? `No encontramos “${q}”` : 'No hay empresas en esta vista'" />
-            <Pagination :links="empresas.links" />
+            <PaginationBar :paginator="empresas" />
         </div>
     </AppLayout>
 </template>

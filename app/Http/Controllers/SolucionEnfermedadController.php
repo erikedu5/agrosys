@@ -40,7 +40,7 @@ class SolucionEnfermedadController extends Controller
         $solucionesByProduct = SolucionEnfermedad::where('id_producto', $request->id_producto)
             ->where('id_sucursal', $sucursal)
             ->latest()
-            ->paginate(10);
+            ->paginate(12);
 
         foreach ($solucionesByProduct as $solucionByProd) {
             $enfermedadTipo = EnfermedadesTipoFlor::where('id', $solucionByProd->id_enfermedad_tipo_flor)->first();

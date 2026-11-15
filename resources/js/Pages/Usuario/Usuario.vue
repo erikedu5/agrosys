@@ -7,7 +7,7 @@ import EmptyState from '@/Components/EmptyState.vue';
 import { formatFecha } from '@/utils/formato';
 import { ref, watch } from 'vue';
 import { router, Link, useForm } from '@inertiajs/vue3';
-import Pagination from '@/Components/Pagination.vue'
+import PaginationBar from '@/Components/PaginationBar.vue'
 const props = defineProps({
     usuarios: {
         type: Object,
@@ -82,7 +82,7 @@ const restaurar = (id) => {
             </div>
 
             <EmptyState v-if="!usuarios.data?.length" :title="q ? `No encontramos “${q}”` : 'No hay usuarios en esta vista'" />
-            <Pagination :links="usuarios.links" />
+            <PaginationBar :paginator="usuarios" />
         </div>
     </AppLayout>
 </template>
