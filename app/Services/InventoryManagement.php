@@ -10,6 +10,7 @@ use App\Services\Pos\Decimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class InventoryManagement
 {
@@ -154,7 +155,7 @@ class InventoryManagement
                 'Las existencias cambiaron. Recarga los datos y confirma de nuevo.');
             if ($action === 'delete') {
                 if ($stock['branchesWithStock']) {
-                    throw \Illuminate\Validation\ValidationException::withMessages(['producto' => 'No se puede borrar el producto porque tiene inventario en al menos una sucursal. Sucursales con stock: '.
+                    throw ValidationException::withMessages(['producto' => 'No se puede borrar el producto porque tiene inventario en al menos una sucursal. Sucursales con stock: '.
                         implode(', ', array_column($stock['branchesWithStock'], 'name'))]);
                 }
                 $product->id_usuario = $user->id;
@@ -176,6 +177,67 @@ class InventoryManagement
         $units = Decimal::units($quantity, 'cantidad');
 
         return $this->moveStock($user, $branch, $id, $units, AltaInventario::EVENTO_ALTA);
+    }
+
+    /**
+     * Da de baja una unidad del producto y da de alta las medidas que salen de ella
+     * en el producto "Medida <nombre>" con el tamaño capturado (se crea si no existe).
+     */
+    public function dose(User $user, Sucursales $branch, int $id, array $input, ?string $version = null): array
+    {
+        $data = Validator::make($input, ['contenido' => 'required|numeric|gt:0', 'medida' => 'required|numeric|gt:0',
+            'unidad' => 'required|string|max:20', 'acepta_perdida' => 'nullable|boolean'], [],
+            ['contenido' => 'contenido del envase', 'medida' => 'tamaño de la medida', 'unidad' => 'unidad de medida'])->validate();
+        $content = Decimal::units((string) $data['contenido'], 'contenido');
+        $measure = Decimal::units((string) $data['medida'], 'medida');
+        $unit = trim($data['unidad']);
+        $count = intdiv($content, $measure);
+        $leftover = $content - $count * $measure;
+        $plain = fn (int $units) => rtrim(rtrim(Decimal::format($units), '0'), '.');
+        if ($count < 1) {
+            throw ValidationException::withMessages(['medida' => 'La medida no puede ser mayor que el contenido del envase.']);
+        }
+        if ($count > 99999) {
+            throw ValidationException::withMessages(['medida' => 'La medida es demasiado pequeña para el contenido del envase.']);
+        }
+        if ($leftover > 0 && ! filter_var($data['acepta_perdida'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            throw ValidationException::withMessages(['acepta_perdida' => "Sobran {$plain($leftover)} $unit que se perderán. Confirma la pérdida para continuar."]);
+        }
+
+        return DB::transaction(function () use ($user, $branch, $id, $input, $version, $measure, $unit, $count, $leftover, $plain) {
+            $source = $this->lockedProduct($branch, $id, $version);
+            $last = AltaInventario::where('id_producto', $source->id)->where('id_sucursal', $branch->id)
+                ->orderByDesc('id')->lockForUpdate()->first();
+            if (Decimal::units($last?->cantidad_nueva ?? '0', 'cantidad', true) < 100) {
+                throw ValidationException::withMessages(['producto' => 'No hay existencias suficientes para dosificar una unidad.']);
+            }
+            $name = mb_substr('Medida '.$source->nombre, 0, 255);
+            $size = "{$plain($measure)} $unit";
+            $target = Producto::withoutGlobalScope('empresa')->withTrashed()->where('id_empresa', $branch->id_empresa)
+                ->where('nombre', $name)->where('tamano', $size)->lockForUpdate()->first();
+            abort_if($target?->id === $source->id, 422, 'El producto ya es esa medida.');
+            // El costo siempre se deriva del envase; nunca se captura.
+            $prices = array_diff_key($input, ['precio_unitario' => true]);
+            if ($target) {
+                if ($target->trashed()) {
+                    $target->restore();
+                }
+                $target = $this->updatePrices($user, $branch, $target->id, $prices);
+            } else {
+                $target = $this->product($user, $branch, [...$prices, 'nombre' => $name, 'tamano' => $size,
+                    'id_clasificacion' => $source->id_clasificacion, 'id_marca' => $source->id_marca,
+                    'ingrediente_activo' => $source->ingrediente_activo, 'barcode' => null]);
+                // La entrada por dosificación es su primer movimiento: el alta en cero del mismo instante
+                // empataría en fecha con ella y las consultas por fecha podrían mostrar existencia cero.
+                AltaInventario::where('id_producto', $target->id)->delete();
+            }
+            $target->precio_unitario = Decimal::format(Decimal::roundRatio(Decimal::units($source->precio_unitario ?? '0', 'precio_unitario'), $count));
+            $target->save();
+
+            return ['source' => $this->moveStock($user, $branch, $source->id, -100, AltaInventario::EVENTO_DOSIFICACION_SALIDA),
+                'movement' => $this->moveStock($user, $branch, $target->id, $count * 100, AltaInventario::EVENTO_DOSIFICACION_ENTRADA),
+                'target' => $target->refresh(), 'units' => $count, 'leftover' => $plain($leftover)];
+        }, 3);
     }
 
     public function moveStock(User $user, Sucursales $branch, int $id, int $units, string $event): AltaInventario

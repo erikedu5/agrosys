@@ -181,6 +181,26 @@ class ProductoController extends Controller
         }
     }
 
+    public function dosificar(Request $request, Producto $producto)
+    {
+        [$sucursalId, , $bloqueado, $motivo] = $this->obtenerSucursalYEstado();
+        $this->asegurarAccesoInventario($bloqueado, $motivo);
+        $logger = \App\Services\EventLogger::start('DOSIFICAR_INVENTARIO', ['producto_id' => $producto->id, 'contenido' => $request->contenido,
+            'medida' => $request->medida, 'unidad' => $request->unidad, 'sucursal_id' => $sucursalId]);
+        try {
+            $dose = app(InventoryManagement::class)->dose($request->user(), Sucursales::findOrFail($sucursalId), $producto->id, $request->all());
+            $logger->success(['producto_medida_id' => $dose['target']->id, 'medidas' => $dose['units'], 'sobrante' => $dose['leftover'],
+                'stock_origen' => $dose['source']->cantidad_nueva, 'stock_medida' => $dose['movement']->cantidad_nueva]);
+
+            // Regresa al listado con los filtros y la página en que estaba el usuario.
+            return redirect()->back(fallback: route('inventario.index'))
+                ->with('success', "Se dosificaron {$dose['units']} medidas de {$dose['target']->tamano}.");
+        } catch (\Exception $e) {
+            $logger->error($e, ['producto_id' => $producto->id]);
+            throw $e;
+        }
+    }
+
     public function resetInventario(Producto $producto)
     {
         [$sucursalId, , $ventasBloqueadas, $motivoBloqueo] = $this->obtenerSucursalYEstado();
@@ -286,13 +306,7 @@ class ProductoController extends Controller
 
     private function resolverTipoMovimiento(AltaInventario $movimiento, ?int $primeraId, float $diferencia): string
     {
-        $tiposPorEvento = [
-            AltaInventario::EVENTO_ALTA => 'Alta de inventario',
-            AltaInventario::EVENTO_RESETEO => 'Reseteo a cero',
-            AltaInventario::EVENTO_VENTA => 'Venta',
-            AltaInventario::EVENTO_TRANSFERENCIA_ENTRADA => 'Entrada por transferencia',
-            AltaInventario::EVENTO_TRANSFERENCIA_SALIDA => 'Salida por transferencia',
-        ];
+        $tiposPorEvento = AltaInventario::ETIQUETAS;
 
         $tipoEvento = $movimiento->tipo_evento ?? null;
         if ($tipoEvento && isset($tiposPorEvento[$tipoEvento])) {

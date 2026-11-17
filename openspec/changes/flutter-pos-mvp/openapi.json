@@ -2940,6 +2940,195 @@
         ]
       }
     },
+    "/inventory/{productId}/dose": {
+      "post": {
+        "operationId": "posInventoryDose",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Context"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "operation_id",
+                      "version",
+                      "contenido",
+                      "medida",
+                      "unidad",
+                      "precio_publico"
+                    ],
+                    "properties": {
+                      "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64
+                      },
+                      "contenido": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "medida": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "unidad": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "acepta_perdida": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "precio_publico": {
+                        "type": "string",
+                        "pattern": "^\\d{1,8}(?:\\.\\d{1,2})?$"
+                      },
+                      "precio_preferencial_1": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "precio_preferencial_2": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inventory response. Mutations require current role permissions and connection; replay the same operation_id after a lost response. Cost fields are omitted or ignored when unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryWriteResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Reauthentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Subscription required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authorization denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource absent or POS disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired cursor: bootstrap preserving pending operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ambiguous or temporary failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Signing unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product changed or operation identity reused with different input"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
     "/inventory/{productId}/preview": {
       "post": {
         "operationId": "posInventoryPreview",
