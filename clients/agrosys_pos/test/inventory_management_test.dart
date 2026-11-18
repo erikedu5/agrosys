@@ -215,6 +215,7 @@ void main() {
       c.session!.contextId,
     );
     await legacy.customStatement('DROP TABLE inventory_requests');
+    await dropV8Columns(legacy.customStatement);
     await legacy.customStatement('PRAGMA user_version=5');
     await legacy.close();
     c = controller();

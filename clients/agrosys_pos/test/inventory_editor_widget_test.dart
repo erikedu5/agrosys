@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support/inventory_server.dart';
 import 'support/fixtures.dart';
+import 'support/navigation.dart';
 
 void main() {
   for (final size in [const Size(360, 740), const Size(1200, 800)]) {
@@ -97,32 +98,31 @@ void main() {
             await field('ingrediente_activo', 'Activo');
             if (costs) {
               await field('precio_unitario', '40.00');
-              await field('ieps', '50.25');
-              await visible(
-                find.byKey(const ValueKey('inventory-field-precio_ieps')),
-              );
-              expect(
-                tester
-                    .widget<TextFormField>(
-                      find.byKey(const ValueKey('inventory-field-precio_ieps')),
-                    )
-                    .controller!
-                    .text,
-                '60.10',
-              );
+              await field('precio_publico', '60.10');
+              await field('precio_preferencial_1', '55.00');
             } else {
               expect(
                 find.byKey(const ValueKey('inventory-field-precio_unitario')),
                 findsNothing,
               );
-              await field('precio_ieps', '60.00');
+              await field('precio_publico', '60.00');
             }
             await save();
             expect(api.mutations, 1);
+            expect(
+              api.mutationBodies.single['precio_preferencial_1'],
+              costs ? '55.00' : null,
+            );
+            expect(api.mutationBodies.single['precio_preferencial_2'], isNull);
+            expect(api.mutationBodies.single.containsKey('ieps'), isFalse);
             expect(find.text('Cambios guardados.'), findsOneWidget);
             expect(
               api.mutationBodies.single.containsKey('precio_unitario'),
               costs,
+            );
+            await scrollInventoryTo(
+              tester,
+              find.byKey(const ValueKey('inventory-product-11')),
             );
             await tester.tap(
               find.byKey(const ValueKey('inventory-product-11')),
@@ -131,6 +131,7 @@ void main() {
             await tester.ensureVisible(
               find.byKey(const ValueKey('inventory-action-update')),
             );
+            await tester.pumpAndSettle();
             await tester.tap(
               find.byKey(const ValueKey('inventory-action-update')),
             );
@@ -141,16 +142,24 @@ void main() {
             await tester.ensureVisible(
               find.byKey(const ValueKey('inventory-action-prices')),
             );
+            await tester.pumpAndSettle();
             await tester.tap(
               find.byKey(const ValueKey('inventory-action-prices')),
             );
             await settle();
-            await field('precio_ieps', '75.00');
+            await field('precio_publico', '75.00');
+            await field('precio_preferencial_2', '70.00');
             await save();
             expect(api.products['11']!['price'], '75.00');
+            expect(api.products['11']!['prices'], {
+              'publico': '75.00',
+              'preferencial_1': costs ? '55.00' : '60.00',
+              'preferencial_2': '70.00',
+            });
             await tester.ensureVisible(
               find.byKey(const ValueKey('inventory-action-add')),
             );
+            await tester.pumpAndSettle();
             await tester.tap(
               find.byKey(const ValueKey('inventory-action-add')),
             );
@@ -158,11 +167,12 @@ void main() {
             await field('cantidad', '2.50');
             await save();
             expect(api.products['11']!['serverQuantity'], '2.50');
-            expect(find.text('Existencia estimada: 2.50'), findsOneWidget);
+            expect(inventoryDetailValue('2.50'), findsOneWidget);
             if (costs) {
               await tester.ensureVisible(
                 find.byKey(const ValueKey('inventory-action-prices')),
               );
+              await tester.pumpAndSettle();
               await tester.tap(
                 find.byKey(const ValueKey('inventory-action-prices')),
               );
@@ -185,10 +195,6 @@ void main() {
                 find.byKey(const ValueKey('inventory-field-precio_unitario')),
                 findsNothing,
               );
-              expect(
-                find.byKey(const ValueKey('inventory-field-ieps')),
-                findsNothing,
-              );
               await visible(find.text('Cancelar'));
               await tester.tap(find.text('Cancelar'));
               await settle();
@@ -199,6 +205,7 @@ void main() {
             await tester.ensureVisible(
               find.byKey(const ValueKey('inventory-action-add')),
             );
+            await tester.pumpAndSettle();
             expect(
               tester
                   .widget<OutlinedButton>(

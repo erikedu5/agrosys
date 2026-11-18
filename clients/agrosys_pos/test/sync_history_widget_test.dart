@@ -73,14 +73,32 @@ void main() {
           await navigate(tester, 'Historial');
           await settle();
           expect(find.text('Reintentar pendientes'), findsOneWidget);
+          final list = find
+              .descendant(
+                of: find.byKey(const Key('history-scroll')),
+                matching: find.byType(Scrollable),
+              )
+              .first;
+          await tester.scrollUntilVisible(
+            find.textContaining('PRICE_CHANGED'),
+            120,
+            scrollable: list,
+          );
           expect(find.textContaining('PRICE_CHANGED'), findsOneWidget);
           expect(
             find.textContaining('Pendiente de sincronizar'),
             findsOneWidget,
           );
-          await tester.tap(find.byType(DropdownButton<String>));
+          // Los filtros están al inicio del listado.
+          await tester.drag(
+            find.byKey(const Key('history-scroll')),
+            const Offset(0, 3000),
+          );
           await tester.pumpAndSettle();
-          await tester.tap(find.text('En revisión').last);
+          final review = find.widgetWithText(ChoiceChip, 'En revisión');
+          await tester.ensureVisible(review);
+          await tester.pumpAndSettle();
+          await tester.tap(review);
           await settle();
           expect(find.textContaining('PRICE_CHANGED'), findsOneWidget);
           expect(find.textContaining('Pendiente de sincronizar'), findsNothing);

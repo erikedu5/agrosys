@@ -48,10 +48,20 @@ class Clientes extends Model
         if ($this->plazo_credito_dias === null) {
             return null;
         }
-        $fecha = Venta::where('id_cliente', $this->id)->where('tipo_venta', 'Credito')
-            ->where('venta_pagada', false)->min('created_at');
+        return $this->vencidoDesde(Venta::where('id_cliente', $this->id)->where('tipo_venta', 'Credito')
+            ->where('venta_pagada', false)->min('created_at'));
+    }
 
-        return $fecha && Carbon::parse($fecha)->addDays((int) $this->plazo_credito_dias)->isPast() ? Carbon::parse($fecha) : null;
+    /** $fecha: venta a crédito sin pagar más antigua (precargada para listados). */
+    public function vencidoDesde(mixed $fecha): ?Carbon
+    {
+        return $this->plazo_credito_dias !== null && $fecha
+            && Carbon::parse($fecha)->addDays((int) $this->plazo_credito_dias)->isPast() ? Carbon::parse($fecha) : null;
+    }
+
+    public function mensajePlazoVencido(Carbon $desde): string
+    {
+        return "El cliente rebasó su plazo de crédito de {$this->plazo_credito_dias} días (adeudo desde el {$desde->format('d/m/Y')}).";
     }
 
     /**
@@ -61,7 +71,7 @@ class Clientes extends Model
     public function restriccionCredito(float $nuevoCredito = 0): ?string
     {
         if ($desde = $this->creditoVencidoDesde()) {
-            return "El cliente rebasó su plazo de crédito de {$this->plazo_credito_dias} días (adeudo desde el {$desde->format('d/m/Y')}).";
+            return $this->mensajePlazoVencido($desde);
         }
         if ($this->limite_credito !== null) {
             $limite = (float) $this->limite_credito;

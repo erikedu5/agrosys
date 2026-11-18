@@ -24,6 +24,7 @@ class InventoryServer extends FixtureApi {
       'product.update',
       'product.prices.update',
       'inventory.add',
+      'inventory.dose',
       if (destructive) ...['inventory.reset', 'product.delete'],
       if (costs) 'product.costs.manage',
     ];
@@ -98,18 +99,20 @@ class InventoryServer extends FixtureApi {
           'id_marca': '1',
           'barcode': p['barcode'],
           'ingrediente_activo': '',
+          'precio_publico': p['price'],
+          'precio_preferencial_1': _prices(p)['preferencial_1'],
+          'precio_preferencial_2': _prices(p)['preferencial_2'],
           'precio_ieps': p['price'],
           'version': 'a' * 64,
-          if (permissions!.contains('product.costs.manage')) ...{
+          if (permissions!.contains('product.costs.manage'))
             'precio_unitario': '40.00',
-            'ieps': '25.00',
-          },
         },
       };
     }
     if (path == 'inventory/products' ||
         [
           'add',
+          'dose',
           'update',
           'prices',
           'reset',
@@ -134,6 +137,8 @@ class InventoryServer extends FixtureApi {
           throw ApiFailure(422, 'Hay existencias en otra sucursal.');
         }
         products[id]!['active'] = false;
+      } else if (path.endsWith('/dose')) {
+        return _dose(id, operation, body);
       } else if (path.endsWith('/add')) {
         final p = products[id]!;
         p['serverQuantity'] = decimalText(
@@ -145,7 +150,7 @@ class InventoryServer extends FixtureApi {
           if (body['nombre'] != null) 'name': body['nombre'],
           if (body['tamano'] != null) 'size': body['tamano'],
           if (body['barcode'] != null) 'barcode': body['barcode'],
-          'price': body['precio_ieps'],
+          ..._priceUpdate(products[id], body),
           'classification': 'Semillas',
         };
       }
@@ -163,5 +168,96 @@ class InventoryServer extends FixtureApi {
       return result;
     }
     return super.request(path, body: body, token: token, method: method);
+  }
+
+  Map<String, dynamic> _prices(Map<String, dynamic> p) =>
+      Map<String, dynamic>.from(p['prices'] as Map? ?? {});
+
+  /// Igual que InventoryManagement::prices: preferenciales vacíos toman el
+  /// público en productos nuevos y conservan el suyo en existentes.
+  Map<String, dynamic> _priceUpdate(
+    Map<String, dynamic>? old,
+    Map<String, dynamic> body,
+  ) {
+    final public = body['precio_publico'] ?? body['precio_ieps'];
+    final previous = old == null ? null : _prices(old);
+    return {
+      'price': public,
+      'prices': {
+        'publico': public,
+        'preferencial_1':
+            body['precio_preferencial_1'] ??
+            previous?['preferencial_1'] ??
+            public,
+        'preferencial_2':
+            body['precio_preferencial_2'] ??
+            previous?['preferencial_2'] ??
+            public,
+      },
+    };
+  }
+
+  /// Igual que InventoryManagement::dose: baja 1 unidad y alta de N medidas.
+  Map<String, dynamic> _dose(
+    String id,
+    String operation,
+    Map<String, dynamic> body,
+  ) {
+    final source = products[id]!;
+    final content = decimalUnits(body['contenido']),
+        measure = decimalUnits(body['medida']);
+    final count = content ~/ measure;
+    if (content % measure != 0 && body['acepta_perdida'] != true) {
+      throw ApiFailure(
+        422,
+        'Confirma la pérdida para continuar.',
+        errors: {
+          'acepta_perdida': ['Confirma la pérdida para continuar.'],
+        },
+      );
+    }
+    if (decimalUnits(source['serverQuantity'], signed: true) < 100) {
+      throw ApiFailure(
+        422,
+        'No hay existencias suficientes.',
+        errors: {
+          'producto': [
+            'No hay existencias suficientes para dosificar una unidad.',
+          ],
+        },
+      );
+    }
+    final name = 'Medida ${source['name']}';
+    final size = '${body['medida']} ${body['unidad']}';
+    final targetId =
+        products.entries
+            .where((e) => e.value['name'] == name && e.value['size'] == size)
+            .firstOrNull
+            ?.key ??
+        '${10 + products.length}';
+    final target = products[targetId];
+    source['serverQuantity'] = decimalText(
+      decimalUnits(source['serverQuantity'], signed: true) - 100,
+    );
+    products[targetId] = {
+      ...target ?? product(id: targetId, name: name, quantity: '0.00'),
+      'name': name,
+      'size': size,
+      'barcode': '',
+      ..._priceUpdate(target, body),
+      'serverQuantity': decimalText(
+        decimalUnits(target?['serverQuantity'] ?? '0.00') + count * 100,
+      ),
+    };
+    mutations++;
+    return results[operation] = {
+      'operationId': operation,
+      'status': 'confirmed',
+      'productId': id,
+      'quantity': source['serverQuantity'],
+      'doseProductId': targetId,
+      'doseUnits': count,
+      'doseQuantity': products[targetId]!['serverQuantity'],
+    };
   }
 }

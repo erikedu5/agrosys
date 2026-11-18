@@ -171,7 +171,17 @@ void main() {
         await tester.enterText(field('Fondo inicial (\$)'), '200.00');
         await tapButton('Abrir caja');
         expect(find.text('Efectivo esperado: \$200.00'), findsOneWidget);
-        await tester.ensureVisible(field('Importe (\$)'));
+        await tester.ensureVisible(find.text('Ventas de esta caja'));
+        expect(find.text('Vendido a crédito (1): \$80.00'), findsOneWidget);
+        expect(
+          find.text('Crédito por cobrar de estas ventas: \$50.00'),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          field('Importe (\$)'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.enterText(field('Importe (\$)'), '50.00');
         await tester.enterText(field('Motivo'), 'Retiro de caja');
         await tapButton('Guardar movimiento');

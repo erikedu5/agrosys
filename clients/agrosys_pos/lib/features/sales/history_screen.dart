@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show OrderingTerm;
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../data/database.dart';
+import '../../ui/components.dart';
 import '../receipts/receipt_dialog.dart';
 import 'sale_domain.dart';
 
@@ -88,101 +89,139 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  static const _filters = <(String?, String, Color?)>[
+    (null, 'Todas', null),
+    ('pending_sync', 'Pendientes', Palette.amber400),
+    ('conflict', 'En revisión', Palette.red500),
+    ('confirmed', 'Confirmadas', Palette.green600),
+  ];
+
+  Tone _tone(String status) => switch (status) {
+    'confirmed' => Tone.green,
+    'conflict' => Tone.red,
+    'pending_sync' => Tone.amber,
+    _ => Tone.gray,
+  };
+
+  Widget _card(LocalSale s) {
+    final reason = _queue[s.id]?.error;
+    final when = DateTime.parse(s.occurredAt).toLocal();
+    return RecordCard(
+      key: ValueKey('history-sale-${s.id}'),
+      eyebrow: s.localFolio,
+      title: s.customerName,
+      badges: [UiBadge(saleStatusText(s.status), tone: _tone(s.status))],
+      fields: [
+        RecordField('Tipo', s.saleType == 'Credito' ? 'Crédito' : 'Contado'),
+        RecordField('Saldo de la venta', money(s.balanceCents)),
+        RecordField(
+          'Fecha',
+          '${when.day}/${when.month}/${when.year} ${when.hour}:${when.minute.toString().padLeft(2, '0')}',
+        ),
+        RecordField('Folio central', s.serverFolio ?? 'Pendiente'),
+      ],
+      actions: [
+        OutlinedButton.icon(
+          onPressed: () => _open(s),
+          icon: const Icon(Icons.receipt_long_outlined, size: 20),
+          label: const Text('Ver ticket'),
+        ),
+      ],
+      onTap: () => _open(s),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AmountLine(money(s.totalCents), label: 'Total'),
+          if (reason != null) ...[
+            const SizedBox(height: 8),
+            UiAlert(reason, tone: Tone.red),
+          ],
+          if (s.status == 'conflict') ...[
+            const SizedBox(height: 8),
+            const Muted(
+              'Solicita revisión central. El reintento no modifica esta venta.',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Encabezado, filtros y avisos; se desplazan con las tarjetas, como en la web.
+  List<Widget> _top() => [
+    PageHeader(
+      title: 'Ventas del dispositivo',
+      subtitle: 'Tickets y pendientes de este contexto. Las ventas terminadas se conservan.',
+      actions: [
+        OutlinedButton.icon(
+          onPressed: widget.controller.syncBusy || widget.controller.busy
+              ? null
+              : () => widget.controller.synchronize(),
+          icon: const Icon(Icons.sync),
+          label: Text(
+            widget.controller.syncBusy
+                ? 'Sincronizando…'
+                : 'Reintentar pendientes',
+          ),
+        ),
+        IconButton.outlined(
+          tooltip: 'Actualizar historial',
+          onPressed: _loading ? null : _load,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
+    const SizedBox(height: 12),
+    FilterChips<String?>(
+      key: const Key('history-filter'),
+      options: _filters,
+      selected: _filter,
+      onSelected: (value) {
+        _filter = value;
+        _load();
+      },
+    ),
+    const SizedBox(height: 12),
+    if (widget.controller.error != null)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: UiAlert(widget.controller.error!, tone: Tone.red),
+      ),
+    if (_error != null)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: UiAlert(_error!, tone: Tone.red),
+      ),
+  ];
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Ventas del dispositivo',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-            IconButton(
-              tooltip: 'Actualizar historial',
-              onPressed: _loading ? null : _load,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        const Text(
-          'Tickets y pendientes de este contexto. Las ventas terminadas se conservan.',
-        ),
-        Wrap(
-          spacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            DropdownButton<String>(
-              value: _filter ?? 'all',
-              items: const [
-                DropdownMenuItem(value: 'all', child: Text('Todas')),
-                DropdownMenuItem(
-                  value: 'pending_sync',
-                  child: Text('Pendientes'),
-                ),
-                DropdownMenuItem(value: 'conflict', child: Text('En revisión')),
-                DropdownMenuItem(
-                  value: 'confirmed',
-                  child: Text('Confirmadas'),
-                ),
-              ],
-              onChanged: (value) {
-                _filter = value == 'all' ? null : value;
-                _load();
-              },
-            ),
-            TextButton.icon(
-              onPressed: widget.controller.syncBusy || widget.controller.busy
-                  ? null
-                  : () => widget.controller.synchronize(),
-              icon: const Icon(Icons.sync),
-              label: Text(
-                widget.controller.syncBusy
-                    ? 'Sincronizando…'
-                    : 'Reintentar pendientes',
-              ),
-            ),
-          ],
-        ),
-        if (widget.controller.error != null) Text(widget.controller.error!),
-        if (_error != null) Text(_error!),
         if (_loading) const LinearProgressIndicator(),
-        const SizedBox(height: 12),
         Expanded(
-          child: _sales.isEmpty && !_loading
-              ? const Center(child: Text('Todavía no hay ventas guardadas.'))
-              : ListView.builder(
-                  itemCount: _sales.length + (_more ? 1 : 0),
-                  itemBuilder: (context, i) {
-                    if (i == _sales.length) {
-                      return TextButton(
-                        onPressed: _loading ? null : () => _load(append: true),
-                        child: const Text('Cargar más ventas'),
-                      );
-                    }
-                    final s = _sales[i];
-                    final queue = _queue[s.id];
-                    final reason = queue?.error;
-                    final when = DateTime.parse(s.occurredAt).toLocal();
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        title: Text(
-                          '${s.customerName} · ${money(s.totalCents)}',
-                        ),
-                        subtitle: Text(
-                          '${s.localFolio}\n${s.saleType} · ${saleStatusText(s.status)}\nSaldo venta ${money(s.balanceCents)} · ${when.day}/${when.month}/${when.year} ${when.hour}:${when.minute.toString().padLeft(2, '0')}${s.serverFolio == null ? '' : '\nFolio central ${s.serverFolio}'}${reason == null ? '' : '\n$reason'}${s.status == 'conflict' ? '\nSolicita revisión central. El reintento no modifica esta venta.' : ''}',
-                        ),
-                        trailing: const Icon(Icons.receipt_long_outlined),
-                        onTap: () => _open(s),
-                      ),
-                    );
-                  },
+          child: RecordGrid(
+            scrollKey: const Key('history-scroll'),
+            itemCount: _sales.length,
+            itemBuilder: (context, i) => _card(_sales[i]),
+            header: [
+              ..._top(),
+              if (_sales.isEmpty && !_loading)
+                const EmptyState(
+                  title: 'Todavía no hay ventas guardadas.',
+                  text: 'Las ventas que cobres en este dispositivo aparecen aquí.',
                 ),
+            ],
+            footer: [
+              if (_more)
+                TextButton(
+                  onPressed: _loading ? null : () => _load(append: true),
+                  child: const Text('Cargar más ventas'),
+                ),
+            ],
+          ),
         ),
       ],
     ),

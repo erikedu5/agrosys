@@ -205,6 +205,7 @@ void main() {
           (await c.repository!.db.select(c.repository!.db.outbox).getSingle())
               .payload;
       await c.repository!.db.customStatement('DROP TABLE cash_local_state');
+      await dropV8Columns(c.repository!.db.customStatement);
       await c.repository!.db.customStatement('PRAGMA user_version=6');
       c.dispose();
       await c.repository!.db.close();

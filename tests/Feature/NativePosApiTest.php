@@ -630,6 +630,24 @@ class NativePosApiTest extends TestCase
         $this->api('POST', 'sync/pull', [...$this->context(), 'cursor' => $pull->json('nextCursor')])->assertJsonPath('products.0.active', false);
     }
 
+    public function test_snapshot_customers_carry_invoice_and_credit_restrictions(): void
+    {
+        $this->activate();
+        $this->customer->update(['requiereFactura' => true, 'limite_credito' => 500, 'plazo_credito_dias' => 5, 'tipo_precio' => 'preferencial_1']);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonPath('customers.0.requiresInvoice', true)
+            ->assertJsonPath('customers.0.creditLimit', '500.00')->assertJsonPath('customers.0.creditBlockedReason', null)
+            ->assertJsonPath('customers.0.priceTier', 'preferencial_1');
+        $this->customer->update(['tipo_precio' => 'publico']);
+        $this->push([$this->operation('Credito', '30.00')])->assertJsonPath('results.0.status', 'confirmed');
+        $since = now()->subDays(6);
+        Venta::where('id_cliente', $this->customer->id)->update(['created_at' => $since]);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()
+            ->assertJsonPath('customers.0.creditBlockedReason', "El cliente rebasó su plazo de crédito de 5 días (adeudo desde el {$since->format('d/m/Y')}).");
+        $this->customer->update(['requiereFactura' => false, 'limite_credito' => null, 'plazo_credito_dias' => null]);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonPath('customers.0.requiresInvoice', false)
+            ->assertJsonPath('customers.0.creditLimit', null)->assertJsonPath('customers.0.creditBlockedReason', null);
+    }
+
     public function test_cursor_expiry_and_unknown_operation_receipts_preserve_recovery_path(): void
     {
         $this->activate();

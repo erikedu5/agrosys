@@ -74,6 +74,7 @@ void main() {
           final label = role == 'inventario' ? 'Transferencias' : 'Compras';
           final menu = find.widgetWithText(OutlinedButton, label);
           await tester.ensureVisible(menu);
+          await tester.pumpAndSettle();
           await tester.tap(menu);
           await settle();
           expect(
@@ -152,6 +153,7 @@ void main() {
           await tester.pumpAndSettle();
           final menu = find.widgetWithText(OutlinedButton, label);
           await tester.ensureVisible(menu);
+          await tester.pumpAndSettle();
           await tester.tap(menu);
           await settle();
         }
@@ -252,6 +254,8 @@ void main() {
           c.online = false;
           c.notifyListeners();
           await tester.pumpAndSettle();
+          // El aviso sin conexión entra arriba de la ficha y la recorre hacia abajo.
+          await visible('stock-document-action', 'stock-detail-scroll');
           expect(
             tester
                 .widget<FilledButton>(

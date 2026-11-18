@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
@@ -97,22 +98,34 @@ Map<String, dynamic> product({
   'barcode': '7501234567890',
   'size': '1 kg',
   'price': '50.00',
+  'prices': {
+    'publico': '50.00',
+    'preferencial_1': '47.50',
+    'preferencial_2': '45.00',
+  },
   'unitPrice': '50.00',
   'active': active,
   'branchId': '1',
   'serverQuantity': quantity,
 };
-Map<String, dynamic> customer({String balance = '40.00', bool active = true}) =>
-    {
-      'id': '20',
-      'name': 'José Pérez',
-      'branchId': '1',
-      'active': active,
-      'discountPercentage': '5.00',
-      'debtTotal': balance,
-      'paymentTotal': '0.00',
-      'balance': balance,
-    };
+Map<String, dynamic> customer({
+  String balance = '40.00',
+  bool active = true,
+  String priceTier = 'publico',
+}) => {
+  'id': '20',
+  'name': 'José Pérez',
+  'branchId': '1',
+  'active': active,
+  'discountPercentage': '0.00',
+  'priceTier': priceTier,
+  'requiresInvoice': false,
+  'creditLimit': null,
+  'creditBlockedReason': null,
+  'debtTotal': balance,
+  'paymentTotal': '0.00',
+  'balance': balance,
+};
 Map<String, dynamic> snapshot({
   String revision = '11111111-1111-4111-8111-111111111111',
   bool more = false,
@@ -251,4 +264,29 @@ class FixtureApi extends PosApi {
 
   @override
   void close() {}
+}
+
+/// Columnas de schema v8; las bases que simulan versiones previas no las tienen.
+Future<void> dropV8Columns(
+  FutureOr<void> Function(String sql) execute, {
+  bool sales = true,
+}) async {
+  final columns = {
+    'local_products': [
+      'price_preferential1_cents',
+      'price_preferential2_cents',
+    ],
+    'local_customers': [
+      'price_tier',
+      'requires_invoice',
+      'credit_limit_cents',
+      'credit_blocked_reason',
+    ],
+    if (sales) 'local_sales': ['price_tier', 'payment_form'],
+  };
+  for (final table in columns.entries) {
+    for (final column in table.value) {
+      await execute('ALTER TABLE ${table.key} DROP COLUMN $column');
+    }
+  }
 }

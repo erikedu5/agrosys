@@ -9,6 +9,7 @@ use App\Models\OfflineOperation;
 use App\Models\Producto;
 use App\Models\Sucursales;
 use App\Models\User;
+use App\Models\Venta;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -45,7 +46,20 @@ class CatalogSnapshots
 
                 return ['id' => (string) $product->id, 'sku' => (string) $product->id, 'barcode' => $product->barcode ?? '', 'name' => $product->nombre, 'size' => $product->tamano, 'classification' => $product->classification, ...($canSeeCosts ? ['unitPrice' => Decimal::format(Decimal::units($product->precio_unitario, 'price'))] : []), 'price' => Decimal::format(Decimal::units($product->precio_publico, 'price')), 'prices' => array_map(fn ($column) => Decimal::format(Decimal::units($product->{$column}, 'price')), Producto::PRECIOS), 'active' => ! $product->trashed(), 'branchId' => (string) $branch->id, 'serverQuantity' => Decimal::format(Decimal::units($stock?->cantidad_nueva ?? 0, 'stock', true))];
             })->all();
-            $customers = Clientes::where('id_sucursal', $branch->id)->orderBy('id')->get()->map(fn ($customer) => ['id' => (string) $customer->id, 'branchId' => (string) $branch->id, 'name' => $customer->nombre, 'active' => (bool) $customer->activo, 'discountPercentage' => '0.00', 'priceTier' => $customer->tipo_precio ?? 'publico', 'debtTotal' => Decimal::format(Decimal::units($customer->adeudo_total, 'debt')), 'paymentTotal' => Decimal::format(Decimal::units($customer->abono_total, 'payment')), 'balance' => Decimal::format(Decimal::units($customer->balance, 'balance', true))])->all();
+            // Venta a crédito sin pagar más antigua por cliente, para el bloqueo por plazo vencido.
+            $oldestCredit = Venta::whereIn('id_cliente', Clientes::where('id_sucursal', $branch->id)->select('id'))
+                ->where('tipo_venta', 'Credito')->where('venta_pagada', false)->groupBy('id_cliente')
+                ->selectRaw('id_cliente, MIN(created_at) as desde')->pluck('desde', 'id_cliente');
+            $customers = Clientes::where('id_sucursal', $branch->id)->orderBy('id')->get()->map(function ($customer) use ($branch, $oldestCredit) {
+                $overdue = $customer->vencidoDesde($oldestCredit->get($customer->id));
+
+                return ['id' => (string) $customer->id, 'branchId' => (string) $branch->id, 'name' => $customer->nombre, 'active' => (bool) $customer->activo, 'discountPercentage' => '0.00', 'priceTier' => $customer->tipo_precio ?? 'publico',
+                    'requiresInvoice' => (bool) $customer->requiereFactura,
+                    // Límite mayor al rango decimal del POS equivale a sin límite práctico.
+                    'creditLimit' => $customer->limite_credito === null ? null : Decimal::format(min((int) round((float) $customer->limite_credito * 100), 9999999999)),
+                    'creditBlockedReason' => $overdue ? $customer->mensajePlazoVencido($overdue) : null,
+                    'debtTotal' => Decimal::format(Decimal::units($customer->adeudo_total, 'debt')), 'paymentTotal' => Decimal::format(Decimal::units($customer->abono_total, 'payment')), 'balance' => Decimal::format(Decimal::units($customer->balance, 'balance', true))];
+            })->all();
             $catalog = ['products' => $products, 'customers' => $customers];
             $changes = [];
             foreach ($catalog as $kind => $rows) {

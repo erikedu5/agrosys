@@ -5482,6 +5482,29 @@
           "serverQuantity": {
             "type": "string",
             "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "prices": {
+            "type": "object",
+            "description": "Precio de venta por tipo de precio del cliente; price es el público.",
+            "properties": {
+              "publico": {
+                "type": "string",
+                "pattern": "^\\d{1,8}\\.\\d{2}$"
+              },
+              "preferencial_1": {
+                "type": "string",
+                "pattern": "^\\d{1,8}\\.\\d{2}$"
+              },
+              "preferencial_2": {
+                "type": "string",
+                "pattern": "^\\d{1,8}\\.\\d{2}$"
+              }
+            },
+            "required": [
+              "publico",
+              "preferencial_1",
+              "preferencial_2"
+            ]
           }
         },
         "required": [
@@ -5515,7 +5538,8 @@
           },
           "discountPercentage": {
             "type": "string",
-            "pattern": "^\\d{1,8}\\.\\d{2}$"
+            "pattern": "^\\d{1,8}\\.\\d{2}$",
+            "description": "Sin descuentos por cliente: siempre 0.00; se conserva por compatibilidad."
           },
           "debtTotal": {
             "type": "string",
@@ -5528,6 +5552,33 @@
           "balance": {
             "type": "string",
             "pattern": "^-?\\d+\\.\\d{2}$"
+          },
+          "priceTier": {
+            "enum": [
+              "publico",
+              "preferencial_1",
+              "preferencial_2"
+            ],
+            "description": "Tipo de precio con el que se le vende."
+          },
+          "requiresInvoice": {
+            "type": "boolean",
+            "description": "La venta debe llevar paymentForm."
+          },
+          "creditLimit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{1,8}\\.\\d{2}$",
+            "description": "null = sin límite. El saldo más el crédito nuevo no puede rebasarlo."
+          },
+          "creditBlockedReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Motivo de plazo de crédito vencido; con valor solo se vende de contado."
           }
         },
         "required": [
@@ -5616,6 +5667,17 @@
             "type": "string",
             "format": "uuid",
             "description": "Required original open cashier/branch session. Missing/null/closed/foreign sessions produce a conflict; queued payloads stay immutable."
+          },
+          "paymentForm": {
+            "enum": [
+              "01",
+              "03",
+              "04",
+              "28",
+              "02",
+              "99"
+            ],
+            "description": "Forma de pago SAT; obligatoria en el cliente cuando requiresInvoice."
           }
         },
         "required": [

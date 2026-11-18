@@ -47,10 +47,10 @@ class SalesRepository {
           'Un producto dejó de estar disponible. Actualiza el carrito.',
         );
       }
-      final price = discountedUnitPrice(
-        product.priceCents,
-        customer.discountBasisPoints,
-      );
+      final price = product.priceFor(customer.priceTier);
+      if (price < 0 || price > maxSaleCents) {
+        throw const SaleInputException('Precio fuera de rango.');
+      }
       final amount = saleLineTotal(price, line.quantityUnits);
       total += amount;
       if (total > maxSaleCents) {
@@ -123,7 +123,7 @@ class SalesRepository {
       final quote = await _quote(request.customerId, request.lines);
       if (quote.priceFingerprint != request.expectedPriceFingerprint) {
         throw const SaleInputException(
-          'Cambió el precio, descuento o nombre del catálogo. Revisa el total antes de finalizar.',
+          'Cambió el precio, tipo de precio o nombre del catálogo. Revisa el total antes de finalizar.',
         );
       }
       if (quote.insufficientStock && !request.acknowledgeStock) {
@@ -137,6 +137,20 @@ class SalesRepository {
         initial: request.initialCents,
         received: request.receivedCents,
       );
+      final invoice = quote.customer.requiresInvoice;
+      if (invoice && !paymentForms.containsKey(request.paymentForm)) {
+        throw const SaleInputException(
+          'El cliente requiere factura: selecciona la forma de pago.',
+        );
+      }
+      final creditRestriction = request.type == 'Credito'
+          ? quote.customer.creditRestriction(payment.balanceCents)
+          : null;
+      if (creditRestriction != null) {
+        throw SaleInputException(
+          '$creditRestriction Solo se le puede vender de contado.',
+        );
+      }
       // Recheck at the commit boundary, after asynchronous reads and quote validation.
       if (!session.hasOfflineAccess || await catalog.isLocked()) {
         throw const SaleInputException(
@@ -167,6 +181,8 @@ class SalesRepository {
               operatorName: session.userName,
               saleType: request.type,
               discountBasisPoints: quote.customer.discountBasisPoints,
+              priceTier: Value(quote.customer.priceTier),
+              paymentForm: Value(invoice ? request.paymentForm : null),
               totalCents: quote.totalCents,
               appliedCents: payment.appliedCents,
               receivedCents: payment.receivedCents,
@@ -242,6 +258,7 @@ class SalesRepository {
           'cashSessionId': cashCurrent['id'],
           'customerId': quote.customer.id,
           'saleType': request.type,
+          if (invoice) 'paymentForm': request.paymentForm,
           'total': decimalText(quote.totalCents),
           'localFolio': folio,
           'items': quote.lines
