@@ -4,6 +4,13 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../core/pos_api.dart';
 
+/// Precios de venta por tipo de precio (Producto::PRECIOS) => etiqueta.
+const priceFields = {
+  'precio_publico': 'Precio público en general',
+  'precio_preferencial_1': 'Precio preferencial 1 (opcional)',
+  'precio_preferencial_2': 'Precio preferencial 2 (opcional)',
+};
+
 class InventoryEditor extends StatefulWidget {
   final AppController controller;
   final String action;
@@ -31,9 +38,8 @@ class _InventoryEditorState extends State<InventoryEditor> {
       'tamano',
       'barcode',
       'ingrediente_activo',
-      'precio_ieps',
       'precio_unitario',
-      'ieps',
+      ...priceFields.keys,
       'cantidad',
     ])
       name: TextEditingController(),
@@ -138,15 +144,16 @@ class _InventoryEditorState extends State<InventoryEditor> {
         if (widget.action == 'add') {
           payload['cantidad'] = _fields['cantidad']!.text.trim();
         } else {
-          payload['precio_ieps'] = _fields['precio_ieps']!.text.trim();
+          // Preferenciales vacíos: el servidor usa el público (nuevo) o conserva el actual.
+          for (final field in priceFields.keys) {
+            final value = _fields[field]!.text.trim();
+            payload[field] = value.isEmpty ? null : value;
+          }
           if (_canShowCosts) {
             payload['precio_unitario'] =
                 _fields['precio_unitario']!.text.trim().isEmpty
                 ? null
                 : _fields['precio_unitario']!.text.trim();
-            payload['ieps'] = _fields['ieps']!.text.trim().isEmpty
-                ? null
-                : _fields['ieps']!.text.trim();
           }
           if (widget.action != 'prices') {
             for (final field in [
@@ -195,35 +202,6 @@ class _InventoryEditorState extends State<InventoryEditor> {
     }
   }
 
-  void _recalculate(String trigger) {
-    if (!_canShowCosts || !_editable) return;
-    int? amount(String field) {
-      try {
-        return decimalUnits(_fields[field]!.text.trim());
-      } catch (_) {
-        return null;
-      }
-    }
-
-    final cost = amount('precio_unitario'),
-        gain = amount('ieps'),
-        price = amount('precio_ieps');
-    if (cost != null && gain != null && trigger != 'precio_ieps') {
-      _fields['precio_ieps']!.text = decimalText(
-        (cost * (10000 + gain) + 5000) ~/ 10000,
-      );
-    } else if (price != null && gain != null && trigger != 'precio_unitario') {
-      final divisor = 10000 + gain;
-      _fields['precio_unitario']!.text = decimalText(
-        (price * 10000 + divisor ~/ 2) ~/ divisor,
-      );
-    } else if (cost != null && cost > 0 && price != null && trigger != 'ieps') {
-      _fields['ieps']!.text = decimalText(
-        ((price - cost) * 10000 / cost).round(),
-      );
-    }
-  }
-
   String? _decimal(
     String? value, {
     bool optional = false,
@@ -258,11 +236,6 @@ class _InventoryEditorState extends State<InventoryEditor> {
       controller: _fields[name],
       enabled: _editable,
       maxLength: maxLength,
-      onChanged: (v) {
-        if (['precio_ieps', 'precio_unitario', 'ieps'].contains(name)) {
-          _recalculate(name);
-        }
-      },
       keyboardType: decimal
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
@@ -405,20 +378,15 @@ class _InventoryEditorState extends State<InventoryEditor> {
                 optional: true,
                 zero: true,
               ),
-              _text(
-                'ieps',
-                'Ganancia (%)',
-                decimal: true,
-                optional: true,
-                zero: true,
-              ),
             ],
-            _text(
-              'precio_ieps',
-              'Precio de venta',
-              required: true,
-              decimal: true,
-            ),
+            for (final price in priceFields.entries)
+              _text(
+                price.key,
+                price.value,
+                required: price.key == 'precio_publico',
+                optional: price.key != 'precio_publico',
+                decimal: true,
+              ),
           ],
           if (_saving) const LinearProgressIndicator(),
           Wrap(

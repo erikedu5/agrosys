@@ -66,6 +66,9 @@ class WebRoutes
      * )
      * @OA\Post(path="/inventario", summary="Inventario - crear", tags={"Web"}, security={{"SessionAuth":{}}}, @OA\Response(response=302, description="Redirección"))
      * @OA\Post(path="/inventario/addInventario", summary="Inventario - alta de existencias", tags={"Web"}, security={{"SessionAuth":{}}}, @OA\Response(response=302, description="Redirección"))
+     * @OA\Post(path="/inventario/{producto}/dosificar", summary="Inventario - dosificar una unidad en medidas", tags={"Web"}, security={{"SessionAuth":{}}},
+     *   @OA\Parameter(name="producto", in="path", required=true, @OA\Schema(type="integer")),
+     *   @OA\Response(response=302, description="Redirección"))
      */
     public function inventario() {}
 

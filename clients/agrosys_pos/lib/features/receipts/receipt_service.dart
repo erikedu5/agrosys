@@ -22,7 +22,9 @@ String receiptText(StoredReceipt r) {
     'Fecha: ${DateTime.parse(s.occurredAt).toLocal()}',
     'Atendió: ${s.operatorName}',
     'Cliente: ${s.customerName}',
-    '${s.saleType} · Descuento ${decimalText(s.discountBasisPoints)}%',
+    '${s.saleType} · Precio ${priceTierLabel(s.priceTier)}',
+    if (s.paymentForm != null)
+      'Forma de pago: ${s.paymentForm} ${paymentForms[s.paymentForm] ?? ''}',
     '',
     for (final i in r.items)
       '${i.productName}\n${decimalText(i.quantityUnits)} × ${money(i.unitPriceCents)} = ${money(i.totalCents)}',

@@ -26,6 +26,8 @@ void main() {
                     'classification': 'Fertilizantes',
                   },
                 ],
+                // Preferencial 1: 47.50 por unidad en lugar del público de 50.00.
+                customers: [customer(priceTier: 'preferencial_1')],
               ),
             ],
           )..salesEnabled = true;
@@ -135,7 +137,21 @@ void main() {
             await settle();
             await navigate(tester, 'Historial');
             await settle();
-            expect(find.text('José Pérez · \$95.00'), findsOneWidget);
+            final sale = find.byWidgetPredicate(
+              (w) =>
+                  w.key is ValueKey<String> &&
+                  (w.key! as ValueKey<String>).value.startsWith(
+                    'history-sale-',
+                  ),
+            );
+            expect(
+              find.descendant(of: sale, matching: find.text('José Pérez')),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(of: sale, matching: find.text('\$95.00')),
+              findsOneWidget,
+            );
             expect(find.text('Eliminar venta'), findsNothing);
             await tester.runAsync(() async {
               expect((await controller.sales!.history()).length, 1);

@@ -33,7 +33,7 @@ class _SaleScreenState extends State<SaleScreen> {
   CustomerView? _customer;
   SaleQuote? _quote;
   String _type = 'Contado', _saleId = const Uuid().v4();
-  String? _error;
+  String? _error, _paymentForm;
   bool _loading = true, _closing = false, _stockAcknowledged = false;
   int _request = 0, _generation = -1;
   Timer? _debounce;
@@ -102,6 +102,11 @@ class _SaleScreenState extends State<SaleScreen> {
         _products = products;
         _categories = categories;
         _category = category;
+        if (customer?.id != _customer?.id) _paymentForm = null;
+        // Plazo vencido o límite alcanzado: solo contado (igual que la web).
+        if (customer?.creditRestriction() != null && _closingRequest == null) {
+          _type = 'Contado';
+        }
         _customer = customer;
         _quote = quote;
         _loading = false;
@@ -138,6 +143,8 @@ class _SaleScreenState extends State<SaleScreen> {
     );
     if (!mounted || chosen == null) return;
     setState(() {
+      if (chosen.id != _customer?.id) _paymentForm = null;
+      if (chosen.creditRestriction() != null) _type = 'Contado';
       _customer = chosen;
       _stockAcknowledged = false;
     });
@@ -230,6 +237,14 @@ class _SaleScreenState extends State<SaleScreen> {
       );
       return;
     }
+    final invoice = _quote!.customer.requiresInvoice;
+    if (_closingRequest == null && invoice && _paymentForm == null) {
+      setState(
+        () => _error =
+            'El cliente requiere factura: selecciona la forma de pago.',
+      );
+      return;
+    }
     final request =
         _closingRequest ??
         SaleRequest(
@@ -242,6 +257,7 @@ class _SaleScreenState extends State<SaleScreen> {
               : 0,
           receivedCents: payment!.receivedCents,
           expectedPriceFingerprint: _quote!.priceFingerprint,
+          paymentForm: invoice ? _paymentForm : null,
           acknowledgeStock: _stockAcknowledged,
         );
     setState(() {
@@ -265,6 +281,7 @@ class _SaleScreenState extends State<SaleScreen> {
       _cart.clear();
       _quote = null;
       _stockAcknowledged = false;
+      _paymentForm = null;
       _received.clear();
       _initial.text = '0.00';
     });
@@ -458,6 +475,33 @@ class _SaleScreenState extends State<SaleScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+                    if (_quote!.customer.requiresInvoice) ...[
+                      DropdownButtonFormField<String>(
+                        key: const Key('payment-form'),
+                        initialValue: _paymentForm,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: 'Forma de pago para factura *',
+                          errorText: _paymentForm == null
+                              ? 'Selecciona la forma de pago'
+                              : null,
+                        ),
+                        items: [
+                          for (final form in paymentForms.entries)
+                            DropdownMenuItem(
+                              value: form.key,
+                              child: Text(form.value),
+                            ),
+                        ],
+                        onChanged: _editable
+                            ? (v) {
+                                setState(() => _paymentForm = v);
+                                refresh(() {});
+                              }
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     if (_type == 'Credito') ...[
                       TextField(
                         controller: _initial,
@@ -565,7 +609,10 @@ class _SaleScreenState extends State<SaleScreen> {
                       onPressed:
                           !_closing &&
                               !widget.controller.busy &&
-                              (_closingRequest != null || payment != null) &&
+                              (_closingRequest != null ||
+                                  (payment != null &&
+                                      (!_quote!.customer.requiresInvoice ||
+                                          _paymentForm != null))) &&
                               (_quote!.insufficientStock == false ||
                                   _stockAcknowledged)
                           ? () {
@@ -1066,7 +1113,7 @@ class _SaleScreenState extends State<SaleScreen> {
                 Text(_customer?.name ?? 'Seleccionar cliente'),
                 if (_customer != null)
                   Text(
-                    'Descuento ${decimalText(_customer!.discountBasisPoints)}% · Adeudo ${money(_customer!.balanceCents)}',
+                    customerSummary(_customer!),
                     style: const TextStyle(fontSize: 11),
                   ),
               ],
@@ -1149,6 +1196,8 @@ class _SaleScreenState extends State<SaleScreen> {
                 ),
               const Divider(),
               DropdownButtonFormField<String>(
+                // Se reconstruye si el tipo cambia solo (crédito restringido => Contado).
+                key: ValueKey('sale-type-$_type'),
                 initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Tipo de venta'),
                 items: [
@@ -1159,9 +1208,10 @@ class _SaleScreenState extends State<SaleScreen> {
                   if (widget.controller.session!.permissions.contains(
                     'sale.credit',
                   ))
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'Credito',
-                      child: Text('Crédito'),
+                      enabled: _customer?.creditRestriction() == null,
+                      child: const Text('Crédito'),
                     ),
                 ],
                 onChanged: _editable
@@ -1174,6 +1224,15 @@ class _SaleScreenState extends State<SaleScreen> {
                       }
                     : null,
               ),
+              if (_customer?.creditRestriction() case final reason?)
+                Padding(
+                  key: const Key('credit-restriction'),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '$reason Solo se le puede vender de contado.',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
               if (_quote?.insufficientStock == true)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
@@ -1354,9 +1413,7 @@ class _CustomerPickerState extends State<_CustomerPicker> {
                         final c = _customers[i];
                         return ListTile(
                           title: Text(c.name),
-                          subtitle: Text(
-                            'Descuento ${decimalText(c.discountBasisPoints)}% · Adeudo estimado ${money(c.balanceCents)}',
-                          ),
+                          subtitle: Text(customerSummary(c, estimated: true)),
                           onTap: () => Navigator.pop(context, c),
                         );
                       },

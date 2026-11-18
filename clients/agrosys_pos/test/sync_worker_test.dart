@@ -288,6 +288,7 @@ void main() {
     raw.execute('ALTER TABLE outbox DROP COLUMN error_code');
     raw.execute('DROP TABLE inventory_requests');
     raw.execute('ALTER TABLE local_products DROP COLUMN classification');
+    await dropV8Columns(raw.execute);
     raw.execute('PRAGMA user_version=3');
     raw.close();
     await open();

@@ -177,24 +177,34 @@ void main() {
           await settle();
           await tester.tap(find.byKey(const ValueKey('inventory-product-10')));
           await settle();
-          expect(find.text('Categoría: Semillas'), findsOneWidget);
-          expect(find.text('Existencia estimada: 10.00'), findsOneWidget);
+          expect(inventoryDetailValue('Semillas'), findsOneWidget);
+          expect(inventoryDetailValue('10.00'), findsOneWidget);
           await tester.ensureVisible(find.text('Consultar movimientos'));
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Consultar movimientos'));
           await settle();
+          await tester.scrollUntilVisible(
+            find.text('Alta de inventario · 10.00'),
+            80,
+            scrollable: find.descendant(
+              of: find.byKey(const Key('inventory-detail-scroll')),
+              matching: find.byType(Scrollable),
+            ),
+          );
           expect(find.text('Alta de inventario · 10.00'), findsOneWidget);
           api.disconnected = true;
           await tester.runAsync(c.checkAccess);
           await settle();
+          // El aviso está al inicio de la ficha, que se desplaza junto con el encabezado.
+          await tester.drag(
+            find.byKey(const Key('inventory-detail-scroll')),
+            const Offset(0, 3000),
+          );
+          await tester.pumpAndSettle();
           expect(
             find.textContaining('Sin conexión. Consulta el catálogo guardado'),
             findsOneWidget,
           );
-          await tester.drag(
-            find.byKey(const Key('inventory-detail-scroll')),
-            const Offset(0, 300),
-          );
-          await tester.pumpAndSettle();
           await tester.scrollUntilVisible(
             find.byKey(const Key('inventory-movements-button')),
             80,
@@ -224,7 +234,7 @@ void main() {
           await tester.runAsync(c.checkAccess);
           await settle();
           expect(c.canReadInventory, isFalse);
-          expect(find.text('Categoría: Semillas'), findsNothing);
+          expect(find.byKey(const Key('inventory-detail')), findsNothing);
           await tester.tap(find.byTooltip('Menú'));
           await tester.pumpAndSettle();
           expect(

@@ -54,6 +54,16 @@ class CashServer extends FixtureApi {
         'difference': null,
         'notes': null,
         'totals': <String, dynamic>{},
+        'sales': {
+          'cash': '120.00',
+          'cashCount': 2,
+          'credit': '80.00',
+          'creditCount': 1,
+          'total': '200.00',
+          'creditInitial': '30.00',
+          'creditPending': '50.00',
+          'accountPayments': '10.00',
+        },
       };
     } else if (path == 'cash/movement') {
       final amount =

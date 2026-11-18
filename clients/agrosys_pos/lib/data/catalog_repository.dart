@@ -19,6 +19,16 @@ String normalizedName(String input) {
 String searchPattern(String value) =>
     '%${normalizedName(value.trim()).replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%';
 
+/// Precios preferencial 1 y 2 del snapshot; servidores anteriores solo envían `price`.
+(int, int) tierPrices(Map<String, dynamic> product) {
+  final prices = product['prices'] == null ? null : object(product['prices']);
+  final public = decimalUnits(product['price']);
+  return (
+    prices == null ? public : decimalUnits(prices['preferencial_1']),
+    prices == null ? public : decimalUnits(prices['preferencial_2']),
+  );
+}
+
 class CatalogRepository {
   final PosDatabase db;
   final Session session;
@@ -89,6 +99,8 @@ class CatalogRepository {
       (stock?.quantityUnits ?? 0) + delta.read<int>('delta'),
       product.revision,
       classification: product.classification,
+      preferential1Cents: product.pricePreferential1Cents,
+      preferential2Cents: product.pricePreferential2Cents,
     );
   }
 
@@ -113,6 +125,10 @@ class CatalogRepository {
       customer.discountBasisPoints,
       (account?.balanceCents ?? 0) + delta.read<int>('delta'),
       customer.revision,
+      priceTier: customer.priceTier,
+      requiresInvoice: customer.requiresInvoice,
+      creditLimitCents: customer.creditLimitCents,
+      creditBlockedReason: customer.creditBlockedReason,
     );
   }
 
@@ -160,6 +176,8 @@ class CatalogRepository {
             r.read<int>('estimated_quantity'),
             r.read<String>('revision'),
             classification: r.read<String>('classification'),
+            preferential1Cents: r.read<int>('price_preferential1_cents'),
+            preferential2Cents: r.read<int>('price_preferential2_cents'),
           ),
         )
         .toList();
@@ -183,6 +201,10 @@ class CatalogRepository {
             r.read<int>('discount_basis_points'),
             r.read<int>('estimated_balance'),
             r.read<String>('revision'),
+            priceTier: r.read<String>('price_tier'),
+            requiresInvoice: r.read<bool>('requires_invoice'),
+            creditLimitCents: r.read<int?>('credit_limit_cents'),
+            creditBlockedReason: r.read<String?>('credit_blocked_reason'),
           ),
         )
         .toList();
@@ -244,6 +266,7 @@ class CatalogRepository {
       }
       if (product['deleted'] != true) {
         decimalUnits(product['price']);
+        tierPrices(product);
         decimalUnits(product['serverQuantity'], signed: true);
       }
     }
@@ -255,6 +278,13 @@ class CatalogRepository {
       if (customer['deleted'] != true) {
         decimalUnits(customer['balance'], signed: true);
         decimalUnits(customer['discountPercentage']);
+        if (customer['creditLimit'] != null) {
+          decimalUnits(customer['creditLimit']);
+        }
+        if (customer['priceTier'] != null &&
+            !priceTiers.containsKey(customer['priceTier'])) {
+          throw const FormatException('Tipo de precio desconocido.');
+        }
       }
     }
     await db
@@ -322,6 +352,8 @@ class CatalogRepository {
                   product['classification'] as String? ?? '',
                 ),
                 priceCents: decimalUnits(product['price']),
+                pricePreferential1Cents: Value(tierPrices(product).$1),
+                pricePreferential2Cents: Value(tierPrices(product).$2),
                 active: product['active'] as bool,
                 revision: download.revision!,
               ),
@@ -362,6 +394,16 @@ class CatalogRepository {
                 searchName: normalizedName(customer['name'] as String),
                 discountBasisPoints: decimalUnits(
                   customer['discountPercentage'],
+                ),
+                priceTier: Value(customer['priceTier'] as String? ?? 'publico'),
+                requiresInvoice: Value(customer['requiresInvoice'] == true),
+                creditLimitCents: Value(
+                  customer['creditLimit'] == null
+                      ? null
+                      : decimalUnits(customer['creditLimit']),
+                ),
+                creditBlockedReason: Value(
+                  customer['creditBlockedReason'] as String?,
                 ),
                 active: customer['active'] as bool,
                 revision: download.revision!,

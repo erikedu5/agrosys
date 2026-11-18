@@ -10,3 +10,25 @@ Future<void> navigate(WidgetTester tester, String label) async {
   await tester.tap(target.last);
   await tester.pumpAndSettle();
 }
+
+/// Desplaza el listado de inventario (tarjetas bajo demanda) hasta [target].
+Future<void> scrollInventoryTo(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    120,
+    // El primero es el del listado; los demás son las filas de filtros.
+    scrollable: find
+        .descendant(
+          of: find.byKey(const Key('inventory-list-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Valor mostrado en la ficha del producto (RecordCard de detalle).
+Finder inventoryDetailValue(String value) => find.descendant(
+  of: find.byKey(const Key('inventory-detail')),
+  matching: find.text(value),
+);

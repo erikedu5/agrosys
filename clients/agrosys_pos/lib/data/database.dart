@@ -15,6 +15,11 @@ class LocalProducts extends Table {
   TextColumn get barcode => text()();
   TextColumn get size => text()();
   IntColumn get priceCents => integer()();
+  // Schema v8: precios por tipo de precio del cliente (público = priceCents).
+  IntColumn get pricePreferential1Cents =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get pricePreferential2Cents =>
+      integer().withDefault(const Constant(0))();
   BoolColumn get active => boolean()();
   TextColumn get revision => text()();
   @override
@@ -26,6 +31,12 @@ class LocalCustomers extends Table {
   TextColumn get name => text()();
   TextColumn get searchName => text()();
   IntColumn get discountBasisPoints => integer()();
+  // Schema v8: tipo de precio, factura y restricciones de crédito.
+  TextColumn get priceTier => text().withDefault(const Constant('publico'))();
+  BoolColumn get requiresInvoice =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get creditLimitCents => integer().nullable()();
+  TextColumn get creditBlockedReason => text().nullable()();
   BoolColumn get active => boolean()();
   TextColumn get revision => text()();
   @override
@@ -124,6 +135,8 @@ class LocalSales extends Table {
   TextColumn get operatorName => text()();
   TextColumn get saleType => text()();
   IntColumn get discountBasisPoints => integer()();
+  TextColumn get priceTier => text().withDefault(const Constant('publico'))();
+  TextColumn get paymentForm => text().nullable()();
   IntColumn get totalCents => integer()();
   IntColumn get appliedCents => integer()();
   IntColumn get receivedCents => integer()();
@@ -254,7 +267,7 @@ class PosDatabase extends _$PosDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
@@ -264,7 +277,7 @@ class PosDatabase extends _$PosDatabase {
       );
     },
     onUpgrade: (m, from, to) async {
-      if (from < 1 || from > 6 || to != 7) {
+      if (from < 1 || from > 7 || to != 8) {
         throw StateError(
           'Migración no soportada. Conserva la base y solicita soporte.',
         );
@@ -293,6 +306,21 @@ class PosDatabase extends _$PosDatabase {
         await m.addColumn(outbox, outbox.errorCode);
       }
       if (from < 4) await m.createTable(syncWorkers);
+      if (from >= 3) {
+        await m.addColumn(localSales, localSales.priceTier);
+        await m.addColumn(localSales, localSales.paymentForm);
+      }
+      await m.addColumn(localProducts, localProducts.pricePreferential1Cents);
+      await m.addColumn(localProducts, localProducts.pricePreferential2Cents);
+      await m.addColumn(localCustomers, localCustomers.priceTier);
+      await m.addColumn(localCustomers, localCustomers.requiresInvoice);
+      await m.addColumn(localCustomers, localCustomers.creditLimitCents);
+      await m.addColumn(localCustomers, localCustomers.creditBlockedReason);
+      // v8: precios por nivel y crédito solo llegan completos en una descarga
+      // total; se descarta cualquier descarga incremental a medias.
+      await delete(downloadPages).go();
+      await delete(downloads).go();
+      await customStatement('UPDATE sync_metadata SET cursor = NULL');
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

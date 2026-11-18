@@ -6,6 +6,7 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../core/pos_api.dart';
 import '../../data/database.dart';
+import '../../ui/components.dart';
 import 'stock_document_editor.dart';
 
 class StockWorkflowScreen extends StatefulWidget {
@@ -231,6 +232,75 @@ class _StockWorkflowScreenState extends State<StockWorkflowScreen> {
     }
   }
 
+  /// Encabezado, avisos y solicitudes pendientes; se desplazan junto con la vista, como en la web.
+  List<Widget> _top(AppController c) => [
+    PageHeader(
+      title: _title,
+      subtitle: _purchase
+          ? 'Compras, créditos y abonos · ${c.session!.branch.name}'
+          : 'Movimientos entre sucursales · ${c.session!.branch.name}',
+      actions: [
+        if (!_creating && c.hasPermission('$_prefix.create'))
+          FilledButton(
+            key: ValueKey('${widget.kind}-create'),
+            onPressed: c.canWriteInventory('$_prefix.create') && !_writing
+                ? () => setState(() {
+                    _creating = true;
+                    _notice = null;
+                    _error = null;
+                  })
+                : null,
+            child: Text(_purchase ? 'Nueva compra' : 'Nueva transferencia'),
+          ),
+        if (!_creating)
+          IconButton.outlined(
+            tooltip: 'Actualizar',
+            onPressed: c.online && !_loading && !_writing ? _load : null,
+            icon: const Icon(Icons.refresh),
+          ),
+      ],
+    ),
+    const SizedBox(height: 12),
+    if (!c.online)
+      const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: UiAlert(
+          'La consulta y el registro de este módulo requieren conexión.',
+        ),
+      ),
+    if (_error != null)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: UiAlert(_error!, tone: Tone.red),
+      ),
+    if (_notice != null)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: UiAlert(_notice!, tone: Tone.blue),
+      ),
+    if (!_creating && _pending.isNotEmpty)
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SectionCard(
+          title: 'Solicitudes por confirmar',
+          children: [
+            for (final row in _pending)
+              if (c.hasPermission(row.permission))
+                UiRow(
+                  title:
+                      'Solicitud de ${_purchase ? 'compra' : 'transferencia'} por confirmar',
+                  trailing: TextButton(
+                    onPressed: !_writing && c.canWriteInventory(row.permission)
+                        ? () => _retry(row)
+                        : null,
+                    child: const Text('Reintentar solicitud'),
+                  ),
+                ),
+          ],
+        ),
+      ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
@@ -239,76 +309,19 @@ class _StockWorkflowScreenState extends State<StockWorkflowScreen> {
     }
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _title,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ),
-              if (!_creating && c.hasPermission('$_prefix.create'))
-                IconButton(
-                  key: ValueKey('${widget.kind}-create'),
-                  tooltip: _purchase ? 'Nueva compra' : 'Nueva transferencia',
-                  icon: const Icon(Icons.add),
-                  onPressed: c.canWriteInventory('$_prefix.create') && !_writing
-                      ? () => setState(() {
-                          _creating = true;
-                          _notice = null;
-                          _error = null;
-                        })
-                      : null,
-                ),
-              if (!_creating)
-                IconButton(
-                  tooltip: 'Actualizar',
-                  onPressed: c.online && !_loading && !_writing ? _load : null,
-                  icon: const Icon(Icons.refresh),
-                ),
-            ],
-          ),
-          Text('Sucursal: ${c.session!.branch.name}'),
-          if (!c.online)
-            const Text(
-              'La consulta y el registro de este módulo requieren conexión.',
-            ),
-          if (_error != null)
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          if (_notice != null) Text(_notice!),
-          if (!_creating && _pending.isNotEmpty)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 130),
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final row in _pending)
-                    if (c.hasPermission(row.permission))
-                      ListTile(
-                        title: Text(
-                          'Solicitud de ${_purchase ? 'compra' : 'transferencia'} por confirmar',
-                        ),
-                        trailing: TextButton(
-                          onPressed:
-                              !_writing && c.canWriteInventory(row.permission)
-                              ? () => _retry(row)
-                              : null,
-                          child: const Text('Reintentar solicitud'),
-                        ),
-                      ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _creating
-                ? StockDocumentEditor(
+      child: _creating
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                PageHeader(title: _title, subtitle: c.session!.branch.name),
+                const SizedBox(height: 12),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: UiAlert(_error!, tone: Tone.red),
+                  ),
+                Expanded(
+                  child: StockDocumentEditor(
                     key: ValueKey('${widget.kind}-editor'),
                     controller: c,
                     kind: widget.kind,
@@ -326,66 +339,133 @@ class _StockWorkflowScreenState extends State<StockWorkflowScreen> {
                       });
                       _load();
                     },
-                  )
-                : _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _selected != null
-                ? _detail(c)
-                : _list(),
-          ),
-        ],
-      ),
+                  ),
+                ),
+              ],
+            )
+          : _loading
+          ? ListView(
+              children: [
+                ..._top(c),
+                const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ],
+            )
+          : _selected != null
+          ? _detail(c)
+          : _list(),
     );
   }
 
-  Widget _list() => Column(
-    children: [
-      TextField(
-        key: const Key('stock-list-search'),
-        controller: _query,
-        decoration: InputDecoration(
-          labelText: _purchase ? 'Buscar proveedor' : 'Buscar folio',
-          suffixIcon: IconButton(
-            onPressed: widget.controller.online ? _load : null,
-            icon: const Icon(Icons.search),
+  // Colores de estado de Compras.vue y Transferencias/Index.vue.
+  Tone _statusTone(String? status) => switch (status) {
+    'pagada' || 'completado' => Tone.green,
+    'adeudo' || 'pendiente' => Tone.amber,
+    'retrasada' || 'cancelado' => Tone.red,
+    _ => Tone.gray,
+  };
+
+  String _capitalized(String? text) => text == null || text.isEmpty
+      ? ''
+      : '${text[0].toUpperCase()}${text.substring(1)}';
+
+  Widget _card(Map<String, dynamic> row) {
+    final open = widget.controller.online
+        ? () => _select(row['id'] as String)
+        : null;
+    return RecordCard(
+      key: ValueKey('stock-document-${row['id']}'),
+      eyebrow: _purchase ? 'Compra #${row['id']}' : row['folio'] as String?,
+      title: _purchase
+          ? row['supplier'] as String
+          : '${row['origin']} → ${row['destination']}',
+      badges: [
+        UiBadge(
+          _capitalized(row['status'] as String?),
+          tone: _statusTone(row['status'] as String?),
+        ),
+      ],
+      fields: _purchase
+          ? [
+              RecordField('Fecha de compra', row['date']?.toString()),
+              RecordField('Límite de crédito', row['dueDate']?.toString()),
+              RecordField(
+                'Saldo a crédito',
+                '\$${row['debt'] ?? '0.00'}',
+                wide: true,
+              ),
+            ]
+          : [
+              RecordField('Fecha de envío', row['date']?.toString()),
+              RecordField(
+                'Fecha de recepción',
+                row['receivedAt']?.toString() ?? 'Pendiente',
+              ),
+              if ((row['notes'] ?? '').toString().isNotEmpty)
+                RecordField(
+                  'Observaciones',
+                  row['notes'].toString(),
+                  wide: true,
+                ),
+            ],
+      actions: [
+        OutlinedButton(
+          onPressed: open,
+          child: Text(_purchase ? 'Ver detalle' : 'Ver detalles'),
+        ),
+      ],
+      onTap: open,
+      child: _purchase ? AmountLine('\$${row['total']}') : null,
+    );
+  }
+
+  Widget _list() {
+    final query = _query.text.trim();
+    return RecordGrid(
+      itemCount: _rows.length,
+      itemBuilder: (context, i) => _card(_rows[i]),
+      header: [
+        ..._top(widget.controller),
+        KeyedSubtree(
+          key: const Key('stock-list-search'),
+          child: UiSearchField(
+            controller: _query,
+            hint: _purchase ? 'Buscar compra o proveedor' : 'Buscar folio',
+            onSubmitted: (_) => _load(),
+            trailing: IconButton(
+              tooltip: 'Buscar',
+              onPressed: widget.controller.online ? _load : null,
+              icon: const Icon(Icons.search),
+            ),
           ),
         ),
-        onSubmitted: (_) => _load(),
-      ),
-      Expanded(
-        child: ListView(
-          children: [
-            for (final row in _rows)
-              Card(
-                child: ListTile(
-                  key: ValueKey('stock-document-${row['id']}'),
-                  title: Text(
-                    (_purchase ? row['supplier'] : row['folio']) as String,
-                  ),
-                  subtitle: Text(
-                    _purchase
-                        ? '${row['status']} · Total \$${row['total']} · Saldo \$${row['debt']}'
-                        : '${row['origin']} → ${row['destination']} · ${row['status']}',
-                  ),
-                  onTap: widget.controller.online
-                      ? () => _select(row['id'] as String)
-                      : null,
-                ),
-              ),
-            if (_rows.isEmpty)
-              const Text('No hay registros para esta búsqueda.'),
-            if (_more)
-              TextButton(
-                onPressed: widget.controller.online && !_loading
-                    ? () => _load(append: true)
-                    : null,
-                child: const Text('Cargar más'),
-              ),
-          ],
-        ),
-      ),
-    ],
-  );
+        const SizedBox(height: 12),
+        if (_rows.isEmpty)
+          EmptyState(
+            title: query.isNotEmpty
+                ? 'No encontramos “$query”'
+                : _purchase
+                ? 'Aún no hay compras'
+                : 'No hay transferencias registradas',
+            text: _purchase
+                ? 'Registra una compra a proveedor para verla aquí.'
+                : 'Crea una transferencia para mover inventario a otra sucursal.',
+          ),
+      ],
+      footer: [
+        if (_more)
+          TextButton(
+            onPressed: widget.controller.online && !_loading
+                ? () => _load(append: true)
+                : null,
+            child: const Text('Cargar más'),
+          ),
+      ],
+    );
+  }
+
   Widget _detail(AppController c) {
     final row = _selected!;
     final permission = '$_prefix.${_purchase ? 'payment' : 'receive'}';
@@ -393,9 +473,13 @@ class _StockWorkflowScreenState extends State<StockWorkflowScreen> {
         ? decimalUnits(row['debt']) > 0
         : row['status'] == 'pendiente' &&
               row['destinationId'] == c.session!.branch.id;
+    final payments = _purchase
+        ? (row['payments'] as List).map(object).toList()
+        : const <Map<String, dynamic>>[];
     return ListView(
       key: const Key('stock-detail-scroll'),
       children: [
+        ..._top(c),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
@@ -414,71 +498,101 @@ class _StockWorkflowScreenState extends State<StockWorkflowScreen> {
             label: Text('Volver a $_title'),
           ),
         ),
-        Text(
-          (_purchase ? row['supplier'] : row['folio']) as String,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        Text('Estado: ${row['status']}'),
-        Text('Fecha: ${row['date'] ?? ''}'),
-        if (_purchase) ...[
-          Text('Total: \$${row['total']}'),
-          Text('Saldo: \$${row['debt']}'),
-          Text('Vencimiento: ${row['dueDate']}'),
-        ] else ...[
-          Text('Origen: ${row['origin']}'),
-          Text('Destino: ${row['destination']}'),
-          Text('Observaciones: ${row['notes']}'),
-          if (row['receivedAt'] != null)
-            Text('Recepción: ${row['receivedAt']}'),
-        ],
-        const SizedBox(height: 12),
-        for (final item in (row['items'] as List).map(object))
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('${item['name']} · ${item['size']}'),
-            subtitle: Text(
-              '${item['quantity']} unidades${_purchase ? ' · \$${item['cost']} por unidad' : ''}',
+        const SizedBox(height: 4),
+        RecordCard(
+          eyebrow: _purchase ? 'Compra #${row['id']}' : row['folio'] as String?,
+          title: _purchase
+              ? row['supplier'] as String
+              : '${row['origin']} → ${row['destination']}',
+          badges: [
+            UiBadge(
+              _capitalized(row['status'] as String?),
+              tone: _statusTone(row['status'] as String?),
             ),
-          ),
+          ],
+          fields: _purchase
+              ? [
+                  RecordField('Fecha de compra', row['date']?.toString()),
+                  RecordField('Límite de crédito', row['dueDate']?.toString()),
+                  RecordField('Total', '\$${row['total']}'),
+                  RecordField('Saldo a crédito', '\$${row['debt']}'),
+                ]
+              : [
+                  RecordField('Origen', row['origin']?.toString()),
+                  RecordField('Destino', row['destination']?.toString()),
+                  RecordField('Fecha de envío', row['date']?.toString()),
+                  RecordField(
+                    'Fecha de recepción',
+                    row['receivedAt']?.toString() ?? 'Pendiente',
+                  ),
+                  RecordField(
+                    'Observaciones',
+                    row['notes']?.toString(),
+                    wide: true,
+                  ),
+                ],
+        ),
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Productos',
+          children: [
+            for (final item in (row['items'] as List).map(object))
+              UiRow(
+                title: '${item['name']} · ${item['size']}',
+                subtitle:
+                    '${item['quantity']} unidades${_purchase ? ' · \$${item['cost']} por unidad' : ''}',
+              ),
+          ],
+        ),
         if (_purchase) ...[
-          const Text('Abonos'),
-          for (final payment in (row['payments'] as List).map(object))
-            Text('\$${payment['amount']} · ${payment['date']}'),
+          const SizedBox(height: 12),
+          SectionCard(
+            title: 'Abonos',
+            children: [
+              if (payments.isEmpty) const Muted('Sin abonos registrados.'),
+              for (final payment in payments)
+                UiRow(
+                  title: '\$${payment['amount']}',
+                  subtitle: payment['date']?.toString(),
+                ),
+            ],
+          ),
         ],
         if (canAct && c.hasPermission(permission)) ...[
-          if (_purchase)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: TextField(
-                key: const Key('stock-payment-amount'),
-                controller: _payment,
-                enabled: !_writing && _operationId == null,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+          const SizedBox(height: 12),
+          SectionCard(
+            title: _purchase ? 'Registrar abono' : 'Recepción',
+            children: [
+              if (_purchase) ...[
+                TextField(
+                  key: const Key('stock-payment-amount'),
+                  controller: _payment,
+                  enabled: !_writing && _operationId == null,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Cantidad a abonar',
+                  ),
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Cantidad a abonar',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+              ],
+              FilledButton(
+                key: const Key('stock-document-action'),
+                onPressed: !_writing && c.canWriteInventory(permission)
+                    ? _confirmWrite
+                    : null,
+                child: Text(
+                  _writing
+                      ? 'Confirmando…'
+                      : _operationId != null
+                      ? 'Reintentar solicitud'
+                      : _purchase
+                      ? 'Registrar abono'
+                      : 'Recibir transferencia',
                 ),
               ),
-            ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FilledButton(
-              key: const Key('stock-document-action'),
-              onPressed: !_writing && c.canWriteInventory(permission)
-                  ? _confirmWrite
-                  : null,
-              child: Text(
-                _writing
-                    ? 'Confirmando…'
-                    : _operationId != null
-                    ? 'Reintentar solicitud'
-                    : _purchase
-                    ? 'Registrar abono'
-                    : 'Recibir transferencia',
-              ),
-            ),
+            ],
           ),
         ],
       ],

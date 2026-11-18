@@ -114,6 +114,7 @@ class ProductView {
   final String id, name, barcode, size, revision;
   final String classification;
   final int priceCents, estimatedQuantity;
+  final int preferential1Cents, preferential2Cents;
   ProductView(
     this.id,
     this.name,
@@ -123,20 +124,78 @@ class ProductView {
     this.estimatedQuantity,
     this.revision, {
     this.classification = '',
-  });
+    int? preferential1Cents,
+    int? preferential2Cents,
+  }) : preferential1Cents = preferential1Cents ?? priceCents,
+       preferential2Cents = preferential2Cents ?? priceCents;
+
+  /// Precio de venta para el tipo de precio del cliente (igual que Producto::precioPara).
+  int priceFor(String tier) => switch (tier) {
+    'preferencial_1' => preferential1Cents,
+    'preferencial_2' => preferential2Cents,
+    _ => priceCents,
+  };
 }
+
+/// Tipos de precio del cliente; mantener igual que Producto::PRECIOS.
+const priceTiers = {
+  'publico': 'Público en general',
+  'preferencial_1': 'Preferencial 1',
+  'preferencial_2': 'Preferencial 2',
+};
+String priceTierLabel(String tier) =>
+    priceTiers[tier] ?? priceTiers['publico']!;
+
+/// Formas de pago SAT para clientes con factura; mantener igual que Venta::FORMAS_PAGO.
+const paymentForms = {
+  '01': 'Efectivo',
+  '03': 'Transferencia electrónica',
+  '04': 'Tarjeta de crédito',
+  '28': 'Tarjeta de débito',
+  '02': 'Cheque nominativo',
+  '99': 'Por definir',
+};
 
 class CustomerView {
   final String id, name, revision;
   final int discountBasisPoints, balanceCents;
+  final String priceTier;
+  final bool requiresInvoice;
+  final int? creditLimitCents;
+  final String? creditBlockedReason;
   CustomerView(
     this.id,
     this.name,
     this.discountBasisPoints,
     this.balanceCents,
-    this.revision,
-  );
+    this.revision, {
+    this.priceTier = 'publico',
+    this.requiresInvoice = false,
+    this.creditLimitCents,
+    this.creditBlockedReason,
+  });
+
+  /// Motivo por el que no puede comprar a crédito, o null (igual que Clientes::restriccionCredito).
+  /// [newCreditCents]: saldo que la venta agregaría a su adeudo.
+  String? creditRestriction([int newCreditCents = 0]) {
+    if (creditBlockedReason != null) return creditBlockedReason;
+    final limit = creditLimitCents;
+    if (limit == null) return null;
+    final balance = balanceCents < 0 ? 0 : balanceCents;
+    if (balance + newCreditCents > limit ||
+        (newCreditCents <= 0 && balance >= limit)) {
+      return 'El cliente excede su límite de crédito de ${money(limit)} (adeudo actual ${money(balance)}).';
+    }
+    return null;
+  }
 }
+
+/// Resumen del cliente para listas: tipo de precio, factura y adeudo.
+String customerSummary(CustomerView c, {bool estimated = false}) => [
+  'Precio ${priceTierLabel(c.priceTier)}',
+  if (c.requiresInvoice) 'Factura',
+  'Adeudo${estimated ? ' estimado' : ''} ${money(c.balanceCents)}',
+].join(' · ');
 
 class SyncInfo {
   final String? cursor, revision;

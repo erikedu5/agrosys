@@ -79,6 +79,11 @@ class PosInventoryController extends Controller
         return $this->mutate($request, $access, 'add', (int) $productId);
     }
 
+    public function dose(Request $request, string $productId, PosAccess $access)
+    {
+        return $this->mutate($request, $access, 'dose', (int) $productId);
+    }
+
     public function preview(Request $request, string $productId, PosAccess $access)
     {
         $data = $request->validate(['action' => 'required|in:reset,delete']);
@@ -99,15 +104,19 @@ class PosInventoryController extends Controller
 
     private function mutate(Request $request, PosAccess $access, string $action, ?int $productId = null)
     {
-        $permission = ['create' => 'product.create', 'update' => 'product.update', 'prices' => 'product.prices.update', 'add' => 'inventory.add', 'reset' => 'inventory.reset', 'delete' => 'product.delete'][$action];
+        $permission = ['create' => 'product.create', 'update' => 'product.update', 'prices' => 'product.prices.update', 'add' => 'inventory.add', 'dose' => 'inventory.dose', 'reset' => 'inventory.reset', 'delete' => 'product.delete'][$action];
         [$device, $branch] = $this->authorizeInventory($request, $access, $permission);
         $rules = ['operation_id' => 'required|uuid'];
-        if (in_array($action, ['update', 'prices', 'reset', 'delete'], true)) {
+        if (in_array($action, ['update', 'prices', 'dose', 'reset', 'delete'], true)) {
             $rules['version'] = 'required|string|size:64';
         }
         if (in_array($action, ['reset', 'delete'], true)) {
             $rules['stock_revision'] = 'required|string|size:64';
             $rules['confirmed'] = 'required|accepted';
+        }
+        if ($action === 'dose') {
+            $amount = ['required', 'string', 'regex:/^\d{1,8}(?:\.\d{1,2})?$/'];
+            $rules += ['contenido' => $amount, 'medida' => $amount, 'unidad' => 'required|string|max:20', 'acepta_perdida' => 'sometimes|boolean'];
         }
         if ($action === 'add') {
             $rules['cantidad'] = ['required', 'string', 'regex:/^\d{1,6}(?:\.\d{1,2})?$/'];
@@ -158,6 +167,12 @@ class PosInventoryController extends Controller
                     $movement = $management->addStock($request->user(), $branch, $productId, $payload['cantidad']);
                     $result += ['productId' => (string) $productId, 'movementId' => (string) $movement->id,
                         'quantity' => Decimal::format(Decimal::units($movement->cantidad_nueva, 'quantity', true))];
+                } elseif ($action === 'dose') {
+                    $dose = $management->dose($request->user(), $branch, $productId, $payload, $payload['version']);
+                    $result += ['productId' => (string) $productId, 'movementId' => (string) $dose['source']->id,
+                        'quantity' => Decimal::format(Decimal::units($dose['source']->cantidad_nueva, 'quantity', true)),
+                        'doseProductId' => (string) $dose['target']->id, 'doseMovementId' => (string) $dose['movement']->id,
+                        'doseUnits' => $dose['units'], 'doseQuantity' => Decimal::format(Decimal::units($dose['movement']->cantidad_nueva, 'quantity', true))];
                 } else {
                     $product = $action === 'prices'
                         ? $management->updatePrices($request->user(), $branch, $productId, $payload, $payload['version'])
@@ -191,9 +206,7 @@ class PosInventoryController extends Controller
         $rows = AltaInventario::with('usuario:id,name')->where('id_producto', $product->id)
             ->where('id_sucursal', $branch->id)->orderByDesc('created_at')->orderByDesc('id')
             ->paginate(50, ['*'], 'page', $data['page'] ?? 1);
-        $labels = [AltaInventario::EVENTO_ALTA => 'Alta de inventario', AltaInventario::EVENTO_RESETEO => 'Reseteo a cero',
-            AltaInventario::EVENTO_VENTA => 'Venta', AltaInventario::EVENTO_TRANSFERENCIA_ENTRADA => 'Entrada por transferencia',
-            AltaInventario::EVENTO_TRANSFERENCIA_SALIDA => 'Salida por transferencia'];
+        $labels = AltaInventario::ETIQUETAS;
 
         return response()->json(['movements' => $rows->getCollection()->map(function ($row) use ($labels) {
             $before = Decimal::units($row->cantidad_actual, 'quantity', true);

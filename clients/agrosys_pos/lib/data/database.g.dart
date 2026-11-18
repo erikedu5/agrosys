@@ -83,6 +83,30 @@ class $LocalProductsTable extends LocalProducts
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _pricePreferential1CentsMeta =
+      const VerificationMeta('pricePreferential1Cents');
+  @override
+  late final GeneratedColumn<int> pricePreferential1Cents =
+      GeneratedColumn<int>(
+        'price_preferential1_cents',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
+  static const VerificationMeta _pricePreferential2CentsMeta =
+      const VerificationMeta('pricePreferential2Cents');
+  @override
+  late final GeneratedColumn<int> pricePreferential2Cents =
+      GeneratedColumn<int>(
+        'price_preferential2_cents',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
   static const VerificationMeta _activeMeta = const VerificationMeta('active');
   @override
   late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
@@ -115,6 +139,8 @@ class $LocalProductsTable extends LocalProducts
     barcode,
     size,
     priceCents,
+    pricePreferential1Cents,
+    pricePreferential2Cents,
     active,
     revision,
   ];
@@ -187,6 +213,24 @@ class $LocalProductsTable extends LocalProducts
     } else if (isInserting) {
       context.missing(_priceCentsMeta);
     }
+    if (data.containsKey('price_preferential1_cents')) {
+      context.handle(
+        _pricePreferential1CentsMeta,
+        pricePreferential1Cents.isAcceptableOrUnknown(
+          data['price_preferential1_cents']!,
+          _pricePreferential1CentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('price_preferential2_cents')) {
+      context.handle(
+        _pricePreferential2CentsMeta,
+        pricePreferential2Cents.isAcceptableOrUnknown(
+          data['price_preferential2_cents']!,
+          _pricePreferential2CentsMeta,
+        ),
+      );
+    }
     if (data.containsKey('active')) {
       context.handle(
         _activeMeta,
@@ -240,6 +284,14 @@ class $LocalProductsTable extends LocalProducts
         DriftSqlType.int,
         data['${effectivePrefix}price_cents'],
       )!,
+      pricePreferential1Cents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}price_preferential1_cents'],
+      )!,
+      pricePreferential2Cents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}price_preferential2_cents'],
+      )!,
       active: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}active'],
@@ -265,6 +317,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   final String barcode;
   final String size;
   final int priceCents;
+  final int pricePreferential1Cents;
+  final int pricePreferential2Cents;
   final bool active;
   final String revision;
   const LocalProduct({
@@ -275,6 +329,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     required this.barcode,
     required this.size,
     required this.priceCents,
+    required this.pricePreferential1Cents,
+    required this.pricePreferential2Cents,
     required this.active,
     required this.revision,
   });
@@ -288,6 +344,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     map['barcode'] = Variable<String>(barcode);
     map['size'] = Variable<String>(size);
     map['price_cents'] = Variable<int>(priceCents);
+    map['price_preferential1_cents'] = Variable<int>(pricePreferential1Cents);
+    map['price_preferential2_cents'] = Variable<int>(pricePreferential2Cents);
     map['active'] = Variable<bool>(active);
     map['revision'] = Variable<String>(revision);
     return map;
@@ -302,6 +360,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       barcode: Value(barcode),
       size: Value(size),
       priceCents: Value(priceCents),
+      pricePreferential1Cents: Value(pricePreferential1Cents),
+      pricePreferential2Cents: Value(pricePreferential2Cents),
       active: Value(active),
       revision: Value(revision),
     );
@@ -320,6 +380,12 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       barcode: serializer.fromJson<String>(json['barcode']),
       size: serializer.fromJson<String>(json['size']),
       priceCents: serializer.fromJson<int>(json['priceCents']),
+      pricePreferential1Cents: serializer.fromJson<int>(
+        json['pricePreferential1Cents'],
+      ),
+      pricePreferential2Cents: serializer.fromJson<int>(
+        json['pricePreferential2Cents'],
+      ),
       active: serializer.fromJson<bool>(json['active']),
       revision: serializer.fromJson<String>(json['revision']),
     );
@@ -335,6 +401,12 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       'barcode': serializer.toJson<String>(barcode),
       'size': serializer.toJson<String>(size),
       'priceCents': serializer.toJson<int>(priceCents),
+      'pricePreferential1Cents': serializer.toJson<int>(
+        pricePreferential1Cents,
+      ),
+      'pricePreferential2Cents': serializer.toJson<int>(
+        pricePreferential2Cents,
+      ),
       'active': serializer.toJson<bool>(active),
       'revision': serializer.toJson<String>(revision),
     };
@@ -348,6 +420,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     String? barcode,
     String? size,
     int? priceCents,
+    int? pricePreferential1Cents,
+    int? pricePreferential2Cents,
     bool? active,
     String? revision,
   }) => LocalProduct(
@@ -358,6 +432,10 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     barcode: barcode ?? this.barcode,
     size: size ?? this.size,
     priceCents: priceCents ?? this.priceCents,
+    pricePreferential1Cents:
+        pricePreferential1Cents ?? this.pricePreferential1Cents,
+    pricePreferential2Cents:
+        pricePreferential2Cents ?? this.pricePreferential2Cents,
     active: active ?? this.active,
     revision: revision ?? this.revision,
   );
@@ -376,6 +454,12 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       priceCents: data.priceCents.present
           ? data.priceCents.value
           : this.priceCents,
+      pricePreferential1Cents: data.pricePreferential1Cents.present
+          ? data.pricePreferential1Cents.value
+          : this.pricePreferential1Cents,
+      pricePreferential2Cents: data.pricePreferential2Cents.present
+          ? data.pricePreferential2Cents.value
+          : this.pricePreferential2Cents,
       active: data.active.present ? data.active.value : this.active,
       revision: data.revision.present ? data.revision.value : this.revision,
     );
@@ -391,6 +475,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
           ..write('barcode: $barcode, ')
           ..write('size: $size, ')
           ..write('priceCents: $priceCents, ')
+          ..write('pricePreferential1Cents: $pricePreferential1Cents, ')
+          ..write('pricePreferential2Cents: $pricePreferential2Cents, ')
           ..write('active: $active, ')
           ..write('revision: $revision')
           ..write(')'))
@@ -406,6 +492,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     barcode,
     size,
     priceCents,
+    pricePreferential1Cents,
+    pricePreferential2Cents,
     active,
     revision,
   );
@@ -420,6 +508,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
           other.barcode == this.barcode &&
           other.size == this.size &&
           other.priceCents == this.priceCents &&
+          other.pricePreferential1Cents == this.pricePreferential1Cents &&
+          other.pricePreferential2Cents == this.pricePreferential2Cents &&
           other.active == this.active &&
           other.revision == this.revision);
 }
@@ -432,6 +522,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   final Value<String> barcode;
   final Value<String> size;
   final Value<int> priceCents;
+  final Value<int> pricePreferential1Cents;
+  final Value<int> pricePreferential2Cents;
   final Value<bool> active;
   final Value<String> revision;
   final Value<int> rowid;
@@ -443,6 +535,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     this.barcode = const Value.absent(),
     this.size = const Value.absent(),
     this.priceCents = const Value.absent(),
+    this.pricePreferential1Cents = const Value.absent(),
+    this.pricePreferential2Cents = const Value.absent(),
     this.active = const Value.absent(),
     this.revision = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -455,6 +549,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     required String barcode,
     required String size,
     required int priceCents,
+    this.pricePreferential1Cents = const Value.absent(),
+    this.pricePreferential2Cents = const Value.absent(),
     required bool active,
     required String revision,
     this.rowid = const Value.absent(),
@@ -474,6 +570,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Expression<String>? barcode,
     Expression<String>? size,
     Expression<int>? priceCents,
+    Expression<int>? pricePreferential1Cents,
+    Expression<int>? pricePreferential2Cents,
     Expression<bool>? active,
     Expression<String>? revision,
     Expression<int>? rowid,
@@ -486,6 +584,10 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
       if (barcode != null) 'barcode': barcode,
       if (size != null) 'size': size,
       if (priceCents != null) 'price_cents': priceCents,
+      if (pricePreferential1Cents != null)
+        'price_preferential1_cents': pricePreferential1Cents,
+      if (pricePreferential2Cents != null)
+        'price_preferential2_cents': pricePreferential2Cents,
       if (active != null) 'active': active,
       if (revision != null) 'revision': revision,
       if (rowid != null) 'rowid': rowid,
@@ -500,6 +602,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Value<String>? barcode,
     Value<String>? size,
     Value<int>? priceCents,
+    Value<int>? pricePreferential1Cents,
+    Value<int>? pricePreferential2Cents,
     Value<bool>? active,
     Value<String>? revision,
     Value<int>? rowid,
@@ -512,6 +616,10 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
       barcode: barcode ?? this.barcode,
       size: size ?? this.size,
       priceCents: priceCents ?? this.priceCents,
+      pricePreferential1Cents:
+          pricePreferential1Cents ?? this.pricePreferential1Cents,
+      pricePreferential2Cents:
+          pricePreferential2Cents ?? this.pricePreferential2Cents,
       active: active ?? this.active,
       revision: revision ?? this.revision,
       rowid: rowid ?? this.rowid,
@@ -542,6 +650,16 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     if (priceCents.present) {
       map['price_cents'] = Variable<int>(priceCents.value);
     }
+    if (pricePreferential1Cents.present) {
+      map['price_preferential1_cents'] = Variable<int>(
+        pricePreferential1Cents.value,
+      );
+    }
+    if (pricePreferential2Cents.present) {
+      map['price_preferential2_cents'] = Variable<int>(
+        pricePreferential2Cents.value,
+      );
+    }
     if (active.present) {
       map['active'] = Variable<bool>(active.value);
     }
@@ -564,6 +682,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
           ..write('barcode: $barcode, ')
           ..write('size: $size, ')
           ..write('priceCents: $priceCents, ')
+          ..write('pricePreferential1Cents: $pricePreferential1Cents, ')
+          ..write('pricePreferential2Cents: $pricePreferential2Cents, ')
           ..write('active: $active, ')
           ..write('revision: $revision, ')
           ..write('rowid: $rowid')
@@ -619,6 +739,55 @@ class $LocalCustomersTable extends LocalCustomers
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _priceTierMeta = const VerificationMeta(
+    'priceTier',
+  );
+  @override
+  late final GeneratedColumn<String> priceTier = GeneratedColumn<String>(
+    'price_tier',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('publico'),
+  );
+  static const VerificationMeta _requiresInvoiceMeta = const VerificationMeta(
+    'requiresInvoice',
+  );
+  @override
+  late final GeneratedColumn<bool> requiresInvoice = GeneratedColumn<bool>(
+    'requires_invoice',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("requires_invoice" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _creditLimitCentsMeta = const VerificationMeta(
+    'creditLimitCents',
+  );
+  @override
+  late final GeneratedColumn<int> creditLimitCents = GeneratedColumn<int>(
+    'credit_limit_cents',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creditBlockedReasonMeta =
+      const VerificationMeta('creditBlockedReason');
+  @override
+  late final GeneratedColumn<String> creditBlockedReason =
+      GeneratedColumn<String>(
+        'credit_blocked_reason',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _activeMeta = const VerificationMeta('active');
   @override
   late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
@@ -648,6 +817,10 @@ class $LocalCustomersTable extends LocalCustomers
     name,
     searchName,
     discountBasisPoints,
+    priceTier,
+    requiresInvoice,
+    creditLimitCents,
+    creditBlockedReason,
     active,
     revision,
   ];
@@ -698,6 +871,39 @@ class $LocalCustomersTable extends LocalCustomers
     } else if (isInserting) {
       context.missing(_discountBasisPointsMeta);
     }
+    if (data.containsKey('price_tier')) {
+      context.handle(
+        _priceTierMeta,
+        priceTier.isAcceptableOrUnknown(data['price_tier']!, _priceTierMeta),
+      );
+    }
+    if (data.containsKey('requires_invoice')) {
+      context.handle(
+        _requiresInvoiceMeta,
+        requiresInvoice.isAcceptableOrUnknown(
+          data['requires_invoice']!,
+          _requiresInvoiceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('credit_limit_cents')) {
+      context.handle(
+        _creditLimitCentsMeta,
+        creditLimitCents.isAcceptableOrUnknown(
+          data['credit_limit_cents']!,
+          _creditLimitCentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('credit_blocked_reason')) {
+      context.handle(
+        _creditBlockedReasonMeta,
+        creditBlockedReason.isAcceptableOrUnknown(
+          data['credit_blocked_reason']!,
+          _creditBlockedReasonMeta,
+        ),
+      );
+    }
     if (data.containsKey('active')) {
       context.handle(
         _activeMeta,
@@ -739,6 +945,22 @@ class $LocalCustomersTable extends LocalCustomers
         DriftSqlType.int,
         data['${effectivePrefix}discount_basis_points'],
       )!,
+      priceTier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}price_tier'],
+      )!,
+      requiresInvoice: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}requires_invoice'],
+      )!,
+      creditLimitCents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}credit_limit_cents'],
+      ),
+      creditBlockedReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}credit_blocked_reason'],
+      ),
       active: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}active'],
@@ -761,6 +983,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
   final String name;
   final String searchName;
   final int discountBasisPoints;
+  final String priceTier;
+  final bool requiresInvoice;
+  final int? creditLimitCents;
+  final String? creditBlockedReason;
   final bool active;
   final String revision;
   const LocalCustomer({
@@ -768,6 +994,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
     required this.name,
     required this.searchName,
     required this.discountBasisPoints,
+    required this.priceTier,
+    required this.requiresInvoice,
+    this.creditLimitCents,
+    this.creditBlockedReason,
     required this.active,
     required this.revision,
   });
@@ -778,6 +1008,14 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
     map['name'] = Variable<String>(name);
     map['search_name'] = Variable<String>(searchName);
     map['discount_basis_points'] = Variable<int>(discountBasisPoints);
+    map['price_tier'] = Variable<String>(priceTier);
+    map['requires_invoice'] = Variable<bool>(requiresInvoice);
+    if (!nullToAbsent || creditLimitCents != null) {
+      map['credit_limit_cents'] = Variable<int>(creditLimitCents);
+    }
+    if (!nullToAbsent || creditBlockedReason != null) {
+      map['credit_blocked_reason'] = Variable<String>(creditBlockedReason);
+    }
     map['active'] = Variable<bool>(active);
     map['revision'] = Variable<String>(revision);
     return map;
@@ -789,6 +1027,14 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
       name: Value(name),
       searchName: Value(searchName),
       discountBasisPoints: Value(discountBasisPoints),
+      priceTier: Value(priceTier),
+      requiresInvoice: Value(requiresInvoice),
+      creditLimitCents: creditLimitCents == null && nullToAbsent
+          ? const Value.absent()
+          : Value(creditLimitCents),
+      creditBlockedReason: creditBlockedReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(creditBlockedReason),
       active: Value(active),
       revision: Value(revision),
     );
@@ -806,6 +1052,12 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
       discountBasisPoints: serializer.fromJson<int>(
         json['discountBasisPoints'],
       ),
+      priceTier: serializer.fromJson<String>(json['priceTier']),
+      requiresInvoice: serializer.fromJson<bool>(json['requiresInvoice']),
+      creditLimitCents: serializer.fromJson<int?>(json['creditLimitCents']),
+      creditBlockedReason: serializer.fromJson<String?>(
+        json['creditBlockedReason'],
+      ),
       active: serializer.fromJson<bool>(json['active']),
       revision: serializer.fromJson<String>(json['revision']),
     );
@@ -818,6 +1070,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
       'name': serializer.toJson<String>(name),
       'searchName': serializer.toJson<String>(searchName),
       'discountBasisPoints': serializer.toJson<int>(discountBasisPoints),
+      'priceTier': serializer.toJson<String>(priceTier),
+      'requiresInvoice': serializer.toJson<bool>(requiresInvoice),
+      'creditLimitCents': serializer.toJson<int?>(creditLimitCents),
+      'creditBlockedReason': serializer.toJson<String?>(creditBlockedReason),
       'active': serializer.toJson<bool>(active),
       'revision': serializer.toJson<String>(revision),
     };
@@ -828,6 +1084,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
     String? name,
     String? searchName,
     int? discountBasisPoints,
+    String? priceTier,
+    bool? requiresInvoice,
+    Value<int?> creditLimitCents = const Value.absent(),
+    Value<String?> creditBlockedReason = const Value.absent(),
     bool? active,
     String? revision,
   }) => LocalCustomer(
@@ -835,6 +1095,14 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
     name: name ?? this.name,
     searchName: searchName ?? this.searchName,
     discountBasisPoints: discountBasisPoints ?? this.discountBasisPoints,
+    priceTier: priceTier ?? this.priceTier,
+    requiresInvoice: requiresInvoice ?? this.requiresInvoice,
+    creditLimitCents: creditLimitCents.present
+        ? creditLimitCents.value
+        : this.creditLimitCents,
+    creditBlockedReason: creditBlockedReason.present
+        ? creditBlockedReason.value
+        : this.creditBlockedReason,
     active: active ?? this.active,
     revision: revision ?? this.revision,
   );
@@ -848,6 +1116,16 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
       discountBasisPoints: data.discountBasisPoints.present
           ? data.discountBasisPoints.value
           : this.discountBasisPoints,
+      priceTier: data.priceTier.present ? data.priceTier.value : this.priceTier,
+      requiresInvoice: data.requiresInvoice.present
+          ? data.requiresInvoice.value
+          : this.requiresInvoice,
+      creditLimitCents: data.creditLimitCents.present
+          ? data.creditLimitCents.value
+          : this.creditLimitCents,
+      creditBlockedReason: data.creditBlockedReason.present
+          ? data.creditBlockedReason.value
+          : this.creditBlockedReason,
       active: data.active.present ? data.active.value : this.active,
       revision: data.revision.present ? data.revision.value : this.revision,
     );
@@ -860,6 +1138,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
           ..write('name: $name, ')
           ..write('searchName: $searchName, ')
           ..write('discountBasisPoints: $discountBasisPoints, ')
+          ..write('priceTier: $priceTier, ')
+          ..write('requiresInvoice: $requiresInvoice, ')
+          ..write('creditLimitCents: $creditLimitCents, ')
+          ..write('creditBlockedReason: $creditBlockedReason, ')
           ..write('active: $active, ')
           ..write('revision: $revision')
           ..write(')'))
@@ -872,6 +1154,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
     name,
     searchName,
     discountBasisPoints,
+    priceTier,
+    requiresInvoice,
+    creditLimitCents,
+    creditBlockedReason,
     active,
     revision,
   );
@@ -883,6 +1169,10 @@ class LocalCustomer extends DataClass implements Insertable<LocalCustomer> {
           other.name == this.name &&
           other.searchName == this.searchName &&
           other.discountBasisPoints == this.discountBasisPoints &&
+          other.priceTier == this.priceTier &&
+          other.requiresInvoice == this.requiresInvoice &&
+          other.creditLimitCents == this.creditLimitCents &&
+          other.creditBlockedReason == this.creditBlockedReason &&
           other.active == this.active &&
           other.revision == this.revision);
 }
@@ -892,6 +1182,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
   final Value<String> name;
   final Value<String> searchName;
   final Value<int> discountBasisPoints;
+  final Value<String> priceTier;
+  final Value<bool> requiresInvoice;
+  final Value<int?> creditLimitCents;
+  final Value<String?> creditBlockedReason;
   final Value<bool> active;
   final Value<String> revision;
   final Value<int> rowid;
@@ -900,6 +1194,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
     this.name = const Value.absent(),
     this.searchName = const Value.absent(),
     this.discountBasisPoints = const Value.absent(),
+    this.priceTier = const Value.absent(),
+    this.requiresInvoice = const Value.absent(),
+    this.creditLimitCents = const Value.absent(),
+    this.creditBlockedReason = const Value.absent(),
     this.active = const Value.absent(),
     this.revision = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -909,6 +1207,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
     required String name,
     required String searchName,
     required int discountBasisPoints,
+    this.priceTier = const Value.absent(),
+    this.requiresInvoice = const Value.absent(),
+    this.creditLimitCents = const Value.absent(),
+    this.creditBlockedReason = const Value.absent(),
     required bool active,
     required String revision,
     this.rowid = const Value.absent(),
@@ -923,6 +1225,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
     Expression<String>? name,
     Expression<String>? searchName,
     Expression<int>? discountBasisPoints,
+    Expression<String>? priceTier,
+    Expression<bool>? requiresInvoice,
+    Expression<int>? creditLimitCents,
+    Expression<String>? creditBlockedReason,
     Expression<bool>? active,
     Expression<String>? revision,
     Expression<int>? rowid,
@@ -933,6 +1239,11 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
       if (searchName != null) 'search_name': searchName,
       if (discountBasisPoints != null)
         'discount_basis_points': discountBasisPoints,
+      if (priceTier != null) 'price_tier': priceTier,
+      if (requiresInvoice != null) 'requires_invoice': requiresInvoice,
+      if (creditLimitCents != null) 'credit_limit_cents': creditLimitCents,
+      if (creditBlockedReason != null)
+        'credit_blocked_reason': creditBlockedReason,
       if (active != null) 'active': active,
       if (revision != null) 'revision': revision,
       if (rowid != null) 'rowid': rowid,
@@ -944,6 +1255,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
     Value<String>? name,
     Value<String>? searchName,
     Value<int>? discountBasisPoints,
+    Value<String>? priceTier,
+    Value<bool>? requiresInvoice,
+    Value<int?>? creditLimitCents,
+    Value<String?>? creditBlockedReason,
     Value<bool>? active,
     Value<String>? revision,
     Value<int>? rowid,
@@ -953,6 +1268,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
       name: name ?? this.name,
       searchName: searchName ?? this.searchName,
       discountBasisPoints: discountBasisPoints ?? this.discountBasisPoints,
+      priceTier: priceTier ?? this.priceTier,
+      requiresInvoice: requiresInvoice ?? this.requiresInvoice,
+      creditLimitCents: creditLimitCents ?? this.creditLimitCents,
+      creditBlockedReason: creditBlockedReason ?? this.creditBlockedReason,
       active: active ?? this.active,
       revision: revision ?? this.revision,
       rowid: rowid ?? this.rowid,
@@ -974,6 +1293,20 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
     if (discountBasisPoints.present) {
       map['discount_basis_points'] = Variable<int>(discountBasisPoints.value);
     }
+    if (priceTier.present) {
+      map['price_tier'] = Variable<String>(priceTier.value);
+    }
+    if (requiresInvoice.present) {
+      map['requires_invoice'] = Variable<bool>(requiresInvoice.value);
+    }
+    if (creditLimitCents.present) {
+      map['credit_limit_cents'] = Variable<int>(creditLimitCents.value);
+    }
+    if (creditBlockedReason.present) {
+      map['credit_blocked_reason'] = Variable<String>(
+        creditBlockedReason.value,
+      );
+    }
     if (active.present) {
       map['active'] = Variable<bool>(active.value);
     }
@@ -993,6 +1326,10 @@ class LocalCustomersCompanion extends UpdateCompanion<LocalCustomer> {
           ..write('name: $name, ')
           ..write('searchName: $searchName, ')
           ..write('discountBasisPoints: $discountBasisPoints, ')
+          ..write('priceTier: $priceTier, ')
+          ..write('requiresInvoice: $requiresInvoice, ')
+          ..write('creditLimitCents: $creditLimitCents, ')
+          ..write('creditBlockedReason: $creditBlockedReason, ')
           ..write('active: $active, ')
           ..write('revision: $revision, ')
           ..write('rowid: $rowid')
@@ -3517,6 +3854,29 @@ class $LocalSalesTable extends LocalSales
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _priceTierMeta = const VerificationMeta(
+    'priceTier',
+  );
+  @override
+  late final GeneratedColumn<String> priceTier = GeneratedColumn<String>(
+    'price_tier',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('publico'),
+  );
+  static const VerificationMeta _paymentFormMeta = const VerificationMeta(
+    'paymentForm',
+  );
+  @override
+  late final GeneratedColumn<String> paymentForm = GeneratedColumn<String>(
+    'payment_form',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _totalCentsMeta = const VerificationMeta(
     'totalCents',
   );
@@ -3652,6 +4012,8 @@ class $LocalSalesTable extends LocalSales
     operatorName,
     saleType,
     discountBasisPoints,
+    priceTier,
+    paymentForm,
     totalCents,
     appliedCents,
     receivedCents,
@@ -3781,6 +4143,21 @@ class $LocalSalesTable extends LocalSales
       );
     } else if (isInserting) {
       context.missing(_discountBasisPointsMeta);
+    }
+    if (data.containsKey('price_tier')) {
+      context.handle(
+        _priceTierMeta,
+        priceTier.isAcceptableOrUnknown(data['price_tier']!, _priceTierMeta),
+      );
+    }
+    if (data.containsKey('payment_form')) {
+      context.handle(
+        _paymentFormMeta,
+        paymentForm.isAcceptableOrUnknown(
+          data['payment_form']!,
+          _paymentFormMeta,
+        ),
+      );
     }
     if (data.containsKey('total_cents')) {
       context.handle(
@@ -3946,6 +4323,14 @@ class $LocalSalesTable extends LocalSales
         DriftSqlType.int,
         data['${effectivePrefix}discount_basis_points'],
       )!,
+      priceTier: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}price_tier'],
+      )!,
+      paymentForm: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_form'],
+      ),
       totalCents: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}total_cents'],
@@ -4012,6 +4397,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
   final String operatorName;
   final String saleType;
   final int discountBasisPoints;
+  final String priceTier;
+  final String? paymentForm;
   final int totalCents;
   final int appliedCents;
   final int receivedCents;
@@ -4036,6 +4423,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
     required this.operatorName,
     required this.saleType,
     required this.discountBasisPoints,
+    required this.priceTier,
+    this.paymentForm,
     required this.totalCents,
     required this.appliedCents,
     required this.receivedCents,
@@ -4065,6 +4454,10 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
     map['operator_name'] = Variable<String>(operatorName);
     map['sale_type'] = Variable<String>(saleType);
     map['discount_basis_points'] = Variable<int>(discountBasisPoints);
+    map['price_tier'] = Variable<String>(priceTier);
+    if (!nullToAbsent || paymentForm != null) {
+      map['payment_form'] = Variable<String>(paymentForm);
+    }
     map['total_cents'] = Variable<int>(totalCents);
     map['applied_cents'] = Variable<int>(appliedCents);
     map['received_cents'] = Variable<int>(receivedCents);
@@ -4095,6 +4488,10 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
       operatorName: Value(operatorName),
       saleType: Value(saleType),
       discountBasisPoints: Value(discountBasisPoints),
+      priceTier: Value(priceTier),
+      paymentForm: paymentForm == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentForm),
       totalCents: Value(totalCents),
       appliedCents: Value(appliedCents),
       receivedCents: Value(receivedCents),
@@ -4129,6 +4526,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
       discountBasisPoints: serializer.fromJson<int>(
         json['discountBasisPoints'],
       ),
+      priceTier: serializer.fromJson<String>(json['priceTier']),
+      paymentForm: serializer.fromJson<String?>(json['paymentForm']),
       totalCents: serializer.fromJson<int>(json['totalCents']),
       appliedCents: serializer.fromJson<int>(json['appliedCents']),
       receivedCents: serializer.fromJson<int>(json['receivedCents']),
@@ -4158,6 +4557,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
       'operatorName': serializer.toJson<String>(operatorName),
       'saleType': serializer.toJson<String>(saleType),
       'discountBasisPoints': serializer.toJson<int>(discountBasisPoints),
+      'priceTier': serializer.toJson<String>(priceTier),
+      'paymentForm': serializer.toJson<String?>(paymentForm),
       'totalCents': serializer.toJson<int>(totalCents),
       'appliedCents': serializer.toJson<int>(appliedCents),
       'receivedCents': serializer.toJson<int>(receivedCents),
@@ -4185,6 +4586,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
     String? operatorName,
     String? saleType,
     int? discountBasisPoints,
+    String? priceTier,
+    Value<String?> paymentForm = const Value.absent(),
     int? totalCents,
     int? appliedCents,
     int? receivedCents,
@@ -4209,6 +4612,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
     operatorName: operatorName ?? this.operatorName,
     saleType: saleType ?? this.saleType,
     discountBasisPoints: discountBasisPoints ?? this.discountBasisPoints,
+    priceTier: priceTier ?? this.priceTier,
+    paymentForm: paymentForm.present ? paymentForm.value : this.paymentForm,
     totalCents: totalCents ?? this.totalCents,
     appliedCents: appliedCents ?? this.appliedCents,
     receivedCents: receivedCents ?? this.receivedCents,
@@ -4251,6 +4656,10 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
       discountBasisPoints: data.discountBasisPoints.present
           ? data.discountBasisPoints.value
           : this.discountBasisPoints,
+      priceTier: data.priceTier.present ? data.priceTier.value : this.priceTier,
+      paymentForm: data.paymentForm.present
+          ? data.paymentForm.value
+          : this.paymentForm,
       totalCents: data.totalCents.present
           ? data.totalCents.value
           : this.totalCents,
@@ -4298,6 +4707,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
           ..write('operatorName: $operatorName, ')
           ..write('saleType: $saleType, ')
           ..write('discountBasisPoints: $discountBasisPoints, ')
+          ..write('priceTier: $priceTier, ')
+          ..write('paymentForm: $paymentForm, ')
           ..write('totalCents: $totalCents, ')
           ..write('appliedCents: $appliedCents, ')
           ..write('receivedCents: $receivedCents, ')
@@ -4327,6 +4738,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
     operatorName,
     saleType,
     discountBasisPoints,
+    priceTier,
+    paymentForm,
     totalCents,
     appliedCents,
     receivedCents,
@@ -4355,6 +4768,8 @@ class LocalSale extends DataClass implements Insertable<LocalSale> {
           other.operatorName == this.operatorName &&
           other.saleType == this.saleType &&
           other.discountBasisPoints == this.discountBasisPoints &&
+          other.priceTier == this.priceTier &&
+          other.paymentForm == this.paymentForm &&
           other.totalCents == this.totalCents &&
           other.appliedCents == this.appliedCents &&
           other.receivedCents == this.receivedCents &&
@@ -4381,6 +4796,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
   final Value<String> operatorName;
   final Value<String> saleType;
   final Value<int> discountBasisPoints;
+  final Value<String> priceTier;
+  final Value<String?> paymentForm;
   final Value<int> totalCents;
   final Value<int> appliedCents;
   final Value<int> receivedCents;
@@ -4406,6 +4823,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
     this.operatorName = const Value.absent(),
     this.saleType = const Value.absent(),
     this.discountBasisPoints = const Value.absent(),
+    this.priceTier = const Value.absent(),
+    this.paymentForm = const Value.absent(),
     this.totalCents = const Value.absent(),
     this.appliedCents = const Value.absent(),
     this.receivedCents = const Value.absent(),
@@ -4432,6 +4851,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
     required String operatorName,
     required String saleType,
     required int discountBasisPoints,
+    this.priceTier = const Value.absent(),
+    this.paymentForm = const Value.absent(),
     required int totalCents,
     required int appliedCents,
     required int receivedCents,
@@ -4478,6 +4899,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
     Expression<String>? operatorName,
     Expression<String>? saleType,
     Expression<int>? discountBasisPoints,
+    Expression<String>? priceTier,
+    Expression<String>? paymentForm,
     Expression<int>? totalCents,
     Expression<int>? appliedCents,
     Expression<int>? receivedCents,
@@ -4505,6 +4928,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
       if (saleType != null) 'sale_type': saleType,
       if (discountBasisPoints != null)
         'discount_basis_points': discountBasisPoints,
+      if (priceTier != null) 'price_tier': priceTier,
+      if (paymentForm != null) 'payment_form': paymentForm,
       if (totalCents != null) 'total_cents': totalCents,
       if (appliedCents != null) 'applied_cents': appliedCents,
       if (receivedCents != null) 'received_cents': receivedCents,
@@ -4533,6 +4958,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
     Value<String>? operatorName,
     Value<String>? saleType,
     Value<int>? discountBasisPoints,
+    Value<String>? priceTier,
+    Value<String?>? paymentForm,
     Value<int>? totalCents,
     Value<int>? appliedCents,
     Value<int>? receivedCents,
@@ -4559,6 +4986,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
       operatorName: operatorName ?? this.operatorName,
       saleType: saleType ?? this.saleType,
       discountBasisPoints: discountBasisPoints ?? this.discountBasisPoints,
+      priceTier: priceTier ?? this.priceTier,
+      paymentForm: paymentForm ?? this.paymentForm,
       totalCents: totalCents ?? this.totalCents,
       appliedCents: appliedCents ?? this.appliedCents,
       receivedCents: receivedCents ?? this.receivedCents,
@@ -4612,6 +5041,12 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
     }
     if (discountBasisPoints.present) {
       map['discount_basis_points'] = Variable<int>(discountBasisPoints.value);
+    }
+    if (priceTier.present) {
+      map['price_tier'] = Variable<String>(priceTier.value);
+    }
+    if (paymentForm.present) {
+      map['payment_form'] = Variable<String>(paymentForm.value);
     }
     if (totalCents.present) {
       map['total_cents'] = Variable<int>(totalCents.value);
@@ -4667,6 +5102,8 @@ class LocalSalesCompanion extends UpdateCompanion<LocalSale> {
           ..write('operatorName: $operatorName, ')
           ..write('saleType: $saleType, ')
           ..write('discountBasisPoints: $discountBasisPoints, ')
+          ..write('priceTier: $priceTier, ')
+          ..write('paymentForm: $paymentForm, ')
           ..write('totalCents: $totalCents, ')
           ..write('appliedCents: $appliedCents, ')
           ..write('receivedCents: $receivedCents, ')
@@ -7850,6 +8287,8 @@ typedef $$LocalProductsTableCreateCompanionBuilder =
       required String barcode,
       required String size,
       required int priceCents,
+      Value<int> pricePreferential1Cents,
+      Value<int> pricePreferential2Cents,
       required bool active,
       required String revision,
       Value<int> rowid,
@@ -7863,6 +8302,8 @@ typedef $$LocalProductsTableUpdateCompanionBuilder =
       Value<String> barcode,
       Value<String> size,
       Value<int> priceCents,
+      Value<int> pricePreferential1Cents,
+      Value<int> pricePreferential2Cents,
       Value<bool> active,
       Value<String> revision,
       Value<int> rowid,
@@ -7909,6 +8350,16 @@ class $$LocalProductsTableFilterComposer
 
   ColumnFilters<int> get priceCents => $composableBuilder(
     column: $table.priceCents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pricePreferential1Cents => $composableBuilder(
+    column: $table.pricePreferential1Cents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pricePreferential2Cents => $composableBuilder(
+    column: $table.pricePreferential2Cents,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7967,6 +8418,16 @@ class $$LocalProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get pricePreferential1Cents => $composableBuilder(
+    column: $table.pricePreferential1Cents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pricePreferential2Cents => $composableBuilder(
+    column: $table.pricePreferential2Cents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get active => $composableBuilder(
     column: $table.active,
     builder: (column) => ColumnOrderings(column),
@@ -8011,6 +8472,16 @@ class $$LocalProductsTableAnnotationComposer
 
   GeneratedColumn<int> get priceCents => $composableBuilder(
     column: $table.priceCents,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pricePreferential1Cents => $composableBuilder(
+    column: $table.pricePreferential1Cents,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pricePreferential2Cents => $composableBuilder(
+    column: $table.pricePreferential2Cents,
     builder: (column) => column,
   );
 
@@ -8059,6 +8530,8 @@ class $$LocalProductsTableTableManager
                 Value<String> barcode = const Value.absent(),
                 Value<String> size = const Value.absent(),
                 Value<int> priceCents = const Value.absent(),
+                Value<int> pricePreferential1Cents = const Value.absent(),
+                Value<int> pricePreferential2Cents = const Value.absent(),
                 Value<bool> active = const Value.absent(),
                 Value<String> revision = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8070,6 +8543,8 @@ class $$LocalProductsTableTableManager
                 barcode: barcode,
                 size: size,
                 priceCents: priceCents,
+                pricePreferential1Cents: pricePreferential1Cents,
+                pricePreferential2Cents: pricePreferential2Cents,
                 active: active,
                 revision: revision,
                 rowid: rowid,
@@ -8083,6 +8558,8 @@ class $$LocalProductsTableTableManager
                 required String barcode,
                 required String size,
                 required int priceCents,
+                Value<int> pricePreferential1Cents = const Value.absent(),
+                Value<int> pricePreferential2Cents = const Value.absent(),
                 required bool active,
                 required String revision,
                 Value<int> rowid = const Value.absent(),
@@ -8094,6 +8571,8 @@ class $$LocalProductsTableTableManager
                 barcode: barcode,
                 size: size,
                 priceCents: priceCents,
+                pricePreferential1Cents: pricePreferential1Cents,
+                pricePreferential2Cents: pricePreferential2Cents,
                 active: active,
                 revision: revision,
                 rowid: rowid,
@@ -8138,6 +8617,10 @@ typedef $$LocalCustomersTableCreateCompanionBuilder =
       required String name,
       required String searchName,
       required int discountBasisPoints,
+      Value<String> priceTier,
+      Value<bool> requiresInvoice,
+      Value<int?> creditLimitCents,
+      Value<String?> creditBlockedReason,
       required bool active,
       required String revision,
       Value<int> rowid,
@@ -8148,6 +8631,10 @@ typedef $$LocalCustomersTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> searchName,
       Value<int> discountBasisPoints,
+      Value<String> priceTier,
+      Value<bool> requiresInvoice,
+      Value<int?> creditLimitCents,
+      Value<String?> creditBlockedReason,
       Value<bool> active,
       Value<String> revision,
       Value<int> rowid,
@@ -8179,6 +8666,26 @@ class $$LocalCustomersTableFilterComposer
 
   ColumnFilters<int> get discountBasisPoints => $composableBuilder(
     column: $table.discountBasisPoints,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get priceTier => $composableBuilder(
+    column: $table.priceTier,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get requiresInvoice => $composableBuilder(
+    column: $table.requiresInvoice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get creditLimitCents => $composableBuilder(
+    column: $table.creditLimitCents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get creditBlockedReason => $composableBuilder(
+    column: $table.creditBlockedReason,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8222,6 +8729,26 @@ class $$LocalCustomersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get priceTier => $composableBuilder(
+    column: $table.priceTier,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get requiresInvoice => $composableBuilder(
+    column: $table.requiresInvoice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get creditLimitCents => $composableBuilder(
+    column: $table.creditLimitCents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get creditBlockedReason => $composableBuilder(
+    column: $table.creditBlockedReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get active => $composableBuilder(
     column: $table.active,
     builder: (column) => ColumnOrderings(column),
@@ -8255,6 +8782,24 @@ class $$LocalCustomersTableAnnotationComposer
 
   GeneratedColumn<int> get discountBasisPoints => $composableBuilder(
     column: $table.discountBasisPoints,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get priceTier =>
+      $composableBuilder(column: $table.priceTier, builder: (column) => column);
+
+  GeneratedColumn<bool> get requiresInvoice => $composableBuilder(
+    column: $table.requiresInvoice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get creditLimitCents => $composableBuilder(
+    column: $table.creditLimitCents,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get creditBlockedReason => $composableBuilder(
+    column: $table.creditBlockedReason,
     builder: (column) => column,
   );
 
@@ -8302,6 +8847,10 @@ class $$LocalCustomersTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> searchName = const Value.absent(),
                 Value<int> discountBasisPoints = const Value.absent(),
+                Value<String> priceTier = const Value.absent(),
+                Value<bool> requiresInvoice = const Value.absent(),
+                Value<int?> creditLimitCents = const Value.absent(),
+                Value<String?> creditBlockedReason = const Value.absent(),
                 Value<bool> active = const Value.absent(),
                 Value<String> revision = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8310,6 +8859,10 @@ class $$LocalCustomersTableTableManager
                 name: name,
                 searchName: searchName,
                 discountBasisPoints: discountBasisPoints,
+                priceTier: priceTier,
+                requiresInvoice: requiresInvoice,
+                creditLimitCents: creditLimitCents,
+                creditBlockedReason: creditBlockedReason,
                 active: active,
                 revision: revision,
                 rowid: rowid,
@@ -8320,6 +8873,10 @@ class $$LocalCustomersTableTableManager
                 required String name,
                 required String searchName,
                 required int discountBasisPoints,
+                Value<String> priceTier = const Value.absent(),
+                Value<bool> requiresInvoice = const Value.absent(),
+                Value<int?> creditLimitCents = const Value.absent(),
+                Value<String?> creditBlockedReason = const Value.absent(),
                 required bool active,
                 required String revision,
                 Value<int> rowid = const Value.absent(),
@@ -8328,6 +8885,10 @@ class $$LocalCustomersTableTableManager
                 name: name,
                 searchName: searchName,
                 discountBasisPoints: discountBasisPoints,
+                priceTier: priceTier,
+                requiresInvoice: requiresInvoice,
+                creditLimitCents: creditLimitCents,
+                creditBlockedReason: creditBlockedReason,
                 active: active,
                 revision: revision,
                 rowid: rowid,
@@ -9696,6 +10257,8 @@ typedef $$LocalSalesTableCreateCompanionBuilder = LocalSalesCompanion Function({
   required String operatorName,
   required String saleType,
   required int discountBasisPoints,
+  Value<String> priceTier,
+  Value<String?> paymentForm,
   required int totalCents,
   required int appliedCents,
   required int receivedCents,
@@ -9722,6 +10285,8 @@ typedef $$LocalSalesTableUpdateCompanionBuilder = LocalSalesCompanion Function({
   Value<String> operatorName,
   Value<String> saleType,
   Value<int> discountBasisPoints,
+  Value<String> priceTier,
+  Value<String?> paymentForm,
   Value<int> totalCents,
   Value<int> appliedCents,
   Value<int> receivedCents,
@@ -9882,6 +10447,16 @@ class $$LocalSalesTableFilterComposer
 
   ColumnFilters<int> get discountBasisPoints => $composableBuilder(
     column: $table.discountBasisPoints,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get priceTier => $composableBuilder(
+    column: $table.priceTier,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentForm => $composableBuilder(
+    column: $table.paymentForm,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10110,6 +10685,16 @@ class $$LocalSalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get priceTier => $composableBuilder(
+    column: $table.priceTier,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paymentForm => $composableBuilder(
+    column: $table.paymentForm,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get totalCents => $composableBuilder(
     column: $table.totalCents,
     builder: (column) => ColumnOrderings(column),
@@ -10224,6 +10809,14 @@ class $$LocalSalesTableAnnotationComposer
 
   GeneratedColumn<int> get discountBasisPoints => $composableBuilder(
     column: $table.discountBasisPoints,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get priceTier =>
+      $composableBuilder(column: $table.priceTier, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentForm => $composableBuilder(
+    column: $table.paymentForm,
     builder: (column) => column,
   );
 
@@ -10424,6 +11017,8 @@ class $$LocalSalesTableTableManager
                 Value<String> operatorName = const Value.absent(),
                 Value<String> saleType = const Value.absent(),
                 Value<int> discountBasisPoints = const Value.absent(),
+                Value<String> priceTier = const Value.absent(),
+                Value<String?> paymentForm = const Value.absent(),
                 Value<int> totalCents = const Value.absent(),
                 Value<int> appliedCents = const Value.absent(),
                 Value<int> receivedCents = const Value.absent(),
@@ -10449,6 +11044,8 @@ class $$LocalSalesTableTableManager
                 operatorName: operatorName,
                 saleType: saleType,
                 discountBasisPoints: discountBasisPoints,
+                priceTier: priceTier,
+                paymentForm: paymentForm,
                 totalCents: totalCents,
                 appliedCents: appliedCents,
                 receivedCents: receivedCents,
@@ -10476,6 +11073,8 @@ class $$LocalSalesTableTableManager
                 required String operatorName,
                 required String saleType,
                 required int discountBasisPoints,
+                Value<String> priceTier = const Value.absent(),
+                Value<String?> paymentForm = const Value.absent(),
                 required int totalCents,
                 required int appliedCents,
                 required int receivedCents,
@@ -10501,6 +11100,8 @@ class $$LocalSalesTableTableManager
                 operatorName: operatorName,
                 saleType: saleType,
                 discountBasisPoints: discountBasisPoints,
+                priceTier: priceTier,
+                paymentForm: paymentForm,
                 totalCents: totalCents,
                 appliedCents: appliedCents,
                 receivedCents: receivedCents,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/app_controller.dart';
 import '../../core/models.dart';
+import '../../ui/components.dart';
 import '../../ui/web_theme.dart';
 import '../sales/sale_screen.dart';
 import '../sales/history_screen.dart';
@@ -300,59 +301,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               ),
                             ),
                           ),
-                        Text(
-                          _section == 0
-                              ? 'Productos'
-                              : _section == 1
-                              ? 'Clientes'
-                              : 'Tu dispositivo',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Última actualización: ${_date(c.syncInfo?.syncedAt)} · ${_section == 1 ? 'Adeudos estimados' : 'Existencias estimadas'}',
-                        ),
-                        const SizedBox(height: 20),
-                        if (_section != 4) ...[
-                          TextField(
-                            controller: _query,
-                            focusNode: _focus,
-                            onChanged: _search,
-                            onSubmitted: (_) => _load(),
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.search),
-                              labelText: _section == 0
-                                  ? 'Nombre, identificador o código de barras'
-                                  : 'Nombre o identificador del cliente',
-                              suffixIcon: IconButton(
-                                tooltip: 'Limpiar búsqueda',
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _query.clear();
-                                  _load();
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (_searchError != null) Text(_searchError!),
-                        ],
                         Expanded(
                           child: _section == 4
-                              ? _account(context)
-                              : _loading
-                              ? const Center(child: CircularProgressIndicator())
-                              : _section == 0
-                              ? _productList(context)
-                              : _customerList(context),
+                              ? Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    ..._top(c),
+                                    Expanded(child: _account(context)),
+                                  ],
+                                )
+                              : _catalogList(context),
                         ),
-                        if (_section != 4)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8),
-                            child: Text(
-                              'Hasta 200 resultados. Refina tu búsqueda para encontrar más.',
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -491,168 +451,144 @@ class _CatalogScreenState extends State<CatalogScreen> {
     ),
   );
 
-  Widget _productList(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 900 && _products.isNotEmpty) {
-      return _table(context, products: true);
-    }
-    if (_products.isEmpty) {
-      return const Center(
-        child: Text('No hay productos activos para esta búsqueda.'),
-      );
-    }
-    return ListView.separated(
-      itemCount: _products.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final p = _products[index];
-        return Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              'ID ${p.id} · ${p.size}\n${p.barcode.isEmpty ? 'Sin código de barras' : p.barcode}\nExistencia estimada: ${decimalText(p.estimatedQuantity)}',
-            ),
-            isThreeLine: true,
-            trailing: Text(
-              money(p.priceCents),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            onTap: () => showDialog<void>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text(p.name),
-                content: Text(
-                  'Precio: ${money(p.priceCents)}\nExistencia estimada: ${decimalText(p.estimatedQuantity)}\nCódigo: ${p.barcode}\nActualizado: ${_date(widget.controller.syncInfo?.syncedAt)}',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cerrar'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _customerList(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 900 && _customers.isNotEmpty) {
-      return _table(context, products: false);
-    }
-    if (_customers.isEmpty) {
-      return const Center(
-        child: Text('No hay clientes activos para esta búsqueda.'),
-      );
-    }
-    return ListView.separated(
-      itemCount: _customers.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final c = _customers[index];
-        return Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            title: Text(
-              c.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              'ID ${c.id} · Descuento ${decimalText(c.discountBasisPoints)}%',
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('Adeudo estimado', style: TextStyle(fontSize: 12)),
-                Text(
-                  money(c.balanceCents),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _table(
-    BuildContext context, {
-    required bool products,
-  }) => LayoutBuilder(
-    builder: (context, constraints) => Card(
-      child: SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: DataTable(
-              headingRowColor: const WidgetStatePropertyAll(WebTheme.canvas),
-              columns: products
-                  ? const [
-                      DataColumn(label: Text('Producto')),
-                      DataColumn(label: Text('Tamaño')),
-                      DataColumn(label: Text('Precio')),
-                      DataColumn(label: Text('Existencia estimada')),
-                      DataColumn(label: Text('Código')),
-                    ]
-                  : const [
-                      DataColumn(label: Text('Cliente')),
-                      DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('Descuento')),
-                      DataColumn(label: Text('Adeudo estimado')),
-                    ],
-              rows: products
-                  ? [
-                      for (final p in _products)
-                        DataRow(
-                          cells: [
-                            DataCell(Text(p.name)),
-                            DataCell(Text(p.size)),
-                            DataCell(Text(money(p.priceCents))),
-                            DataCell(Text(decimalText(p.estimatedQuantity))),
-                            DataCell(Text(p.barcode)),
-                          ],
-                        ),
-                    ]
-                  : [
-                      for (final c in _customers)
-                        DataRow(
-                          cells: [
-                            DataCell(Text(c.name)),
-                            DataCell(Text(c.id)),
-                            DataCell(
-                              Text('${decimalText(c.discountBasisPoints)}%'),
-                            ),
-                            DataCell(Text(money(c.balanceCents))),
-                          ],
-                        ),
-                    ],
-            ),
-          ),
+  Widget _productCard(BuildContext context, ProductView p) => RecordCard(
+    key: ValueKey('catalog-product-${p.id}'),
+    accent: stockAccent(p.estimatedQuantity),
+    eyebrow: p.classification.isEmpty ? '#${p.id}' : p.classification,
+    title: p.name,
+    subtitle: p.size,
+    badges: [
+      UiBadge(
+        stockBadgeText(p.estimatedQuantity, decimalText(p.estimatedQuantity)),
+        tone: stockTone(p.estimatedQuantity),
+      ),
+    ],
+    fields: [
+      RecordField('Preferencial 1', money(p.preferential1Cents)),
+      RecordField('Preferencial 2', money(p.preferential2Cents)),
+      RecordField('Id', p.id),
+      RecordField('Código de barras', p.barcode),
+    ],
+    onTap: () => showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(p.name),
+        content: Text(
+          'Precio público: ${money(p.priceCents)}\nPreferencial 1: ${money(p.preferential1Cents)}\nPreferencial 2: ${money(p.preferential2Cents)}\nExistencia estimada: ${decimalText(p.estimatedQuantity)}\nCódigo: ${p.barcode}\nActualizado: ${_date(widget.controller.syncInfo?.syncedAt)}',
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     ),
+    child: AmountLine(money(p.priceCents), label: 'Precio público'),
   );
+
+  Widget _customerCard(CustomerView c) {
+    final blocked = c.creditRestriction();
+    return RecordCard(
+      key: ValueKey('catalog-customer-${c.id}'),
+      eyebrow: '#${c.id}',
+      title: c.name,
+      badges: [
+        if (c.requiresInvoice) const UiBadge('Factura', tone: Tone.blue),
+        if (blocked != null) const UiBadge('Solo contado', tone: Tone.red),
+      ],
+      fields: [
+        RecordField('Precio asignado', priceTierLabel(c.priceTier)),
+        RecordField(
+          'Límite de crédito',
+          c.creditLimitCents == null
+              ? 'Sin límite'
+              : money(c.creditLimitCents!),
+        ),
+        if (blocked != null) RecordField('Crédito', blocked, wide: true),
+      ],
+      child: AmountLine(money(c.balanceCents), label: 'Adeudo estimado'),
+    );
+  }
+
+  /// Título y fecha de actualización; en los listados se desplazan con las tarjetas.
+  List<Widget> _top(AppController c) => [
+    PageHeader(
+      title: switch (_section) {
+        0 => 'Productos',
+        1 => 'Clientes',
+        _ => 'Tu dispositivo',
+      },
+      subtitle: switch (_section) {
+        0 => 'Precios y existencias del catálogo guardado',
+        1 => 'Precio asignado, crédito y adeudos',
+        _ => 'Sesión, sucursal y autorización offline',
+      },
+    ),
+    const SizedBox(height: 4),
+    Muted(
+      'Actualizado ${_date(c.syncInfo?.syncedAt)} · ${_section == 1 ? 'Adeudos estimados' : 'Existencias estimadas'}',
+    ),
+    const SizedBox(height: 16),
+  ];
+
+  Widget _catalogList(BuildContext context) {
+    final products = _section == 0;
+    final count = products ? _products.length : _customers.length;
+    final query = _query.text.trim();
+    return RecordGrid(
+      itemCount: _loading ? 0 : count,
+      itemBuilder: (context, i) => products
+          ? _productCard(context, _products[i])
+          : _customerCard(_customers[i]),
+      header: [
+        ..._top(widget.controller),
+        UiSearchField(
+          controller: _query,
+          focusNode: _focus,
+          hint: products ? 'Buscar producto o código' : 'Buscar cliente',
+          onChanged: _search,
+          onSubmitted: (_) => _load(),
+          onClear: () {
+            _query.clear();
+            _load();
+          },
+        ),
+        const SizedBox(height: 10),
+        if (_searchError != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: UiAlert(_searchError!, tone: Tone.red),
+          ),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (count == 0)
+          EmptyState(
+            title: query.isNotEmpty
+                ? 'No encontramos “$query”'
+                : products
+                ? 'No hay productos activos para esta búsqueda.'
+                : 'No hay clientes activos para esta búsqueda.',
+            text: 'Revisa la escritura o sincroniza el catálogo.',
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Muted(
+              products
+                  ? (count == 1 ? '1 producto' : '$count productos')
+                  : (count == 1 ? '1 cliente' : '$count clientes'),
+            ),
+          ),
+      ],
+      footer: const [
+        Muted('Hasta 200 resultados. Refina tu búsqueda para encontrar más.'),
+      ],
+    );
+  }
 
   Widget _account(BuildContext context) {
     final c = widget.controller;

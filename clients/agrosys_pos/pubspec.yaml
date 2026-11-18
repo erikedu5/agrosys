@@ -60,6 +60,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.35.1
   build_runner: ^2.16.2
+  msix: ^3.18.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -106,3 +107,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Paquete MSIX para Microsoft Store (ver WINDOWS-DISTRIBUCION.md). El workflow
+# Flutter POS agrega al final de este bloque la identidad de Partner Center
+# (identity_name, publisher, publisher_display_name), por eso debe ser el último
+# del archivo, y compila con --store. La versión MSIX es la de arriba con
+# revisión 0 (2.1.1+8 -> 2.1.1.0): súbela en cada envío a la Store.
+msix_config:
+  display_name: AgroSys POS
+  logo_path: macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png
+  capabilities: internetClient
+  languages: es-mx
+  windows_build_args: --dart-define-from-file=config/production.json

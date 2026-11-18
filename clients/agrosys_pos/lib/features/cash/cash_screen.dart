@@ -10,6 +10,21 @@ import '../../core/app_controller.dart';
 import '../../core/models.dart';
 import '../../core/pos_api.dart';
 import '../../data/database.dart';
+import '../../ui/components.dart';
+
+/// Ventas de la caja (CashRegister::salesBreakdown); vacío si el servidor no lo envía.
+List<String> cashSalesLines(Map<String, dynamic> session) {
+  if (session['sales'] is! Map) return const [];
+  final sales = object(session['sales']);
+  return [
+    'Vendido de contado (${sales['cashCount']}): \$${sales['cash']}',
+    'Vendido a crédito (${sales['creditCount']}): \$${sales['credit']}',
+    'Total vendido: \$${sales['total']}',
+    'Abonos iniciales de crédito (cobrado): \$${sales['creditInitial']}',
+    'Crédito por cobrar de estas ventas: \$${sales['creditPending']}',
+    'Abonos de clientes a crédito (cobrado): \$${sales['accountPayments']}',
+  ];
+}
 
 const cashLabels = {
   'sale': 'Ventas de contado',
@@ -212,6 +227,13 @@ class _CashScreenState extends State<CashScreen> {
         'Folio: ${cut['id']}',
         'Apertura: ${_date(cut['openedAt'])}',
         'Cierre: ${_date(cut['closedAt'])}',
+        if (cashSalesLines(cut).isNotEmpty) ...[
+          '',
+          'VENTAS DEL TURNO',
+          ...cashSalesLines(cut),
+          '',
+          'EFECTIVO EN CAJA',
+        ],
         'Fondo inicial: \$${cut['opening']}',
         for (final entry in object(cut['totals']).entries)
           '${cashLabels[entry.key] ?? entry.key}: \$${entry.value}',
@@ -267,18 +289,20 @@ class _CashScreenState extends State<CashScreen> {
     decoration: InputDecoration(labelText: label, counterText: ''),
     onChanged: controller == _counted ? (_) => setState(() {}) : null,
   );
-  Widget _card(List<Widget> children) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
-    ),
+  Widget _card(List<Widget> children) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: SectionCard(children: children),
   );
   Widget _heading(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Text(text, style: Theme.of(context).textTheme.titleLarge),
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Palette.gray900,
+      ),
+    ),
   );
 
   @override
@@ -303,7 +327,12 @@ class _CashScreenState extends State<CashScreen> {
       children: [
         Row(
           children: [
-            Expanded(child: _heading('Apertura y corte de caja')),
+            Expanded(
+              child: PageHeader(
+                title: 'Apertura y corte de caja',
+                subtitle: '${c.session!.userName} · ${c.session!.branch.name}',
+              ),
+            ),
             Tooltip(
               message:
                   'Caja de ${c.session!.userName} · ${c.session!.branch.name}. Apertura, movimientos y corte requieren conexión.\nAntes de cerrar, sincroniza las ventas de todos tus dispositivos. Abre la caja antes de realizar ventas.\nSi pagas a un proveedor con efectivo de esta caja, registra una salida manual.',
@@ -316,9 +345,13 @@ class _CashScreenState extends State<CashScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 12),
         if (_cached)
-          const Text(
-            'Datos guardados en este dispositivo. Conéctate para actualizar o manejar caja.',
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: UiAlert(
+              'Datos guardados en este dispositivo. Conéctate para actualizar o manejar caja.',
+            ),
           ),
         if (_loading || _writing) const LinearProgressIndicator(),
         if (_error != null)
@@ -379,6 +412,16 @@ class _CashScreenState extends State<CashScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ]),
+          if (cashSalesLines(current).isNotEmpty)
+            _card([
+              _heading('Ventas de esta caja'),
+              for (final line in cashSalesLines(current)) Text(line),
+              const SizedBox(height: 8),
+              const Text(
+                'El efectivo esperado solo incluye lo cobrado: ventas de contado, abonos iniciales y abonos de clientes. El crédito por cobrar no entra a la caja.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ]),
           _card([
             _heading('Entrada o salida de efectivo'),
             DropdownButtonFormField<String>(

@@ -44,6 +44,7 @@ void main() {
     int quantity = 200,
     String? id,
     bool ack = false,
+    String? paymentForm,
   }) async {
     final quote = await sales.quote('20', [CartLine('10', quantity)]);
     return SaleRequest(
@@ -54,9 +55,32 @@ void main() {
       initialCents: initial,
       receivedCents: received,
       expectedPriceFingerprint: quote.priceFingerprint,
+      paymentForm: paymentForm,
       acknowledgeStock: ack,
     );
   }
+
+  Future<void> restage({
+    Map<String, dynamic>? customerRow,
+    Map<String, dynamic>? productRow,
+  }) async {
+    await catalog.startDownload(incremental: false);
+    await catalog.stage(
+      snapshot(
+        products: [productRow ?? product()],
+        customers: [customerRow ?? customer()],
+      ),
+    );
+    await catalog.commitDownload();
+  }
+
+  Matcher saleError(String text) => throwsA(
+    isA<SaleInputException>().having(
+      (e) => e.message,
+      'message',
+      contains(text),
+    ),
+  );
 
   Future<void> empty() async {
     expect(await db.select(db.localSales).get(), isEmpty);
@@ -403,10 +427,13 @@ void main() {
     }
     raw.execute('DROP TABLE inventory_requests');
     raw.execute('ALTER TABLE local_products DROP COLUMN classification');
+    await dropV8Columns(raw.execute, sales: false);
     raw.execute('PRAGMA user_version=2');
     raw.close();
     await open();
-    expect((await catalog.info()).cursor, cursor);
+    // v8 descarta el cursor para forzar una descarga total con precios por nivel.
+    expect(cursor, isNotNull);
+    expect((await catalog.info()).cursor, isNull);
     expect((await catalog.products('')).single.estimatedQuantity, 900);
     expect(
       (await db.customSelect('SELECT payload FROM pending_probe').getSingle())
@@ -471,4 +498,100 @@ void main() {
       expect((await db.select(db.localSales).get()).length, 1);
     },
   );
+  test(
+    'customer price tier sets the unit price; old servers fall back to public',
+    () async {
+      await restage(customerRow: customer(priceTier: 'preferencial_2'));
+      final quote = await sales.quote('20', [const CartLine('10', 200)]);
+      expect(quote.lines.single.unitPriceCents, 4500);
+      expect(quote.totalCents, 9000);
+      final stored = await sales.complete(await request(received: 9000));
+      expect(stored.sale.priceTier, 'preferencial_2');
+      final payload = object(
+        object(
+          jsonDecode((await db.select(db.outbox).getSingle()).payload),
+        )['payload'],
+      );
+      expect(object((payload['items'] as List).single)['unitPrice'], '45.00');
+      expect(payload.containsKey('paymentForm'), isFalse);
+      expect(receiptText(stored), contains('Contado · Precio Preferencial 2'));
+
+      await restage(
+        customerRow: {...customer()}..remove('priceTier'),
+        productRow: {...product()}..remove('prices'),
+      );
+      expect(
+        (await sales.quote('20', [const CartLine('10', 100)])).totalCents,
+        5000,
+      );
+      expect(
+        (await catalog.productById('10'))!.priceFor('preferencial_1'),
+        5000,
+      );
+    },
+  );
+  test(
+    'invoice customers require a SAT payment form that travels with the sale',
+    () async {
+      await restage(customerRow: {...customer(), 'requiresInvoice': true});
+      expect((await catalog.customerById('20'))!.requiresInvoice, isTrue);
+      await expectLater(
+        sales.complete(await request()),
+        saleError('forma de pago'),
+      );
+      await expectLater(
+        sales.complete(await request(paymentForm: 'XX')),
+        saleError('forma de pago'),
+      );
+      await empty();
+      final stored = await sales.complete(await request(paymentForm: '03'));
+      expect(stored.sale.paymentForm, '03');
+      final payload = object(
+        object(
+          jsonDecode((await db.select(db.outbox).getSingle()).payload),
+        )['payload'],
+      );
+      expect(payload['paymentForm'], '03');
+      expect(
+        receiptText(stored),
+        contains('Forma de pago: 03 Transferencia electrónica'),
+      );
+    },
+  );
+  test('credit is blocked by an overdue term or the credit limit; cash still sells', () async {
+    const overdue =
+        'El cliente rebasó su plazo de crédito de 5 días (adeudo desde el 01/11/2026).';
+    await restage(customerRow: {...customer(), 'creditBlockedReason': overdue});
+    expect((await catalog.customerById('20'))!.creditRestriction(), overdue);
+    await expectLater(
+      sales.complete(await request(type: 'Credito', received: 0)),
+      saleError('$overdue Solo se le puede vender de contado.'),
+    );
+    await empty();
+    // Saldo 40.00 + crédito nuevo frente al límite de 100.00.
+    await restage(customerRow: {...customer(), 'creditLimit': '100.00'});
+    final customerView = (await catalog.customerById('20'))!;
+    expect(customerView.creditRestriction(), isNull);
+    expect(
+      customerView.creditRestriction(6001),
+      contains('límite de crédito de \$100.00'),
+    );
+    await expectLater(
+      sales.complete(
+        await request(type: 'Credito', initial: 3000, received: 3000),
+      ),
+      saleError(
+        'excede su límite de crédito de \$100.00 (adeudo actual \$40.00)',
+      ),
+    );
+    await empty();
+    final credit = await sales.complete(
+      await request(type: 'Credito', initial: 4000, received: 4000),
+    );
+    expect(credit.sale.balanceCents, 6000);
+    // Con el saldo en el límite ya no se fía, pero sí se vende de contado.
+    expect((await catalog.customerById('20'))!.creditRestriction(), isNotNull);
+    final cash = await sales.complete(await request());
+    expect(cash.sale.saleType, 'Contado');
+  });
 }

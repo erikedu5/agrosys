@@ -432,6 +432,31 @@ class NativePosApiTest extends TestCase
         $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonPath('products.0.serverQuantity', '13.00');
     }
 
+    public function test_native_dose_is_idempotent_and_requires_permission_version_and_loss_confirmation(): void
+    {
+        $this->activate();
+        $id = $this->product->id;
+        $input = ['operation_id' => (string) Str::uuid(), 'version' => str_repeat('0', 64), 'contenido' => '1000', 'medida' => '250', 'unidad' => 'ml', 'precio_publico' => '15.00'];
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input])->assertForbidden();
+        $this->user->update(['tipo' => 'inventario']);
+        $this->assertContains('inventory.dose', app(\App\Services\Pos\PosAccess::class)->permissions($this->user, $this->branch));
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input])->assertConflict();
+        $input['version'] = $this->api('POST', "inventory/{$id}/detail", $this->context())->assertOk()->json('product.version');
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'medida' => '300'])->assertUnprocessable()->assertJsonValidationErrors('acepta_perdida');
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'medida' => '250.001'])->assertUnprocessable();
+        $this->assertSame(1, Producto::count());
+        $first = $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input])->assertOk()
+            ->assertJsonPath('productId', (string) $id)->assertJsonPath('quantity', '9.00')->assertJsonPath('doseUnits', 4)->assertJsonPath('doseQuantity', '4.00');
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input])->assertOk()->assertExactJson($first->json());
+        $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input, 'medida' => '500'])->assertConflict();
+        $dose = Producto::findOrFail($first->json('doseProductId'));
+        $this->assertSame(['Medida '.$this->product->nombre, '250 ml'], [$dose->nombre, $dose->tamano]);
+        $this->assertEquals([15, 15, 15, 12.5], array_map('floatval', array_values($dose->only([...array_values(Producto::PRECIOS), 'precio_unitario']))));
+        $this->assertSame(1, AltaInventario::where('tipo_evento', AltaInventario::EVENTO_DOSIFICACION_SALIDA)->count());
+        $this->api('POST', "inventory/{$dose->id}/movements", $this->context())->assertOk()->assertJsonPath('movements.0.type', 'Entrada por dosificación')->assertJsonPath('movements.0.change', '4.00');
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonCount(2, 'products');
+    }
+
     public function test_inventory_writes_and_costs_follow_current_role_company_and_block(): void
     {
         $this->activate();
@@ -603,6 +628,24 @@ class NativePosApiTest extends TestCase
         $this->api('POST', 'sync/pull', [...$this->context(), 'cursor' => $pull->json('nextCursor')])->assertJsonPath('customers.0.balance', '60.00');
         $this->product->delete();
         $this->api('POST', 'sync/pull', [...$this->context(), 'cursor' => $pull->json('nextCursor')])->assertJsonPath('products.0.active', false);
+    }
+
+    public function test_snapshot_customers_carry_invoice_and_credit_restrictions(): void
+    {
+        $this->activate();
+        $this->customer->update(['requiereFactura' => true, 'limite_credito' => 500, 'plazo_credito_dias' => 5, 'tipo_precio' => 'preferencial_1']);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonPath('customers.0.requiresInvoice', true)
+            ->assertJsonPath('customers.0.creditLimit', '500.00')->assertJsonPath('customers.0.creditBlockedReason', null)
+            ->assertJsonPath('customers.0.priceTier', 'preferencial_1');
+        $this->customer->update(['tipo_precio' => 'publico']);
+        $this->push([$this->operation('Credito', '30.00')])->assertJsonPath('results.0.status', 'confirmed');
+        $since = now()->subDays(6);
+        Venta::where('id_cliente', $this->customer->id)->update(['created_at' => $since]);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()
+            ->assertJsonPath('customers.0.creditBlockedReason', "El cliente rebasó su plazo de crédito de 5 días (adeudo desde el {$since->format('d/m/Y')}).");
+        $this->customer->update(['requiereFactura' => false, 'limite_credito' => null, 'plazo_credito_dias' => null]);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonPath('customers.0.requiresInvoice', false)
+            ->assertJsonPath('customers.0.creditLimit', null)->assertJsonPath('customers.0.creditBlockedReason', null);
     }
 
     public function test_cursor_expiry_and_unknown_operation_receipts_preserve_recovery_path(): void

@@ -65,7 +65,7 @@ class PosAccess
         if (in_array($user->tipo, ['inventario', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
             $permissions = [...$permissions, 'inventory.read', 'inventory.movements.read', 'transfer.read'];
             if (! $branch->empresa->ventas_bloqueadas || $user->tipo === 'superAdmin') {
-                $permissions = [...$permissions, 'product.create', 'product.update', 'product.prices.update', 'inventory.add', 'transfer.create', 'transfer.receive'];
+                $permissions = [...$permissions, 'product.create', 'product.update', 'product.prices.update', 'inventory.add', 'inventory.dose', 'transfer.create', 'transfer.receive'];
                 if (in_array($user->tipo, ['adminEmpresa', 'superAdmin'], true)) {
                     $permissions = [...$permissions, 'product.delete', 'inventory.reset'];
                 }

@@ -56,6 +56,7 @@ Route::prefix('v1/pos')->name('pos.')->middleware(\App\Http\Middleware\PosApi::c
         Route::post('/inventory/{productId}/update', [\App\Http\Controllers\Api\PosInventoryController::class, 'update'])->whereNumber('productId')->name('inventory.update');
         Route::post('/inventory/{productId}/prices', [\App\Http\Controllers\Api\PosInventoryController::class, 'prices'])->whereNumber('productId')->name('inventory.prices');
         Route::post('/inventory/{productId}/add', [\App\Http\Controllers\Api\PosInventoryController::class, 'add'])->whereNumber('productId')->name('inventory.add');
+        Route::post('/inventory/{productId}/dose', [\App\Http\Controllers\Api\PosInventoryController::class, 'dose'])->whereNumber('productId')->name('inventory.dose');
         Route::post('/inventory/{productId}/preview', [\App\Http\Controllers\Api\PosInventoryController::class, 'preview'])->whereNumber('productId')->name('inventory.preview');
         Route::post('/inventory/{productId}/reset', [\App\Http\Controllers\Api\PosInventoryController::class, 'reset'])->whereNumber('productId')->name('inventory.reset');
         Route::post('/inventory/{productId}/delete', [\App\Http\Controllers\Api\PosInventoryController::class, 'delete'])->whereNumber('productId')->name('inventory.delete');

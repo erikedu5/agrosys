@@ -294,6 +294,7 @@ void main() {
     );
     legacy.execute('DROP TABLE inventory_requests');
     legacy.execute('ALTER TABLE local_products DROP COLUMN classification');
+    await dropV8Columns(legacy.execute, sales: false);
     legacy.execute('PRAGMA user_version=1');
     legacy.close();
     db = PosDatabase(NativeDatabase(File(file)), fixtureSession().contextId);

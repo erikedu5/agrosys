@@ -236,6 +236,78 @@ El backend necesita las migraciones POS aplicadas y `POS_NATIVE_ENABLED=true`
 en el `.env` del servidor, seguido de `php artisan config:cache`. El instalador
 no modifica el backend ni habilita la API por sí mismo.
 
+## 8. Microsoft Store (MSIX firmado por Microsoft)
+
+La Store firma el paquete: no hace falta certificado propio y Windows no muestra
+el aviso de editor desconocido. Las actualizaciones llegan por la Store. El
+workflow `.github/workflows/flutter-pos.yml` genera el `.msix` con el paquete
+[`msix`](https://pub.dev/packages/msix), que incluye el runtime de Visual C++.
+
+### Configuración única
+
+1. En [Partner Center](https://partner.microsoft.com/dashboard): **Apps and games →
+   New product → MSIX or PWA app** y reserva el nombre *AgroSys POS*.
+2. En **Product management → Product identity** copia los valores a variables
+   del repositorio (**Settings → Secrets and variables → Actions → Variables**):
+
+   | Variable | Valor de Partner Center |
+   | --- | --- |
+   | `MSSTORE_IDENTITY_NAME` | `Package/Identity/Name` |
+   | `MSSTORE_PUBLISHER` | `Package/Identity/Publisher` (`CN=...`) |
+   | `MSSTORE_PUBLISHER_DISPLAY_NAME` | `Package/Properties/PublisherDisplayName` |
+
+   Sin `MSSTORE_IDENTITY_NAME` el job `windows-store-package` no se ejecuta.
+
+### Primera versión (manual)
+
+1. **Actions → Flutter POS → Run workflow** en la rama predeterminada.
+2. Descarga el artefacto `AgroSys-POS-<versión>-Store` (`.msix` + SHA-256).
+   El job verifica identidad, versión, runtime de Visual C++ y archivos de Flutter.
+3. En Partner Center crea la solicitud: precio gratis, categoría Negocios,
+   **URL de política de privacidad** (obligatoria: la app pide login), clasificación
+   por edad, descripción y capturas; en **Packages** sube el `.msix`.
+   Si piden justificar `runFullTrust`, es la capacidad normal de una app de escritorio.
+4. La certificación puede tardar varios días hábiles.
+
+### Actualizaciones automáticas
+
+Sólo funcionan cuando la app ya está publicada y disponible en la Store.
+
+1. Asocia un tenant de Microsoft Entra ID a Partner Center, registra una
+   aplicación en Entra y agrégala en **Account settings → User management →
+   Microsoft Entra applications** con rol **Manager**
+   ([guía](https://learn.microsoft.com/en-us/windows/apps/publish/msstore-dev-cli/github-actions)).
+2. Agrega los **secretos** del repositorio `AZURE_AD_TENANT_ID`,
+   `AZURE_AD_APPLICATION_CLIENT_ID`, `AZURE_AD_APPLICATION_SECRET` y `SELLER_ID`,
+   y la **variable** `MSSTORE_PRODUCT_ID` (Store ID, p. ej. `9N...`).
+3. Sube `version` en `pubspec.yaml` (la Store exige una versión mayor; el MSIX
+   usa revisión 0: `2.1.2+9` → `2.1.2.0`).
+4. **Run workflow** en la rama predeterminada marcando **publish_store**. El job
+   `publish-microsoft-store` espera las pruebas de escritorio, comprueba el
+   checksum y envía el paquete con `msstore publish`.
+
+### Pasar una PC del instalador EXE a la Store
+
+Los datos locales están en `%APPDATA%\mx.agrosys\agrosys_pos`. En Windows 10
+1903 o posterior la versión de la Store abre los archivos existentes ahí, pero
+los que cree después quedan en una ubicación privada del paquete que Windows
+borra al desinstalarla. Antes de cambiar:
+
+1. Sincroniza y confirma que el historial no tenga ventas pendientes.
+2. Desinstala la versión EXE (no borra AppData) e instala desde la Store.
+3. Inicia sesión y verifica sucursal, catálogo y caja.
+
+Prueba el cambio primero en una PC que no sea de producción.
+
+### Probar el MSIX sin la Store
+
+En una PC Windows, sin `--store`, el paquete se firma con un certificado de
+prueba que se instala en esa máquina (sólo para pruebas internas):
+
+```powershell
+dart run msix:create --identity-name <...> --publisher-display-name "<...>"
+```
+
 ## Problemas frecuentes
 
 | Síntoma | Qué revisar |

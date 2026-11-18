@@ -1,6 +1,11 @@
 name: Flutter POS
 on:
   workflow_dispatch:
+    inputs:
+      publish_store:
+        description: 'Enviar el MSIX como actualización a Microsoft Store (la app ya debe estar publicada)'
+        type: boolean
+        default: false
   push:
     paths: ['clients/agrosys_pos/**', '.github/workflows/flutter-pos.yml']
   pull_request:
@@ -176,6 +181,123 @@ jobs:
           fi
           git commit -m 'build: update Windows POS installer'
           git push origin "HEAD:$TARGET_BRANCH"
+  # Paquete MSIX para Microsoft Store: la Store lo firma, no requiere certificado propio.
+  # Requiere las variables de repositorio MSSTORE_IDENTITY_NAME, MSSTORE_PUBLISHER y
+  # MSSTORE_PUBLISHER_DISPLAY_NAME (Partner Center > Product identity).
+  windows-store-package:
+    needs: quality
+    if: github.event_name != 'pull_request' && vars.MSSTORE_IDENTITY_NAME != ''
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: clients/agrosys_pos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Build Microsoft Store MSIX
+        id: msix
+        shell: pwsh
+        env:
+          IDENTITY_NAME: ${{ vars.MSSTORE_IDENTITY_NAME }}
+          PUBLISHER: ${{ vars.MSSTORE_PUBLISHER }}
+          PUBLISHER_DISPLAY_NAME: ${{ vars.MSSTORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $identity = [ordered]@{
+            identity_name = $env:IDENTITY_NAME
+            publisher = $env:PUBLISHER
+            publisher_display_name = $env:PUBLISHER_DISPLAY_NAME
+          }
+          foreach ($key in $identity.Keys) {
+            if (-not $identity[$key]) { throw "Falta la variable de repositorio para $key (Partner Center > Product identity)." }
+          }
+          # La identidad va en msix_config (último bloque del pubspec) para no depender del quoting de la línea de comandos.
+          $lines = foreach ($key in $identity.Keys) { "  ${key}: '$($identity[$key] -replace "'", "''")'" }
+          Add-Content pubspec.yaml ($lines -join "`n")
+          $versionLine = Get-Content pubspec.yaml | Where-Object { $_ -match '^version:\s*(\S+)\s*$' }
+          if (-not $versionLine) { throw 'Missing version in pubspec.yaml' }
+          $version = (($versionLine -replace '^version:\s*', '').Trim() -replace '\+.*$', '')
+          $name = "AgroSys-POS-$version-Store"
+          dart run msix:create --store --output-path dist --output-name $name
+          if ($LASTEXITCODE -ne 0) { throw 'msix:create failed' }
+          $msix = "dist/$name.msix"
+          if (-not (Test-Path $msix)) { throw "MSIX not generated: $msix" }
+          # Verifica identidad, versión con revisión 0, runtime de Visual C++ y bundle de Flutter.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $msix))
+          try {
+            $entries = $zip.Entries | ForEach-Object { $_.FullName }
+            foreach ($required in @('AppxManifest.xml', 'agrosys_pos.exe', 'flutter_windows.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+              if ($entries -notcontains $required) { throw "MSIX missing: $required" }
+            }
+            if (-not ($entries | Where-Object { $_ -like 'data/flutter_assets/*' })) { throw 'MSIX missing data/flutter_assets' }
+            $reader = New-Object System.IO.StreamReader(($zip.Entries | Where-Object { $_.FullName -eq 'AppxManifest.xml' }).Open())
+            [xml]$manifest = $reader.ReadToEnd()
+            $reader.Close()
+          } finally { $zip.Dispose() }
+          $id = $manifest.Package.Identity
+          if ($id.Name -ne $env:IDENTITY_NAME -or $id.Publisher -ne $env:PUBLISHER) { throw "Unexpected identity: $($id.Name) / $($id.Publisher)" }
+          if ($id.Version -ne "$version.0") { throw "Unexpected MSIX version: $($id.Version)" }
+          $hash = (Get-FileHash $msix -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name.msix" | Set-Content "$msix.sha256" -Encoding ascii
+          "name=$name" >> $env:GITHUB_OUTPUT
+      - name: Upload Microsoft Store MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.msix.outputs.name }}
+          path: |
+            clients/agrosys_pos/dist/*-Store.msix
+            clients/agrosys_pos/dist/*-Store.msix.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+  # Actualización automática en la Store: sólo ejecución manual con publish_store en la
+  # rama predeterminada. La primera versión se sube a mano en Partner Center.
+  publish-microsoft-store:
+    needs: [native-desktop, windows-store-package]
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.publish_store &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: windows-latest
+    concurrency:
+      group: microsoft-store-publication
+      cancel-in-progress: false
+    steps:
+      - name: Download verified MSIX
+        uses: actions/download-artifact@v4
+        with:
+          pattern: AgroSys-POS-*-Store
+          path: store-package
+          merge-multiple: true
+      - uses: microsoft/microsoft-store-apppublisher@v1.1
+      - name: Publish package update
+        shell: pwsh
+        env:
+          TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+          PRODUCT_ID: ${{ vars.MSSTORE_PRODUCT_ID }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($name in @('TENANT_ID', 'SELLER_ID', 'CLIENT_ID', 'CLIENT_SECRET', 'PRODUCT_ID')) {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) { throw "Falta el secreto o variable para $name." }
+          }
+          $msix = @(Get-ChildItem store-package -Filter *.msix)
+          if ($msix.Count -ne 1) { throw "Expected one MSIX, found $($msix.Count)" }
+          Push-Location store-package
+          try {
+            $check = (Get-Content "$($msix[0].Name).sha256").Split(' ')[0]
+            if ((Get-FileHash $msix[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $check) { throw 'MSIX checksum mismatch' }
+          } finally { Pop-Location }
+          msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
+          if ($LASTEXITCODE -ne 0) { throw 'msstore reconfigure failed' }
+          msstore publish $msix[0].FullName -id $env:PRODUCT_ID
+          if ($LASTEXITCODE -ne 0) { throw 'msstore publish failed' }
   android:
     runs-on: ${{ vars.ANDROID_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 30

@@ -10,9 +10,10 @@ import { router, Link, useForm, usePage } from '@inertiajs/vue3';
 import PaginationBar from '@/Components/PaginationBar.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
 import CardexModal from '@/Components/CardexModal.vue';
+import DosificarModal from '@/Components/DosificarModal.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline, mdiTrendingUp } from '@mdi/js';
+import { mdiBeakerOutline, mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline, mdiTrendingUp } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -60,6 +61,8 @@ const showPriceModal = ref(false);
 const selectedProduct = ref(null);
 const showCardexModal = ref(false);
 const cardexProducto = ref(null);
+const showDosificarModal = ref(false);
+const dosificarProducto = ref(null);
 const showDeleteModal = ref(false);
 const productoEliminar = ref(null);
 const deletingProduct = ref(false);
@@ -69,6 +72,7 @@ const icons = {
     add: mdiPlusBox,
     reset: mdiBackupRestore,
     cardex: mdiClipboardListOutline,
+    dose: mdiBeakerOutline,
     delete: mdiTrashCanOutline,
     trending: mdiTrendingUp,
 };
@@ -179,6 +183,19 @@ const openCardex = (producto) => {
 const closeCardexModal = () => {
     showCardexModal.value = false;
     cardexProducto.value = null;
+};
+
+const openDosificar = (producto) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
+    dosificarProducto.value = producto;
+    showDosificarModal.value = true;
+};
+
+const closeDosificar = () => {
+    showDosificarModal.value = false;
+    dosificarProducto.value = null;
 };
 
 const eliminarProducto = (producto) => {
@@ -318,6 +335,10 @@ const confirmarEliminar = () => {
                             <button type="button" class="ui-btn ui-btn-icon" @click="agregarInventario(producto.id)" title="Agregar al inventario" aria-label="Agregar al inventario">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.add" /></svg>
                             </button>
+                            <button type="button" class="ui-btn ui-btn-icon disabled:cursor-not-allowed disabled:opacity-40" @click="openDosificar(producto)"
+                                :disabled="Number(producto.cantidad) < 1" :title="Number(producto.cantidad) < 1 ? 'Sin existencias para dosificar' : 'Dosificar'" aria-label="Dosificar">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.dose" /></svg>
+                            </button>
                             <button v-if="props.auth.user.tipo == 'adminEmpresa' || props.auth.user.tipo == 'superAdmin'" type="button"
                                 class="ui-btn ui-btn-icon" @click="resetInventario(producto.id)" title="Resetear inventario a cero" aria-label="Resetear inventario a cero">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.reset" /></svg>
@@ -339,6 +360,7 @@ const confirmarEliminar = () => {
         <UpdateProductPricesModal :show="showPriceModal" :producto="selectedProduct"
             :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
         <CardexModal :show="showCardexModal" :producto="cardexProducto" @close="closeCardexModal" />
+        <DosificarModal :show="showDosificarModal" :producto="dosificarProducto" @close="closeDosificar" />
 
         <!-- Reporte de aumentos de inventario -->
         <div v-if="showReporteAumentosModal" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="cerrarReporteAumentos">

@@ -82,7 +82,7 @@ class SaleQuote {
         utf8.encode(
           jsonEncode({
             'customerId': customer.id,
-            'discount': customer.discountBasisPoints,
+            'priceTier': customer.priceTier,
             'lines': lines.map((l) => l.toJson()).toList(),
             'total': totalCents,
           }),
@@ -130,6 +130,7 @@ class SalePayment {
 
 class SaleRequest {
   final String saleId, customerId, type, expectedPriceFingerprint;
+  final String? paymentForm;
   final List<CartLine> lines;
   final int initialCents, receivedCents;
   final bool acknowledgeStock;
@@ -141,6 +142,7 @@ class SaleRequest {
     required this.initialCents,
     required this.receivedCents,
     required this.expectedPriceFingerprint,
+    this.paymentForm,
     this.acknowledgeStock = false,
   }) : lines = List.unmodifiable(lines);
   String get fingerprint => sha256
@@ -154,6 +156,7 @@ class SaleRequest {
             'initial': initialCents,
             'received': receivedCents,
             'priceFingerprint': expectedPriceFingerprint,
+            'paymentForm': ?paymentForm,
           }),
         ),
       )

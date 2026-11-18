@@ -15,6 +15,19 @@ class AltaInventario extends Model
     public const EVENTO_VENTA = 'venta';
     public const EVENTO_TRANSFERENCIA_SALIDA = 'transferencia_salida';
     public const EVENTO_TRANSFERENCIA_ENTRADA = 'transferencia_entrada';
+    public const EVENTO_DOSIFICACION_SALIDA = 'dosificacion_salida';
+    public const EVENTO_DOSIFICACION_ENTRADA = 'dosificacion_entrada';
+
+    /** Etiquetas del cardex por tipo de evento. */
+    public const ETIQUETAS = [
+        self::EVENTO_ALTA => 'Alta de inventario',
+        self::EVENTO_RESETEO => 'Reseteo a cero',
+        self::EVENTO_VENTA => 'Venta',
+        self::EVENTO_TRANSFERENCIA_ENTRADA => 'Entrada por transferencia',
+        self::EVENTO_TRANSFERENCIA_SALIDA => 'Salida por transferencia',
+        self::EVENTO_DOSIFICACION_SALIDA => 'Salida por dosificación',
+        self::EVENTO_DOSIFICACION_ENTRADA => 'Entrada por dosificación',
+    ];
 
     protected $fillable = [
         'cantidad_actual',

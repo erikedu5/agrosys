@@ -227,6 +227,9 @@ menú Inicio y ofrece uno opcional en el escritorio. Incluye las DLL de Visual
 C++, permite actualizar la misma instalación y registra el desinstalador.
 El workflow compila `packaging/windows.iss` con Inno Setup y verifica una
 instalación y desinstalación silenciosas. El instalador aún no tiene firma digital.
+Para distribución firmada, el job `windows-store-package` genera el MSIX de
+Microsoft Store y `publish-microsoft-store` envía actualizaciones; configuración
+en [WINDOWS-DISTRIBUCION.md](WINDOWS-DISTRIBUCION.md#8-microsoft-store-msix-firmado-por-microsoft).
 
 Para usar la alternativa portable, extrae el ZIP completo y ejecuta
 `agrosys_pos.exe` conservando las DLL y la carpeta `data` junto al ejecutable.
