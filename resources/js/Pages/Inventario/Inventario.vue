@@ -11,9 +11,12 @@ import PaginationBar from '@/Components/PaginationBar.vue';
 import UpdateProductPricesModal from '@/Components/UpdateProductPricesModal.vue';
 import CardexModal from '@/Components/CardexModal.vue';
 import DosificarModal from '@/Components/DosificarModal.vue';
+import EditProductoModal from '@/Components/EditProductoModal.vue';
+import AddInventarioModal from '@/Components/AddInventarioModal.vue';
+import SolucionesModal from '@/Components/SolucionesModal.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { mdiBeakerOutline, mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiTrashCanOutline, mdiTrendingUp } from '@mdi/js';
+import { mdiBeakerOutline, mdiCashMultiple, mdiPencil, mdiPlusBox, mdiBackupRestore, mdiClipboardListOutline, mdiSprayBottle, mdiTrashCanOutline, mdiTrendingUp } from '@mdi/js';
 import { notify } from '@/utils/notify';
 
 const props = defineProps({
@@ -26,6 +29,10 @@ const props = defineProps({
         default: {}
     },
     marcas: {
+        type: Array,
+        default: () => []
+    },
+    clasificaciones: {
         type: Array,
         default: () => []
     },
@@ -63,6 +70,12 @@ const showCardexModal = ref(false);
 const cardexProducto = ref(null);
 const showDosificarModal = ref(false);
 const dosificarProducto = ref(null);
+const showEditModal = ref(false);
+const editProducto = ref(null);
+const showAddInventarioModal = ref(false);
+const addInventarioProducto = ref(null);
+const showSolucionesModal = ref(false);
+const solucionesProducto = ref(null);
 const showDeleteModal = ref(false);
 const productoEliminar = ref(null);
 const deletingProduct = ref(false);
@@ -73,6 +86,7 @@ const icons = {
     reset: mdiBackupRestore,
     cardex: mdiClipboardListOutline,
     dose: mdiBeakerOutline,
+    soluciones: mdiSprayBottle,
     delete: mdiTrashCanOutline,
     trending: mdiTrendingUp,
 };
@@ -131,12 +145,44 @@ watch([q, marcaActiva, existenciaActiva], ([busqueda, marca, existencia]) => {
     router.get(route('inventario.index', params), {}, { preserveState: true, preserveScroll: true, replace: true });
 });
 
-const agregarInventario = (id) => {
+const agregarInventario = (producto) => {
     if (bloqueoActivo.value) {
         return;
     }
-    useForm({}).get(route('inventario.show', id));
-}
+    addInventarioProducto.value = producto;
+    showAddInventarioModal.value = true;
+};
+
+const closeAddInventario = () => {
+    showAddInventarioModal.value = false;
+    addInventarioProducto.value = null;
+};
+
+const openEditModal = (producto) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
+    editProducto.value = producto;
+    showEditModal.value = true;
+};
+
+const closeEditModal = () => {
+    showEditModal.value = false;
+    editProducto.value = null;
+};
+
+const openSoluciones = (producto) => {
+    if (bloqueoActivo.value) {
+        return;
+    }
+    solucionesProducto.value = producto;
+    showSolucionesModal.value = true;
+};
+
+const closeSoluciones = () => {
+    showSolucionesModal.value = false;
+    solucionesProducto.value = null;
+};
 
 const resetInventario = (id) => {
     if (bloqueoActivo.value) {
@@ -326,13 +372,16 @@ const confirmarEliminar = () => {
                             <button type="button" class="ui-btn ui-btn-icon" @click="openPriceModal(producto)" title="Actualizar precios" aria-label="Actualizar precios">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.price" /></svg>
                             </button>
-                            <Link :href="route('inventario.edit', producto.id)" class="ui-btn ui-btn-icon" title="Editar producto" aria-label="Editar producto">
+                            <button type="button" class="ui-btn ui-btn-icon" @click="openEditModal(producto)" title="Editar producto" aria-label="Editar producto">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.edit" /></svg>
-                            </Link>
+                            </button>
+                            <button type="button" class="ui-btn ui-btn-icon" @click="openSoluciones(producto)" title="Soluciones" aria-label="Soluciones">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.soluciones" /></svg>
+                            </button>
                             <button type="button" class="ui-btn ui-btn-icon" @click="openCardex(producto)" title="Ver cardex" aria-label="Ver cardex">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.cardex" /></svg>
                             </button>
-                            <button type="button" class="ui-btn ui-btn-icon" @click="agregarInventario(producto.id)" title="Agregar al inventario" aria-label="Agregar al inventario">
+                            <button type="button" class="ui-btn ui-btn-icon" @click="agregarInventario(producto)" title="Agregar al inventario" aria-label="Agregar al inventario">
                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="icons.add" /></svg>
                             </button>
                             <button type="button" class="ui-btn ui-btn-icon disabled:cursor-not-allowed disabled:opacity-40" @click="openDosificar(producto)"
@@ -361,6 +410,10 @@ const confirmarEliminar = () => {
             :can-manage-costs="puedeGestionarCostos" @close="closePriceModal" @updated="handlePriceUpdated" />
         <CardexModal :show="showCardexModal" :producto="cardexProducto" @close="closeCardexModal" />
         <DosificarModal :show="showDosificarModal" :producto="dosificarProducto" @close="closeDosificar" />
+        <EditProductoModal :show="showEditModal" :producto="editProducto" :clasificaciones="clasificaciones" :marcas="marcas"
+            :can-manage-costs="puedeGestionarCostos" @close="closeEditModal" />
+        <AddInventarioModal :show="showAddInventarioModal" :producto="addInventarioProducto" @close="closeAddInventario" />
+        <SolucionesModal :show="showSolucionesModal" :producto="solucionesProducto" @close="closeSoluciones" />
 
         <!-- Reporte de aumentos de inventario -->
         <div v-if="showReporteAumentosModal" class="fixed inset-0 z-[60] flex items-end justify-center bg-gray-900/55 sm:items-center sm:p-6" @click.self="cerrarReporteAumentos">

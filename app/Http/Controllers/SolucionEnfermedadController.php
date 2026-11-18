@@ -23,6 +23,23 @@ class SolucionEnfermedadController extends Controller
     {
         $sucursal = SucursalService::getSucursalActiva();
 
+        // El modal de soluciones del listado de inventario pide los datos en JSON.
+        if ($request->wantsJson()) {
+            $request->validate(['id_producto' => 'required|integer|min:1']);
+            abort_if(Producto::where('id', $request->integer('id_producto'))->doesntExist(), 404);
+
+            $soluciones = SolucionEnfermedad::where('id_producto', $request->integer('id_producto'))
+                ->where('id_sucursal', $sucursal)
+                ->latest()
+                ->get()
+                ->map(fn (SolucionEnfermedad $solucion) => $this->conCatalogos($solucion));
+
+            return response()->json([
+                'soluciones' => $soluciones,
+                'enfermedadesFlor' => $this->enfermedadesFlor(),
+            ]);
+        }
+
         $solucion = SolucionEnfermedad::where('id_enfermedad_tipo_flor', intval($request->q))
             ->where('id_producto', $request->id_producto)
             ->where('id_sucursal', $sucursal)
@@ -43,28 +60,12 @@ class SolucionEnfermedadController extends Controller
             ->paginate(12);
 
         foreach ($solucionesByProduct as $solucionByProd) {
-            $enfermedadTipo = EnfermedadesTipoFlor::where('id', $solucionByProd->id_enfermedad_tipo_flor)->first();
-            $tipoFlor = CatTipoFlor::where('id', $enfermedadTipo->id_tipo_flor)->first();
-            $enfermedad = CatEnfermedades::where('id', $enfermedadTipo->id_enfermedad)->first();
-            $solucionByProd->tipoFlor = $tipoFlor;
-            $solucionByProd->enfermedad = $enfermedad;
-        }
-
-        $enfermedadesTipoFlores = EnfermedadesTipoFlor::get();
-        $enfermedadesFlorArray = [];
-
-        foreach ($enfermedadesTipoFlores as $enfermedadTipoFlor) {
-            $tipoFlor = CatTipoFlor::where('id', $enfermedadTipoFlor->id_tipo_flor)->first();
-            $enfermedad = CatEnfermedades::where('id', $enfermedadTipoFlor->id_enfermedad)->first();
-            $enfermedadTipoFlor->tipoFlor = $tipoFlor;
-            $enfermedadTipoFlor->enfermedad = $enfermedad;
-            $enfermedadTipoFlor->nombre = $enfermedad->nombre . ' en ' . $tipoFlor->nombre;
-            array_push($enfermedadesFlorArray, $enfermedadTipoFlor);
+            $this->conCatalogos($solucionByProd);
         }
 
         return Inertia::render('Inventario/AgregarSolucion', [
             'producto' => $producto,
-            'enfermedadesFlor' => $enfermedadesFlorArray,
+            'enfermedadesFlor' => $this->enfermedadesFlor(),
             'solucion' => $solucion,
             'solucionesByProduct' => $solucionesByProduct,
         ]);
@@ -115,6 +116,10 @@ class SolucionEnfermedadController extends Controller
             $solu->save();
         }
 
+        if ($request->wantsJson()) {
+            return response()->json($this->conCatalogos($solu));
+        }
+
         $producto = Producto::where('id', $request->id_producto)->first();
 
         return redirect()->route('solucion.index', [
@@ -152,13 +157,41 @@ class SolucionEnfermedadController extends Controller
         $solucion->condiciones = $request->condiciones;
         $solucion->save();
 
+        if ($request->wantsJson()) {
+            return response()->json($this->conCatalogos($solucion));
+        }
+
         $producto = Producto::where('id', $request->id_producto)->first();
 
         return redirect()->route('solucion.index', [
             'id_producto' => $producto->id,
         ]);
     }
+
+    /** Agrega la enfermedad y el tipo de flor de la solución (solo para mostrarla, no se guarda). */
+    private function conCatalogos(SolucionEnfermedad $solucion): SolucionEnfermedad
+    {
+        $enfermedadTipo = EnfermedadesTipoFlor::where('id', $solucion->id_enfermedad_tipo_flor)->first();
+        $solucion->tipoFlor = $enfermedadTipo ? CatTipoFlor::where('id', $enfermedadTipo->id_tipo_flor)->first() : null;
+        $solucion->enfermedad = $enfermedadTipo ? CatEnfermedades::where('id', $enfermedadTipo->id_enfermedad)->first() : null;
+
+        return $solucion;
+    }
+
+    /** Catálogo de enfermedades por tipo de flor con su nombre para el selector. */
+    private function enfermedadesFlor(): array
+    {
+        $enfermedadesFlor = [];
+
+        foreach (EnfermedadesTipoFlor::get() as $enfermedadTipoFlor) {
+            $tipoFlor = CatTipoFlor::where('id', $enfermedadTipoFlor->id_tipo_flor)->first();
+            $enfermedad = CatEnfermedades::where('id', $enfermedadTipoFlor->id_enfermedad)->first();
+            $enfermedadTipoFlor->tipoFlor = $tipoFlor;
+            $enfermedadTipoFlor->enfermedad = $enfermedad;
+            $enfermedadTipoFlor->nombre = $enfermedad->nombre . ' en ' . $tipoFlor->nombre;
+            $enfermedadesFlor[] = $enfermedadTipoFlor;
+        }
+
+        return $enfermedadesFlor;
+    }
 }
-
-
-

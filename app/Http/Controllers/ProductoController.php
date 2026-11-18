@@ -66,6 +66,7 @@ class ProductoController extends Controller
         return Inertia::render('Inventario/Inventario', [
             'productos' => $productos,
             'marcas' => CatMarca::orderBy('nombre')->get(['id', 'nombre']),
+            'clasificaciones' => CatClasificacion::orderBy('nombre')->get(['id', 'nombre']),
             'filtros' => [
                 'q' => (string) $request->q,
                 'marca' => $request->filled('marca') ? $request->integer('marca') : null,
@@ -143,7 +144,9 @@ class ProductoController extends Controller
         [$sucursalId, , $bloqueado, $motivo] = $this->obtenerSucursalYEstado();
         $this->asegurarAccesoInventario($bloqueado, $motivo);
         app(InventoryManagement::class)->product($request->user(), Sucursales::findOrFail($sucursalId), $request->all(), $inventario->id);
-        return redirect()->route('solucion.index', ['id_producto' => $inventario->id]);
+
+        // Se edita desde un modal del listado: regresa con los filtros y la página en que estaba el usuario.
+        return redirect()->back(fallback: route('inventario.index'));
     }
 
     public function show(Producto $inventario)
@@ -174,7 +177,8 @@ class ProductoController extends Controller
         try {
             $movement = app(InventoryManagement::class)->addStock($request->user(), Sucursales::findOrFail($sucursalId), (int) $request->id, $request->cantidad);
             $logger->success(['stock_anterior' => $movement->cantidad_actual, 'stock_nuevo' => $movement->cantidad_nueva]);
-            return redirect()->route('inventario.index', ['id_producto' => $request->id]);
+            // Regresa a la pantalla de origen (listado con sus filtros o soluciones del producto).
+            return redirect()->back(fallback: route('inventario.index'));
         } catch (\Exception $e) {
             $logger->error($e, ['producto_id' => $request->id]);
             throw $e;
