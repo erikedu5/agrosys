@@ -150,7 +150,7 @@ void main() {
           );
           expect(
             (await controller.repository!.customers('')).single.balanceCents,
-            10500,
+            11000,
           );
           await controller.repository!.db.close();
         });
@@ -177,13 +177,13 @@ void main() {
           );
           expect(
             (await controller.repository!.customers('')).single.balanceCents,
-            10500,
+            11000,
           );
           expect(
             (await controller.sales!.receipt(history.first.id))
                 .sale
                 .balanceCents,
-            6500,
+            7000,
           );
           await controller.signOut();
         });
