@@ -697,6 +697,7 @@ class VentaController extends Controller
                 'productos.precio_publico',
                 'productos.precio_preferencial_1',
                 'productos.precio_preferencial_2',
+                'productos.precio_preferencial_3',
                 'cat_marcas.nombre as marca',
                 'cat_clasificacions.nombre as clasificacion'
             )

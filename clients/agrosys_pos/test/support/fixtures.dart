@@ -102,6 +102,7 @@ Map<String, dynamic> product({
     'publico': '50.00',
     'preferencial_1': '47.50',
     'preferencial_2': '45.00',
+    'preferencial_3': '42.50',
   },
   'unitPrice': '50.00',
   'active': active,
@@ -266,7 +267,7 @@ class FixtureApi extends PosApi {
   void close() {}
 }
 
-/// Columnas de schema v8; las bases que simulan versiones previas no las tienen.
+/// Columnas de schema v8 y v9; las bases que simulan versiones previas no las tienen.
 Future<void> dropV8Columns(
   FutureOr<void> Function(String sql) execute, {
   bool sales = true,
@@ -275,6 +276,7 @@ Future<void> dropV8Columns(
     'local_products': [
       'price_preferential1_cents',
       'price_preferential2_cents',
+      'price_preferential3_cents',
     ],
     'local_customers': [
       'price_tier',

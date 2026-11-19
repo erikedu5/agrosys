@@ -65,7 +65,7 @@ class DosificarInventarioTest extends TestCase
     {
         return $this->post(route('inventario.dosificar', $this->producto->id), [
             'contenido' => '1000', 'medida' => '250', 'unidad' => 'ml',
-            'precio_publico' => '55.00', 'precio_preferencial_1' => '50.00', 'precio_preferencial_2' => '45.00', ...$input,
+            'precio_publico' => '55.00', 'precio_preferencial_1' => '50.00', 'precio_preferencial_2' => '45.00', 'precio_preferencial_3' => '40.00', ...$input,
         ]);
     }
 
@@ -77,7 +77,7 @@ class DosificarInventarioTest extends TestCase
         $this->assertSame('250 ml', $medida->tamano);
         $this->assertSame([$this->producto->id_clasificacion, $this->producto->id_marca, 'Glifosato', ''],
             [$medida->id_clasificacion, $medida->id_marca, $medida->ingrediente_activo, $medida->barcode]);
-        $this->assertEquals([55, 50, 45], array_map('floatval', array_values($medida->only(array_values(Producto::PRECIOS)))));
+        $this->assertEquals([55, 50, 45, 40], array_map('floatval', array_values($medida->only(array_values(Producto::PRECIOS)))));
         // El costo se deriva del envase (100 / 4), no del valor enviado.
         $this->assertEquals(25, $medida->precio_unitario);
         $this->assertEquals(1, $this->existencia($this->producto));
@@ -109,11 +109,11 @@ class DosificarInventarioTest extends TestCase
     public function test_dosing_again_reuses_the_measure_and_updates_prices(): void
     {
         $this->dosificar()->assertSessionHasNoErrors();
-        $this->dosificar(['precio_publico' => '60.00', 'precio_preferencial_1' => '', 'precio_preferencial_2' => ''])->assertSessionHasNoErrors();
+        $this->dosificar(['precio_publico' => '60.00', 'precio_preferencial_1' => '', 'precio_preferencial_2' => '', 'precio_preferencial_3' => ''])->assertSessionHasNoErrors();
 
         $this->assertSame(1, Producto::where('nombre', 'Medida Herbicida')->count());
         $medida = Producto::where('nombre', 'Medida Herbicida')->firstOrFail();
-        $this->assertEquals([60, 50, 45], array_map('floatval', array_values($medida->only(array_values(Producto::PRECIOS)))));
+        $this->assertEquals([60, 50, 45, 40], array_map('floatval', array_values($medida->only(array_values(Producto::PRECIOS)))));
         $this->assertEquals(8, $this->existencia($medida));
         $this->assertEquals(0, $this->existencia($this->producto));
 

@@ -7,8 +7,9 @@ import '../../core/pos_api.dart';
 /// Precios de venta por tipo de precio (Producto::PRECIOS) => etiqueta.
 const priceFields = {
   'precio_publico': 'Precio público en general',
-  'precio_preferencial_1': 'Precio preferencial 1 (opcional)',
-  'precio_preferencial_2': 'Precio preferencial 2 (opcional)',
+  'precio_preferencial_1': 'Precio distribuidor 1 (opcional)',
+  'precio_preferencial_2': 'Precio distribuidor 2 (opcional)',
+  'precio_preferencial_3': 'Precio distribuidor 3 (opcional)',
 };
 
 class InventoryEditor extends StatefulWidget {

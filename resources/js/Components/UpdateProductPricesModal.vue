@@ -41,7 +41,7 @@
                         <InputError class="mt-1" :message="form.errors.precio_unitario" />
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-3">
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div v-for="(tipo, index) in TIPOS_PRECIO" :key="tipo.campo">
                             <label class="block text-sm font-medium text-gray-700">
                                 {{ tipo.label }} <span class="text-red-500">*</span>
@@ -108,6 +108,7 @@ const form = useForm({
     precio_publico: '',
     precio_preferencial_1: '',
     precio_preferencial_2: '',
+    precio_preferencial_3: '',
     precio_unitario: '',
 });
 

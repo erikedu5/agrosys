@@ -159,6 +159,11 @@ void main() {
             find.byKey(const ValueKey('inventory-product-11')),
             findsNothing,
           );
+          await scrollInventoryTo(
+            tester,
+            find.byKey(const Key('inventory-search')),
+            delta: -120,
+          );
           await tester.enterText(
             find.byKey(const Key('inventory-search')),
             'abono',
@@ -179,7 +184,14 @@ void main() {
           await settle();
           expect(inventoryDetailValue('Semillas'), findsOneWidget);
           expect(inventoryDetailValue('10.00'), findsOneWidget);
-          await tester.ensureVisible(find.text('Consultar movimientos'));
+          await tester.scrollUntilVisible(
+            find.text('Consultar movimientos'),
+            80,
+            scrollable: find.descendant(
+              of: find.byKey(const Key('inventory-detail-scroll')),
+              matching: find.byType(Scrollable),
+            ),
+          );
           await tester.pumpAndSettle();
           await tester.tap(find.text('Consultar movimientos'));
           await settle();

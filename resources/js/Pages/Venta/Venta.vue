@@ -198,6 +198,7 @@ const loadLocalProducts = async (query = '') => {
             precio_publico: product.prices?.publico ?? product.price,
             precio_preferencial_1: product.prices?.preferencial_1 ?? product.price,
             precio_preferencial_2: product.prices?.preferencial_2 ?? product.price,
+            precio_preferencial_3: product.prices?.preferencial_3 ?? product.price,
             cantidad: product.stock?.estimatedQuantity ?? 0,
             offlineStock: product.stock,
         }));

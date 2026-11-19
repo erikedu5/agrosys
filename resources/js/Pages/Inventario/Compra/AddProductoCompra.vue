@@ -188,6 +188,7 @@ const productoForm = reactive({
     precio_publico: '',
     precio_preferencial_1: '',
     precio_preferencial_2: '',
+    precio_preferencial_3: '',
     tamano: '',
     ingrediente_activo: '',
     barcode: '',
@@ -217,6 +218,7 @@ const closeProductoModal = () => {
     productoForm.precio_publico = '';
     productoForm.precio_preferencial_1 = '';
     productoForm.precio_preferencial_2 = '';
+    productoForm.precio_preferencial_3 = '';
     productoForm.tamano = '';
     productoForm.ingrediente_activo = '';
     productoForm.barcode = '';
@@ -456,14 +458,14 @@ const changeStatus = (event) => {
                         <InputError :message="productoErrors.precio_unitario" />
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-3">
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
                             <label class="ui-label">Precio {{ tipo.label }}</label>
                             <input type="number" step="0.01" min="0.01" class="ui-input" v-model="productoForm[tipo.campo]">
                             <InputError :message="productoErrors[tipo.campo]" />
                         </div>
                     </div>
-                    <p class="ui-help -mt-2">Los precios preferenciales sin capturar toman el precio público.</p>
+                    <p class="ui-help -mt-2">Los precios de distribuidor sin capturar toman el precio público.</p>
 
                     <div class="ui-field">
                         <label class="ui-label">Tamaño</label>

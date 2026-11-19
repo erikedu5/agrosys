@@ -307,6 +307,23 @@ void main() {
     );
     expect(await repo.download(), isNull);
   });
+  test('v8 migration adds price tier 3 from public price and forces full download', () async {
+    await db.close();
+    final file = '${directory.path}/context.sqlite';
+    final legacy = sqlite.sqlite3.open(file);
+    legacy.execute(
+      'ALTER TABLE local_products DROP COLUMN price_preferential3_cents',
+    );
+    legacy.execute('PRAGMA user_version=8');
+    legacy.close();
+    db = PosDatabase(NativeDatabase(File(file)), fixtureSession().contextId);
+    repo = CatalogRepository(db, fixtureSession());
+    final migrated = (await repo.products('')).single;
+    expect(migrated.preferential2Cents, 4500);
+    expect(migrated.priceFor('preferencial_3'), migrated.priceCents);
+    expect(await repo.download(), isNull);
+    expect((await db.select(db.syncMetadata).getSingle()).cursor, isNull);
+  });
   test(
     'AC-14 database ownership mismatch blocks access without resetting data',
     () async {

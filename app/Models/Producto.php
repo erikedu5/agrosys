@@ -20,6 +20,7 @@ class Producto extends Model
         'precio_publico',
         'precio_preferencial_1',
         'precio_preferencial_2',
+        'precio_preferencial_3',
         'tamano',
         'id_usuario',
         'ingrediente_activo',
@@ -32,6 +33,7 @@ class Producto extends Model
         'publico' => 'precio_publico',
         'preferencial_1' => 'precio_preferencial_1',
         'preferencial_2' => 'precio_preferencial_2',
+        'preferencial_3' => 'precio_preferencial_3',
     ];
 
     /** Precio de venta para el tipo de precio dado (público por defecto). */

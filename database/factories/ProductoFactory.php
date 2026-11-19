@@ -26,6 +26,7 @@ class ProductoFactory extends Factory
             'precio_publico' => $precio = $this->faker->numberBetween(100, 1200),
             'precio_preferencial_1' => $precio,
             'precio_preferencial_2' => $precio,
+            'precio_preferencial_3' => $precio,
             'tamano' => $this->faker->numberBetween(3, 1),
             'id_usuario' => User::factory(),
             'ingrediente_activo' => $this->faker->text(20),

@@ -102,6 +102,7 @@ class InventoryServer extends FixtureApi {
           'precio_publico': p['price'],
           'precio_preferencial_1': _prices(p)['preferencial_1'],
           'precio_preferencial_2': _prices(p)['preferencial_2'],
+          'precio_preferencial_3': _prices(p)['preferencial_3'],
           'precio_ieps': p['price'],
           'version': 'a' * 64,
           if (permissions!.contains('product.costs.manage'))
@@ -192,6 +193,10 @@ class InventoryServer extends FixtureApi {
         'preferencial_2':
             body['precio_preferencial_2'] ??
             previous?['preferencial_2'] ??
+            public,
+        'preferencial_3':
+            body['precio_preferencial_3'] ??
+            previous?['preferencial_3'] ??
             public,
       },
     };

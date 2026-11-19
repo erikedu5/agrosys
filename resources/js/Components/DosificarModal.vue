@@ -29,6 +29,7 @@ const form = useForm({
     precio_publico: '',
     precio_preferencial_1: '',
     precio_preferencial_2: '',
+    precio_preferencial_3: '',
 });
 
 // Cantidades en centésimas para no arrastrar errores de punto flotante.
@@ -168,7 +169,7 @@ const submit = () => {
                 <InputError :message="form.errors.acepta_perdida" />
             </div>
 
-            <div class="grid gap-3 sm:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
                     <label :for="`dosificar-${tipo.campo}`" class="ui-label">{{ tipo.label }}</label>
                     <input :id="`dosificar-${tipo.campo}`" type="number" min="0.01" step="0.01" inputmode="decimal"

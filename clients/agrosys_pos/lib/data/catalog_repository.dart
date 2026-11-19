@@ -19,13 +19,17 @@ String normalizedName(String input) {
 String searchPattern(String value) =>
     '%${normalizedName(value.trim()).replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')}%';
 
-/// Precios preferencial 1 y 2 del snapshot; servidores anteriores solo envían `price`.
-(int, int) tierPrices(Map<String, dynamic> product) {
+/// Precios preferencial 1, 2 y 3 del snapshot; servidores anteriores solo envían
+/// `price` o no incluyen `preferencial_3` (toman el público).
+(int, int, int) tierPrices(Map<String, dynamic> product) {
   final prices = product['prices'] == null ? null : object(product['prices']);
   final public = decimalUnits(product['price']);
+  int tier(String key) =>
+      prices?[key] == null ? public : decimalUnits(prices![key]);
   return (
     prices == null ? public : decimalUnits(prices['preferencial_1']),
     prices == null ? public : decimalUnits(prices['preferencial_2']),
+    tier('preferencial_3'),
   );
 }
 
@@ -101,6 +105,7 @@ class CatalogRepository {
       classification: product.classification,
       preferential1Cents: product.pricePreferential1Cents,
       preferential2Cents: product.pricePreferential2Cents,
+      preferential3Cents: product.pricePreferential3Cents,
     );
   }
 
@@ -178,6 +183,7 @@ class CatalogRepository {
             classification: r.read<String>('classification'),
             preferential1Cents: r.read<int>('price_preferential1_cents'),
             preferential2Cents: r.read<int>('price_preferential2_cents'),
+            preferential3Cents: r.read<int>('price_preferential3_cents'),
           ),
         )
         .toList();
@@ -354,6 +360,7 @@ class CatalogRepository {
                 priceCents: decimalUnits(product['price']),
                 pricePreferential1Cents: Value(tierPrices(product).$1),
                 pricePreferential2Cents: Value(tierPrices(product).$2),
+                pricePreferential3Cents: Value(tierPrices(product).$3),
                 active: product['active'] as bool,
                 revision: download.revision!,
               ),

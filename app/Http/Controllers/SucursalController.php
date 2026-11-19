@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Empresa;
 use App\Models\Sucursales;
 use App\Models\Clientes;
+use App\Models\User;
 use App\Services\SucursalService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -236,6 +237,23 @@ class SucursalController extends Controller
             'sucursal_id' => $sucursal->id,
             'nombre' => $sucursal->nombre,
         ]);
+
+        // adminEmpresa no cuenta: en login se le reasigna otra sucursal activa de su empresa.
+        $usuariosActivos = User::where('id_sucursal', $sucursal->id)
+            ->where('tipo', '!=', 'adminEmpresa')
+            ->count();
+
+        if ($usuariosActivos > 0) {
+            $logger->warning('Sucursal con usuarios activos', [
+                'sucursal_id' => $sucursal->id,
+                'usuarios_activos' => $usuariosActivos,
+            ]);
+
+            return back()->with('flash', [
+                'banner' => "No se puede desactivar la sucursal: tiene {$usuariosActivos} usuario(s) activo(s). Reasignalos o desactivalos primero.",
+                'bannerStyle' => 'danger',
+            ]);
+        }
 
         try {
             $sucursal->delete(); // Soft delete

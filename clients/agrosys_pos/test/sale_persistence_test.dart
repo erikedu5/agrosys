@@ -514,7 +514,7 @@ void main() {
       );
       expect(object((payload['items'] as List).single)['unitPrice'], '45.00');
       expect(payload.containsKey('paymentForm'), isFalse);
-      expect(receiptText(stored), contains('Contado · Precio Preferencial 2'));
+      expect(receiptText(stored), contains('Contado · Precio Distribuidor 2'));
 
       await restage(
         customerRow: {...customer()}..remove('priceTier'),
@@ -528,6 +528,24 @@ void main() {
         (await catalog.productById('10'))!.priceFor('preferencial_1'),
         5000,
       );
+    },
+  );
+  test(
+    'price tier 3 sets the unit price; servers without it fall back to public',
+    () async {
+      await restage(customerRow: customer(priceTier: 'preferencial_3'));
+      final quote = await sales.quote('20', [const CartLine('10', 200)]);
+      expect(quote.lines.single.unitPriceCents, 4250);
+      final stored = await sales.complete(await request(received: 8500));
+      expect(stored.sale.priceTier, 'preferencial_3');
+      expect(receiptText(stored), contains('Contado · Precio Distribuidor 3'));
+
+      final prices = Map<String, dynamic>.from(product()['prices'] as Map)
+        ..remove('preferencial_3');
+      await restage(productRow: {...product(), 'prices': prices});
+      final legacy = (await catalog.productById('10'))!;
+      expect(legacy.priceFor('preferencial_3'), 5000);
+      expect(legacy.priceFor('preferencial_2'), 4500);
     },
   );
   test(

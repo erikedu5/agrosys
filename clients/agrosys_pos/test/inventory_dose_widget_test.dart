@@ -130,10 +130,11 @@ void main() {
             ),
             findsOneWidget,
           );
-          // Precio del envase repartido entre las medidas (50.00, 47.50 y 45.00 / 3).
+          // Precio del envase repartido entre las medidas (50.00, 47.50, 45.00 y 42.50 / 3).
           expect(await text('precio_publico'), '16.67');
           expect(await text('precio_preferencial_1'), '15.83');
           expect(await text('precio_preferencial_2'), '15.00');
+          expect(await text('precio_preferencial_3'), '14.17');
           await visible(find.byKey(const Key('dose-leftover')));
           expect(
             find.textContaining('Sobran 100 ml que no completan una medida'),

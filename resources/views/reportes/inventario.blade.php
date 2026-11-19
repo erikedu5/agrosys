@@ -57,8 +57,9 @@
                     <th>Cantidad en stock</th>
                     <th>Precio compra</th>
                     <th>Precio público</th>
-                    <th>Preferencial 1</th>
-                    <th>Preferencial 2</th>
+                    <th>Distribuidor 1</th>
+                    <th>Distribuidor 2</th>
+                    <th>Distribuidor 3</th>
                     <th>Ultima actualizacion</th>
                     <th>Usuario que actualizo por última vez</th>
                 </tr>
@@ -75,6 +76,7 @@
                         <td class="px-4 py-2">  {{ $producto->precio_publico }} </td>
                         <td class="px-4 py-2">  {{ $producto->precio_preferencial_1 }} </td>
                         <td class="px-4 py-2">  {{ $producto->precio_preferencial_2 }} </td>
+                        <td class="px-4 py-2">  {{ $producto->precio_preferencial_3 }} </td>
                         <td class="px-4 py-2">  {{ $producto->updated_at }} </td>
                         <td class="px-4 py-2">  {{ $producto->usuario->name }} </td>
                         </tr>

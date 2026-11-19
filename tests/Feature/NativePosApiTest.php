@@ -394,7 +394,7 @@ class NativePosApiTest extends TestCase
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input])->assertOk()->assertExactJson($first->json());
         $this->assertSame(1, Producto::where('nombre', 'Nuevo insumo')->count());
         $this->assertSame(1, AltaInventario::where('id_producto', $id)->count());
-        $this->assertEquals([60, 55, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
+        $this->assertEquals([60, 55, 60, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'nombre' => 'Otro'])->assertConflict();
         $detail = $this->api('POST', "inventory/{$id}/detail", $this->context())->assertOk()->json('product');
         $edit = [...$input, 'operation_id' => (string) Str::uuid(), 'nombre' => 'Insumo editado', 'version' => $detail['version']];
@@ -407,7 +407,7 @@ class NativePosApiTest extends TestCase
         $this->api('POST', "inventory/{$id}/prices", [...$this->context(), ...$prices])->assertOk();
         $this->api('POST', "inventory/{$id}/prices", [...$this->context(), ...$prices])->assertOk();
         // precio_ieps: contrato de clientes POS anteriores, actualiza solo el precio público.
-        $this->assertEquals([75, 55, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
+        $this->assertEquals([75, 55, 60, 60], array_map('floatval', array_values(Producto::findOrFail($id)->only(array_values(Producto::PRECIOS)))));
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'id_marca' => '999999'])->assertUnprocessable();
         $this->api('POST', 'inventory/products', [...$this->context(), ...$input, 'operation_id' => (string) Str::uuid(), 'precio_publico' => '2.001'])->assertUnprocessable();
         $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonCount(2, 'products');
@@ -451,7 +451,7 @@ class NativePosApiTest extends TestCase
         $this->api('POST', "inventory/{$id}/dose", [...$this->context(), ...$input, 'medida' => '500'])->assertConflict();
         $dose = Producto::findOrFail($first->json('doseProductId'));
         $this->assertSame(['Medida '.$this->product->nombre, '250 ml'], [$dose->nombre, $dose->tamano]);
-        $this->assertEquals([15, 15, 15, 12.5], array_map('floatval', array_values($dose->only([...array_values(Producto::PRECIOS), 'precio_unitario']))));
+        $this->assertEquals([15, 15, 15, 15, 12.5], array_map('floatval', array_values($dose->only([...array_values(Producto::PRECIOS), 'precio_unitario']))));
         $this->assertSame(1, AltaInventario::where('tipo_evento', AltaInventario::EVENTO_DOSIFICACION_SALIDA)->count());
         $this->api('POST', "inventory/{$dose->id}/movements", $this->context())->assertOk()->assertJsonPath('movements.0.type', 'Entrada por dosificación')->assertJsonPath('movements.0.change', '4.00');
         $this->api('POST', 'bootstrap', $this->context())->assertOk()->assertJsonCount(2, 'products');
@@ -715,19 +715,29 @@ class NativePosApiTest extends TestCase
 
     public function test_sale_uses_the_price_assigned_to_the_customer(): void
     {
-        $this->product->update(['precio_publico' => 100, 'precio_preferencial_1' => 90, 'precio_preferencial_2' => 80]);
+        $this->product->update(['precio_publico' => 100, 'precio_preferencial_1' => 90, 'precio_preferencial_2' => 80, 'precio_preferencial_3' => 70]);
         $sale = fn (string $price) => app(\App\Services\Pos\SaleAmounts::class)->validate([
             'saleType' => 'Contado', 'total' => $price,
             'items' => [['productId' => $this->product->id, 'quantity' => '1.00', 'unitPrice' => $price, 'total' => $price]],
             'payments' => [['method' => 'cash', 'amount' => $price]],
         ], $this->customer->fresh(), $this->branch, false);
         $this->assertSame(10000, $sale('100.00')['total']);
-        foreach (['preferencial_1' => '90.00', 'preferencial_2' => '80.00'] as $tier => $price) {
+        foreach (['preferencial_1' => '90.00', 'preferencial_2' => '80.00', 'preferencial_3' => '70.00'] as $tier => $price) {
             $this->customer->update(['tipo_precio' => $tier]);
             $this->assertSame((int) ($price * 100), $sale($price)['total']);
         }
         $this->expectException(\Illuminate\Validation\ValidationException::class);
         $sale('100.00');
+    }
+
+    public function test_snapshot_carries_price_tier_3(): void
+    {
+        $this->activate();
+        $this->product->update(['precio_preferencial_3' => 42.5]);
+        $this->customer->update(['tipo_precio' => 'preferencial_3']);
+        $this->api('POST', 'bootstrap', $this->context())->assertOk()
+            ->assertJsonPath('products.0.prices.preferencial_3', '42.50')
+            ->assertJsonPath('customers.0.priceTier', 'preferencial_3');
     }
 
     public function test_openapi_routes_match_registered_native_endpoints(): void

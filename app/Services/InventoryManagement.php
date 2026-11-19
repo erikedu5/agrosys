@@ -76,13 +76,15 @@ class InventoryManagement
         $input['precio_publico'] ??= $input['precio_ieps'] ?? null;
         $rules = ['precio_publico' => 'required|numeric|min:0.01|max:99999999.99',
             'precio_preferencial_1' => 'nullable|numeric|min:0.01|max:99999999.99',
-            'precio_preferencial_2' => 'nullable|numeric|min:0.01|max:99999999.99'];
+            'precio_preferencial_2' => 'nullable|numeric|min:0.01|max:99999999.99',
+            'precio_preferencial_3' => 'nullable|numeric|min:0.01|max:99999999.99'];
         if ($this->canManageCosts($user, $branch)) {
             $rules += ['precio_unitario' => 'nullable|numeric|min:0|max:99999999.99'];
         }
         $data = Validator::make($input, $rules, [], ['precio_publico' => 'precio público en general',
-            'precio_preferencial_1' => 'precio preferencial 1', 'precio_preferencial_2' => 'precio preferencial 2'])->validate();
-        foreach (['precio_preferencial_1', 'precio_preferencial_2'] as $field) {
+            'precio_preferencial_1' => 'precio distribuidor 1', 'precio_preferencial_2' => 'precio distribuidor 2',
+            'precio_preferencial_3' => 'precio distribuidor 3'])->validate();
+        foreach (['precio_preferencial_1', 'precio_preferencial_2', 'precio_preferencial_3'] as $field) {
             // Sin capturar: producto nuevo toma el precio público; existente conserva el suyo.
             if (($data[$field] ?? null) === null) {
                 unset($data[$field]);

@@ -44,6 +44,7 @@ use OpenApi\Annotations as OA;
  *   @OA\Property(property="precio_publico", type="number", format="float", example=150.00),
  *   @OA\Property(property="precio_preferencial_1", type="number", format="float", example=140.00),
  *   @OA\Property(property="precio_preferencial_2", type="number", format="float", example=130.00),
+ *   @OA\Property(property="precio_preferencial_3", type="number", format="float", example=120.00),
  *   @OA\Property(property="tamano", type="string", example="1L"),
  *   @OA\Property(property="ingrediente_activo", type="string", example="Glifosato"),
  *   @OA\Property(property="cantidad", type="number", example=15, description="Stock actual en la sucursal (derivado de inventario)")

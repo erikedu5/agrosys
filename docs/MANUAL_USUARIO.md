@@ -264,7 +264,7 @@ Una vez que entres, verás el **Dashboard** (tablero principal). Aquí encontrar
 
 -   **Precio Compra:** Lo que te cuesta a ti
 -   **Precio Público en general:** Precio de venta por defecto
--   **Precio Preferencial 1 y Preferencial 2:** Precios para clientes con ese precio asignado (se asigna en la pantalla de clientes)
+-   **Precio Distribuidor 1, Distribuidor 2 y Distribuidor 3:** Precios para clientes con ese precio asignado (se asigna en la pantalla de clientes)
 
 **4. Detalles del producto**
 
@@ -867,7 +867,7 @@ El dashboard es la página principal del sistema donde encontrará:
     - **Clasificación**: Seleccione de la lista (Fertilizantes, Pesticidas, etc.)
     - **Marca**: Seleccione la marca correspondiente
     - **Precio Unitario**: Precio base del producto
-    - **Precios de venta**: Público en general, Preferencial 1 y Preferencial 2 (la venta usa el precio asignado al cliente)
+    - **Precios de venta**: Público en general, Distribuidor 1, Distribuidor 2 y Distribuidor 3 (la venta usa el precio asignado al cliente)
     - **Tamaño**: Especificaciones del envase
     - **Ingrediente Activo**: Componente principal
     - **Código de Barras**: Para identificación rápida

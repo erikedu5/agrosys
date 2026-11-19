@@ -114,7 +114,7 @@ class ProductView {
   final String id, name, barcode, size, revision;
   final String classification;
   final int priceCents, estimatedQuantity;
-  final int preferential1Cents, preferential2Cents;
+  final int preferential1Cents, preferential2Cents, preferential3Cents;
   ProductView(
     this.id,
     this.name,
@@ -126,13 +126,16 @@ class ProductView {
     this.classification = '',
     int? preferential1Cents,
     int? preferential2Cents,
+    int? preferential3Cents,
   }) : preferential1Cents = preferential1Cents ?? priceCents,
-       preferential2Cents = preferential2Cents ?? priceCents;
+       preferential2Cents = preferential2Cents ?? priceCents,
+       preferential3Cents = preferential3Cents ?? priceCents;
 
   /// Precio de venta para el tipo de precio del cliente (igual que Producto::precioPara).
   int priceFor(String tier) => switch (tier) {
     'preferencial_1' => preferential1Cents,
     'preferencial_2' => preferential2Cents,
+    'preferencial_3' => preferential3Cents,
     _ => priceCents,
   };
 }
@@ -140,8 +143,9 @@ class ProductView {
 /// Tipos de precio del cliente; mantener igual que Producto::PRECIOS.
 const priceTiers = {
   'publico': 'Público en general',
-  'preferencial_1': 'Preferencial 1',
-  'preferencial_2': 'Preferencial 2',
+  'preferencial_1': 'Distribuidor 1',
+  'preferencial_2': 'Distribuidor 2',
+  'preferencial_3': 'Distribuidor 3',
 };
 String priceTierLabel(String tier) =>
     priceTiers[tier] ?? priceTiers['publico']!;

@@ -33,6 +33,7 @@ class SucursalProductosController extends Controller
      *         "precio_publico": 150.0,
      *         "precio_preferencial_1": 140.0,
      *         "precio_preferencial_2": 130.0,
+     *         "precio_preferencial_3": 120.0,
      *         "tamano": "1L",
      *         "ingrediente_activo": "Glifosato",
      *         "cantidad": 15

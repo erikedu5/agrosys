@@ -3003,6 +3003,12 @@
                           "string",
                           "null"
                         ]
+                      },
+                      "precio_preferencial_3": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
                     }
                   }
@@ -5498,6 +5504,11 @@
               "preferencial_2": {
                 "type": "string",
                 "pattern": "^\\d{1,8}\\.\\d{2}$"
+              },
+              "preferencial_3": {
+                "type": "string",
+                "pattern": "^\\d{1,8}\\.\\d{2}$",
+                "description": "Servidores anteriores no lo envían; el POS usa el público."
               }
             },
             "required": [
@@ -5557,7 +5568,8 @@
             "enum": [
               "publico",
               "preferencial_1",
-              "preferencial_2"
+              "preferencial_2",
+              "preferencial_3"
             ],
             "description": "Tipo de precio con el que se le vende."
           },

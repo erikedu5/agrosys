@@ -24,7 +24,7 @@
         }
     });
 
-    const { form, reset } = usePersistedForm('usuarioForm', {
+    const { form, reset } = usePersistedForm(props.usuario ? `usuarioForm-${props.usuario.id}` : 'usuarioForm', {
         name: props.usuario !== undefined ? props.usuario.name : '',
         password: '',
         email: props.usuario !== undefined ? props.usuario.email: '',

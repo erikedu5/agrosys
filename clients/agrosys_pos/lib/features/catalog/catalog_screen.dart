@@ -464,8 +464,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
     ],
     fields: [
-      RecordField('Preferencial 1', money(p.preferential1Cents)),
-      RecordField('Preferencial 2', money(p.preferential2Cents)),
+      RecordField('Distribuidor 1', money(p.preferential1Cents)),
+      RecordField('Distribuidor 2', money(p.preferential2Cents)),
+      RecordField('Distribuidor 3', money(p.preferential3Cents)),
       RecordField('Id', p.id),
       RecordField('Código de barras', p.barcode),
     ],
@@ -474,7 +475,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       builder: (context) => AlertDialog(
         title: Text(p.name),
         content: Text(
-          'Precio público: ${money(p.priceCents)}\nPreferencial 1: ${money(p.preferential1Cents)}\nPreferencial 2: ${money(p.preferential2Cents)}\nExistencia estimada: ${decimalText(p.estimatedQuantity)}\nCódigo: ${p.barcode}\nActualizado: ${_date(widget.controller.syncInfo?.syncedAt)}',
+          'Precio público: ${money(p.priceCents)}\nDistribuidor 1: ${money(p.preferential1Cents)}\nDistribuidor 2: ${money(p.preferential2Cents)}\nDistribuidor 3: ${money(p.preferential3Cents)}\nExistencia estimada: ${decimalText(p.estimatedQuantity)}\nCódigo: ${p.barcode}\nActualizado: ${_date(widget.controller.syncInfo?.syncedAt)}',
         ),
         actions: [
           TextButton(

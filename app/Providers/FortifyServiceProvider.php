@@ -57,9 +57,20 @@ class FortifyServiceProvider extends ServiceProvider
 
                 $sucursal = Sucursales::withTrashed()->find($user->id_sucursal);
                 if (!$sucursal || $sucursal->trashed()) {
-                    throw ValidationException::withMessages([
-                        Fortify::username() => ['La sucursal asociada a esta cuenta esta desactivada.'],
-                    ]);
+                    if ($user->tipo !== 'adminEmpresa') {
+                        throw ValidationException::withMessages([
+                            Fortify::username() => ['La sucursal asociada a esta cuenta esta desactivada.'],
+                        ]);
+                    }
+
+                    // adminEmpresa opera sobre cualquier sucursal de su empresa:
+                    // si la asignada ya no esta activa, se reasigna a otra activa.
+                    $sucursal = $this->reasignarSucursalAdminEmpresa($user, $sucursal);
+                    if (!$sucursal) {
+                        throw ValidationException::withMessages([
+                            Fortify::username() => ['La empresa asociada a esta cuenta no tiene sucursales activas.'],
+                        ]);
+                    }
                 }
 
                 $empresa = Empresa::withTrashed()->find($sucursal->id_empresa);
@@ -93,5 +104,37 @@ class FortifyServiceProvider extends ServiceProvider
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });
+    }
+
+    private function reasignarSucursalAdminEmpresa(User $user, ?Sucursales $anterior): ?Sucursales
+    {
+        $empresaId = $user->id_empresa ?: $anterior?->id_empresa;
+        if (!$empresaId) {
+            return null;
+        }
+
+        $nueva = Sucursales::where('id_empresa', $empresaId)
+            ->orderByRaw('COALESCE(es_bodega, 0) asc')
+            ->orderByDesc('es_matriz')
+            ->orderBy('id')
+            ->first();
+
+        if (!$nueva) {
+            return null;
+        }
+
+        Log::warning('Sucursal de adminEmpresa reasignada durante login.', [
+            'user_id' => $user->id,
+            'empresa_id' => $empresaId,
+            'sucursal_anterior' => $user->id_sucursal,
+            'sucursal_nueva' => $nueva->id,
+        ]);
+
+        $user->forceFill([
+            'id_sucursal' => $nueva->id,
+            'id_empresa' => $empresaId,
+        ])->save();
+
+        return $nueva;
     }
 }

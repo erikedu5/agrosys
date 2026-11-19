@@ -351,8 +351,9 @@ const confirmarEliminar = () => {
                         :eyebrow="producto.marca?.nombre ?? `#${producto.id}`" :title="producto.nombre"
                         :subtitle="[producto.tamano, producto.ingrediente_activo].filter(Boolean).join(' · ')"
                         :fields="[
-                            { label: 'Preferencial 1', value: formatMoneda(producto.precio_preferencial_1) },
-                            { label: 'Preferencial 2', value: formatMoneda(producto.precio_preferencial_2) },
+                            { label: 'Distribuidor 1', value: formatMoneda(producto.precio_preferencial_1) },
+                            { label: 'Distribuidor 2', value: formatMoneda(producto.precio_preferencial_2) },
+                            { label: 'Distribuidor 3', value: formatMoneda(producto.precio_preferencial_3) },
                             { label: 'Id', value: producto.id },
                             { label: 'Última actualización', value: formatFecha(producto.updated_at) },
                         ]">

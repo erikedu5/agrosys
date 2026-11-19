@@ -126,6 +126,7 @@ class PosInventoryController extends Controller
             $rules['precio_ieps'] = ['required_without:precio_publico', ...$price];
             $rules['precio_preferencial_1'] = ['nullable', ...$price];
             $rules['precio_preferencial_2'] = ['nullable', ...$price];
+            $rules['precio_preferencial_3'] = ['nullable', ...$price];
         }
         $request->validate($rules);
         $id = strtolower($request->input('operation_id'));

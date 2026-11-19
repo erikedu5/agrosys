@@ -31,6 +31,7 @@ const form = useForm({
     precio_publico: '',
     precio_preferencial_1: '',
     precio_preferencial_2: '',
+    precio_preferencial_3: '',
     tamano: '',
     cantidad: 0,
     ingrediente_activo: '',
@@ -87,7 +88,7 @@ watch(() => form.precio_unitario, (value) => {
     }
 });
 
-// En un producto nuevo los precios preferenciales siguen al público hasta que se editan.
+// En un producto nuevo los precios de distribuidor siguen al público hasta que se editan.
 const preferencialesEditados = ref(false);
 const copiarPrecioPublico = (campo) => {
     if (props.producto) {
@@ -96,8 +97,11 @@ const copiarPrecioPublico = (campo) => {
     if (campo !== 'precio_publico') {
         preferencialesEditados.value = true;
     } else if (!preferencialesEditados.value) {
-        form.precio_preferencial_1 = form.precio_publico;
-        form.precio_preferencial_2 = form.precio_publico;
+        TIPOS_PRECIO.forEach(({ campo }) => {
+            if (campo !== 'precio_publico') {
+                form[campo] = form.precio_publico;
+            }
+        });
     }
 };
 
@@ -240,7 +244,7 @@ const submit = () => {
                         <InputError :message="form.errors.precio_unitario" />
                     </div>
 
-                    <div class="grid gap-4 sm:grid-cols-3">
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
                             <label class="ui-label">Precio {{ tipo.label }} *</label>
                             <input type="number" step="0.01" min="0.01" @input="copiarPrecioPublico(tipo.campo)" class="ui-input"

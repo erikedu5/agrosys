@@ -107,6 +107,18 @@ class $LocalProductsTable extends LocalProducts
         requiredDuringInsert: false,
         defaultValue: const Constant(0),
       );
+  static const VerificationMeta _pricePreferential3CentsMeta =
+      const VerificationMeta('pricePreferential3Cents');
+  @override
+  late final GeneratedColumn<int> pricePreferential3Cents =
+      GeneratedColumn<int>(
+        'price_preferential3_cents',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
   static const VerificationMeta _activeMeta = const VerificationMeta('active');
   @override
   late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
@@ -141,6 +153,7 @@ class $LocalProductsTable extends LocalProducts
     priceCents,
     pricePreferential1Cents,
     pricePreferential2Cents,
+    pricePreferential3Cents,
     active,
     revision,
   ];
@@ -231,6 +244,15 @@ class $LocalProductsTable extends LocalProducts
         ),
       );
     }
+    if (data.containsKey('price_preferential3_cents')) {
+      context.handle(
+        _pricePreferential3CentsMeta,
+        pricePreferential3Cents.isAcceptableOrUnknown(
+          data['price_preferential3_cents']!,
+          _pricePreferential3CentsMeta,
+        ),
+      );
+    }
     if (data.containsKey('active')) {
       context.handle(
         _activeMeta,
@@ -292,6 +314,10 @@ class $LocalProductsTable extends LocalProducts
         DriftSqlType.int,
         data['${effectivePrefix}price_preferential2_cents'],
       )!,
+      pricePreferential3Cents: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}price_preferential3_cents'],
+      )!,
       active: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}active'],
@@ -319,6 +345,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
   final int priceCents;
   final int pricePreferential1Cents;
   final int pricePreferential2Cents;
+  final int pricePreferential3Cents;
   final bool active;
   final String revision;
   const LocalProduct({
@@ -331,6 +358,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     required this.priceCents,
     required this.pricePreferential1Cents,
     required this.pricePreferential2Cents,
+    required this.pricePreferential3Cents,
     required this.active,
     required this.revision,
   });
@@ -346,6 +374,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     map['price_cents'] = Variable<int>(priceCents);
     map['price_preferential1_cents'] = Variable<int>(pricePreferential1Cents);
     map['price_preferential2_cents'] = Variable<int>(pricePreferential2Cents);
+    map['price_preferential3_cents'] = Variable<int>(pricePreferential3Cents);
     map['active'] = Variable<bool>(active);
     map['revision'] = Variable<String>(revision);
     return map;
@@ -362,6 +391,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       priceCents: Value(priceCents),
       pricePreferential1Cents: Value(pricePreferential1Cents),
       pricePreferential2Cents: Value(pricePreferential2Cents),
+      pricePreferential3Cents: Value(pricePreferential3Cents),
       active: Value(active),
       revision: Value(revision),
     );
@@ -386,6 +416,9 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       pricePreferential2Cents: serializer.fromJson<int>(
         json['pricePreferential2Cents'],
       ),
+      pricePreferential3Cents: serializer.fromJson<int>(
+        json['pricePreferential3Cents'],
+      ),
       active: serializer.fromJson<bool>(json['active']),
       revision: serializer.fromJson<String>(json['revision']),
     );
@@ -407,6 +440,9 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       'pricePreferential2Cents': serializer.toJson<int>(
         pricePreferential2Cents,
       ),
+      'pricePreferential3Cents': serializer.toJson<int>(
+        pricePreferential3Cents,
+      ),
       'active': serializer.toJson<bool>(active),
       'revision': serializer.toJson<String>(revision),
     };
@@ -422,6 +458,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     int? priceCents,
     int? pricePreferential1Cents,
     int? pricePreferential2Cents,
+    int? pricePreferential3Cents,
     bool? active,
     String? revision,
   }) => LocalProduct(
@@ -436,6 +473,8 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
         pricePreferential1Cents ?? this.pricePreferential1Cents,
     pricePreferential2Cents:
         pricePreferential2Cents ?? this.pricePreferential2Cents,
+    pricePreferential3Cents:
+        pricePreferential3Cents ?? this.pricePreferential3Cents,
     active: active ?? this.active,
     revision: revision ?? this.revision,
   );
@@ -460,6 +499,9 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
       pricePreferential2Cents: data.pricePreferential2Cents.present
           ? data.pricePreferential2Cents.value
           : this.pricePreferential2Cents,
+      pricePreferential3Cents: data.pricePreferential3Cents.present
+          ? data.pricePreferential3Cents.value
+          : this.pricePreferential3Cents,
       active: data.active.present ? data.active.value : this.active,
       revision: data.revision.present ? data.revision.value : this.revision,
     );
@@ -477,6 +519,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
           ..write('priceCents: $priceCents, ')
           ..write('pricePreferential1Cents: $pricePreferential1Cents, ')
           ..write('pricePreferential2Cents: $pricePreferential2Cents, ')
+          ..write('pricePreferential3Cents: $pricePreferential3Cents, ')
           ..write('active: $active, ')
           ..write('revision: $revision')
           ..write(')'))
@@ -494,6 +537,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
     priceCents,
     pricePreferential1Cents,
     pricePreferential2Cents,
+    pricePreferential3Cents,
     active,
     revision,
   );
@@ -510,6 +554,7 @@ class LocalProduct extends DataClass implements Insertable<LocalProduct> {
           other.priceCents == this.priceCents &&
           other.pricePreferential1Cents == this.pricePreferential1Cents &&
           other.pricePreferential2Cents == this.pricePreferential2Cents &&
+          other.pricePreferential3Cents == this.pricePreferential3Cents &&
           other.active == this.active &&
           other.revision == this.revision);
 }
@@ -524,6 +569,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
   final Value<int> priceCents;
   final Value<int> pricePreferential1Cents;
   final Value<int> pricePreferential2Cents;
+  final Value<int> pricePreferential3Cents;
   final Value<bool> active;
   final Value<String> revision;
   final Value<int> rowid;
@@ -537,6 +583,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     this.priceCents = const Value.absent(),
     this.pricePreferential1Cents = const Value.absent(),
     this.pricePreferential2Cents = const Value.absent(),
+    this.pricePreferential3Cents = const Value.absent(),
     this.active = const Value.absent(),
     this.revision = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -551,6 +598,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     required int priceCents,
     this.pricePreferential1Cents = const Value.absent(),
     this.pricePreferential2Cents = const Value.absent(),
+    this.pricePreferential3Cents = const Value.absent(),
     required bool active,
     required String revision,
     this.rowid = const Value.absent(),
@@ -572,6 +620,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Expression<int>? priceCents,
     Expression<int>? pricePreferential1Cents,
     Expression<int>? pricePreferential2Cents,
+    Expression<int>? pricePreferential3Cents,
     Expression<bool>? active,
     Expression<String>? revision,
     Expression<int>? rowid,
@@ -588,6 +637,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
         'price_preferential1_cents': pricePreferential1Cents,
       if (pricePreferential2Cents != null)
         'price_preferential2_cents': pricePreferential2Cents,
+      if (pricePreferential3Cents != null)
+        'price_preferential3_cents': pricePreferential3Cents,
       if (active != null) 'active': active,
       if (revision != null) 'revision': revision,
       if (rowid != null) 'rowid': rowid,
@@ -604,6 +655,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
     Value<int>? priceCents,
     Value<int>? pricePreferential1Cents,
     Value<int>? pricePreferential2Cents,
+    Value<int>? pricePreferential3Cents,
     Value<bool>? active,
     Value<String>? revision,
     Value<int>? rowid,
@@ -620,6 +672,8 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
           pricePreferential1Cents ?? this.pricePreferential1Cents,
       pricePreferential2Cents:
           pricePreferential2Cents ?? this.pricePreferential2Cents,
+      pricePreferential3Cents:
+          pricePreferential3Cents ?? this.pricePreferential3Cents,
       active: active ?? this.active,
       revision: revision ?? this.revision,
       rowid: rowid ?? this.rowid,
@@ -660,6 +714,11 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
         pricePreferential2Cents.value,
       );
     }
+    if (pricePreferential3Cents.present) {
+      map['price_preferential3_cents'] = Variable<int>(
+        pricePreferential3Cents.value,
+      );
+    }
     if (active.present) {
       map['active'] = Variable<bool>(active.value);
     }
@@ -684,6 +743,7 @@ class LocalProductsCompanion extends UpdateCompanion<LocalProduct> {
           ..write('priceCents: $priceCents, ')
           ..write('pricePreferential1Cents: $pricePreferential1Cents, ')
           ..write('pricePreferential2Cents: $pricePreferential2Cents, ')
+          ..write('pricePreferential3Cents: $pricePreferential3Cents, ')
           ..write('active: $active, ')
           ..write('revision: $revision, ')
           ..write('rowid: $rowid')
@@ -8289,6 +8349,7 @@ typedef $$LocalProductsTableCreateCompanionBuilder =
       required int priceCents,
       Value<int> pricePreferential1Cents,
       Value<int> pricePreferential2Cents,
+      Value<int> pricePreferential3Cents,
       required bool active,
       required String revision,
       Value<int> rowid,
@@ -8304,6 +8365,7 @@ typedef $$LocalProductsTableUpdateCompanionBuilder =
       Value<int> priceCents,
       Value<int> pricePreferential1Cents,
       Value<int> pricePreferential2Cents,
+      Value<int> pricePreferential3Cents,
       Value<bool> active,
       Value<String> revision,
       Value<int> rowid,
@@ -8360,6 +8422,11 @@ class $$LocalProductsTableFilterComposer
 
   ColumnFilters<int> get pricePreferential2Cents => $composableBuilder(
     column: $table.pricePreferential2Cents,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pricePreferential3Cents => $composableBuilder(
+    column: $table.pricePreferential3Cents,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8428,6 +8495,11 @@ class $$LocalProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get pricePreferential3Cents => $composableBuilder(
+    column: $table.pricePreferential3Cents,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get active => $composableBuilder(
     column: $table.active,
     builder: (column) => ColumnOrderings(column),
@@ -8485,6 +8557,11 @@ class $$LocalProductsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get pricePreferential3Cents => $composableBuilder(
+    column: $table.pricePreferential3Cents,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get active =>
       $composableBuilder(column: $table.active, builder: (column) => column);
 
@@ -8532,6 +8609,7 @@ class $$LocalProductsTableTableManager
                 Value<int> priceCents = const Value.absent(),
                 Value<int> pricePreferential1Cents = const Value.absent(),
                 Value<int> pricePreferential2Cents = const Value.absent(),
+                Value<int> pricePreferential3Cents = const Value.absent(),
                 Value<bool> active = const Value.absent(),
                 Value<String> revision = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8545,6 +8623,7 @@ class $$LocalProductsTableTableManager
                 priceCents: priceCents,
                 pricePreferential1Cents: pricePreferential1Cents,
                 pricePreferential2Cents: pricePreferential2Cents,
+                pricePreferential3Cents: pricePreferential3Cents,
                 active: active,
                 revision: revision,
                 rowid: rowid,
@@ -8560,6 +8639,7 @@ class $$LocalProductsTableTableManager
                 required int priceCents,
                 Value<int> pricePreferential1Cents = const Value.absent(),
                 Value<int> pricePreferential2Cents = const Value.absent(),
+                Value<int> pricePreferential3Cents = const Value.absent(),
                 required bool active,
                 required String revision,
                 Value<int> rowid = const Value.absent(),
@@ -8573,6 +8653,7 @@ class $$LocalProductsTableTableManager
                 priceCents: priceCents,
                 pricePreferential1Cents: pricePreferential1Cents,
                 pricePreferential2Cents: pricePreferential2Cents,
+                pricePreferential3Cents: pricePreferential3Cents,
                 active: active,
                 revision: revision,
                 rowid: rowid,

@@ -405,8 +405,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       ],
       fields: [
-        RecordField('Preferencial 1', money(p.preferential1Cents)),
-        RecordField('Preferencial 2', money(p.preferential2Cents)),
+        RecordField('Distribuidor 1', money(p.preferential1Cents)),
+        RecordField('Distribuidor 2', money(p.preferential2Cents)),
+        RecordField('Distribuidor 3', money(p.preferential3Cents)),
         RecordField('Id', p.id),
         RecordField('Código de barras', p.barcode),
       ],
@@ -559,8 +560,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
               'Existencia estimada',
               decimalText(p.estimatedQuantity),
             ),
-            RecordField('Preferencial 1', money(p.preferential1Cents)),
-            RecordField('Preferencial 2', money(p.preferential2Cents)),
+            RecordField('Distribuidor 1', money(p.preferential1Cents)),
+            RecordField('Distribuidor 2', money(p.preferential2Cents)),
+            RecordField('Distribuidor 3', money(p.preferential3Cents)),
             RecordField(
               'Presentación',
               p.size.isEmpty ? 'Sin presentación' : p.size,

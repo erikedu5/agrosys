@@ -12,10 +12,15 @@ Future<void> navigate(WidgetTester tester, String label) async {
 }
 
 /// Desplaza el listado de inventario (tarjetas bajo demanda) hasta [target].
-Future<void> scrollInventoryTo(WidgetTester tester, Finder target) async {
+/// `delta` negativo regresa hacia el encabezado (búsqueda y filtros).
+Future<void> scrollInventoryTo(
+  WidgetTester tester,
+  Finder target, {
+  double delta = 120,
+}) async {
   await tester.scrollUntilVisible(
     target,
-    120,
+    delta,
     // El primero es el del listado; los demás son las filas de filtros.
     scrollable: find
         .descendant(

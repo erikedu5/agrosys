@@ -20,6 +20,9 @@ class LocalProducts extends Table {
       integer().withDefault(const Constant(0))();
   IntColumn get pricePreferential2Cents =>
       integer().withDefault(const Constant(0))();
+  // Schema v9: precio preferencial 3.
+  IntColumn get pricePreferential3Cents =>
+      integer().withDefault(const Constant(0))();
   BoolColumn get active => boolean()();
   TextColumn get revision => text()();
   @override
@@ -267,7 +270,7 @@ class PosDatabase extends _$PosDatabase {
   }
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
@@ -277,7 +280,7 @@ class PosDatabase extends _$PosDatabase {
       );
     },
     onUpgrade: (m, from, to) async {
-      if (from < 1 || from > 7 || to != 8) {
+      if (from < 1 || from > 8 || to != 9) {
         throw StateError(
           'Migración no soportada. Conserva la base y solicita soporte.',
         );
@@ -285,39 +288,14 @@ class PosDatabase extends _$PosDatabase {
       await customStatement(
         'CREATE TABLE IF NOT EXISTS cash_local_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)',
       );
-      if (from < 6) await m.createTable(inventoryRequests);
-      if (from < 5) {
-        await m.addColumn(localProducts, localProducts.classification);
-      }
-      if (from == 1) {
-        await m.createTable(downloads);
-        await m.createTable(downloadPages);
-        await m.createTable(localEffects);
-      }
-      if (from < 3) {
-        await m.createTable(localSales);
-        await m.createTable(localSaleItems);
-        await m.createTable(localPayments);
-        await m.createTable(outbox);
-        await m.createTable(deviceSequence);
-        await m.createTable(receiptAttempts);
-      } else if (from < 4) {
-        await m.addColumn(outbox, outbox.serverResult);
-        await m.addColumn(outbox, outbox.errorCode);
-      }
-      if (from < 4) await m.createTable(syncWorkers);
-      if (from >= 3) {
-        await m.addColumn(localSales, localSales.priceTier);
-        await m.addColumn(localSales, localSales.paymentForm);
-      }
-      await m.addColumn(localProducts, localProducts.pricePreferential1Cents);
-      await m.addColumn(localProducts, localProducts.pricePreferential2Cents);
-      await m.addColumn(localCustomers, localCustomers.priceTier);
-      await m.addColumn(localCustomers, localCustomers.requiresInvoice);
-      await m.addColumn(localCustomers, localCustomers.creditLimitCents);
-      await m.addColumn(localCustomers, localCustomers.creditBlockedReason);
-      // v8: precios por nivel y crédito solo llegan completos en una descarga
-      // total; se descarta cualquier descarga incremental a medias.
+      if (from < 8) await _upgradeToV8(m, from);
+      // v9: precio preferencial 3. Mientras llega la descarga total, toma el público.
+      await m.addColumn(localProducts, localProducts.pricePreferential3Cents);
+      await customStatement(
+        'UPDATE local_products SET price_preferential3_cents = price_cents',
+      );
+      // Los precios por nivel solo llegan completos en una descarga total; se
+      // descarta cualquier descarga incremental a medias.
       await delete(downloadPages).go();
       await delete(downloads).go();
       await customStatement('UPDATE sync_metadata SET cursor = NULL');
@@ -362,4 +340,39 @@ class PosDatabase extends _$PosDatabase {
       );
     },
   );
+
+  /// Pasos de schema v1..v7 a v8. La limpieza de descargas la hace el paso v9.
+  Future<void> _upgradeToV8(Migrator m, int from) async {
+    if (from < 6) await m.createTable(inventoryRequests);
+    if (from < 5) {
+      await m.addColumn(localProducts, localProducts.classification);
+    }
+    if (from == 1) {
+      await m.createTable(downloads);
+      await m.createTable(downloadPages);
+      await m.createTable(localEffects);
+    }
+    if (from < 3) {
+      await m.createTable(localSales);
+      await m.createTable(localSaleItems);
+      await m.createTable(localPayments);
+      await m.createTable(outbox);
+      await m.createTable(deviceSequence);
+      await m.createTable(receiptAttempts);
+    } else if (from < 4) {
+      await m.addColumn(outbox, outbox.serverResult);
+      await m.addColumn(outbox, outbox.errorCode);
+    }
+    if (from < 4) await m.createTable(syncWorkers);
+    if (from >= 3) {
+      await m.addColumn(localSales, localSales.priceTier);
+      await m.addColumn(localSales, localSales.paymentForm);
+    }
+    await m.addColumn(localProducts, localProducts.pricePreferential1Cents);
+    await m.addColumn(localProducts, localProducts.pricePreferential2Cents);
+    await m.addColumn(localCustomers, localCustomers.priceTier);
+    await m.addColumn(localCustomers, localCustomers.requiresInvoice);
+    await m.addColumn(localCustomers, localCustomers.creditLimitCents);
+    await m.addColumn(localCustomers, localCustomers.creditBlockedReason);
+  }
 }

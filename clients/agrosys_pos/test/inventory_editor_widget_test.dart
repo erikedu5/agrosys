@@ -114,6 +114,7 @@ void main() {
               costs ? '55.00' : null,
             );
             expect(api.mutationBodies.single['precio_preferencial_2'], isNull);
+            expect(api.mutationBodies.single['precio_preferencial_3'], isNull);
             expect(api.mutationBodies.single.containsKey('ieps'), isFalse);
             expect(find.text('Cambios guardados.'), findsOneWidget);
             expect(
@@ -149,12 +150,14 @@ void main() {
             await settle();
             await field('precio_publico', '75.00');
             await field('precio_preferencial_2', '70.00');
+            await field('precio_preferencial_3', '65.00');
             await save();
             expect(api.products['11']!['price'], '75.00');
             expect(api.products['11']!['prices'], {
               'publico': '75.00',
               'preferencial_1': costs ? '55.00' : '60.00',
               'preferencial_2': '70.00',
+              'preferencial_3': '65.00',
             });
             await tester.ensureVisible(
               find.byKey(const ValueKey('inventory-action-add')),

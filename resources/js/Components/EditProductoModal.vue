@@ -43,6 +43,7 @@ const form = useForm({
     precio_publico: '',
     precio_preferencial_1: '',
     precio_preferencial_2: '',
+    precio_preferencial_3: '',
     tamano: '',
     ingrediente_activo: '',
     barcode: '',
@@ -198,7 +199,7 @@ const submit = () => {
                     <InputError :message="form.errors.precio_unitario" />
                 </div>
 
-                <div class="grid gap-4 sm:grid-cols-3">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div v-for="tipo in TIPOS_PRECIO" :key="tipo.campo" class="ui-field">
                         <label :for="`editar-${tipo.campo}`" class="ui-label">Precio {{ tipo.label }} *</label>
                         <input :id="`editar-${tipo.campo}`" type="number" step="0.01" min="0.01" inputmode="decimal" class="ui-input"

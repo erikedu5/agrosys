@@ -223,35 +223,67 @@ class UsuarioController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(Request $request, $id)
     {
+        $esAdminEmpresa = $request->tipo === 'adminEmpresa';
+
         $request->validate([
             'name' => 'required',
             'email' => 'required|email',
-            'tipo' => 'required'
+            'tipo' => 'required',
+            'id_sucursal' => $esAdminEmpresa ? 'nullable' : 'required',
         ], [
             'name.required' => 'Agregar un nombre de usuario.',
             'email.required' => 'Agregar un correo electrónico.',
             'tipo.required' => 'Agregar un Rol.',
+            'id_sucursal.required' => 'Seleccionar una sucursal.',
         ]);
 
         // Iniciar logging del evento
         $logger = \App\Services\EventLogger::start('ACTUALIZAR_USUARIO', [
-            'usuario_id' => $request->id,
+            'usuario_id' => $id,
             'name' => $request->name,
             'email' => $request->email,
         ]);
 
-        try {
-            $usuario = User::find($request->id);
+        $usuario = User::find($id);
 
-            if (!$usuario) {
-                $logger->warning('Usuario no encontrado', [
-                    'usuario_id' => $request->id,
-                ]);
-                return redirect()->route('usuario.index')->with('error', 'Usuario no encontrado.');
+        if (!$usuario) {
+            $logger->warning('Usuario no encontrado', [
+                'usuario_id' => $id,
+            ]);
+            return redirect()->route('usuario.index')->with('error', 'Usuario no encontrado.');
+        }
+
+        $editorEsSuperAdmin = Auth::user()->tipo === 'superAdmin';
+
+        if ($esAdminEmpresa) {
+            // Solo superAdmin puede mover un adminEmpresa de empresa.
+            $empresaId = ($editorEsSuperAdmin ? $request->id_empresa : null) ?: $usuario->id_empresa;
+
+            if (!$empresaId) {
+                return back()->withErrors(['id_empresa' => 'Seleccionar una empresa.']);
             }
 
+            // Conservar su sucursal si sigue activa y es de la empresa; si no, la primera activa.
+            $sucursalId = Sucursales::where('id_empresa', $empresaId)->where('id', $usuario->id_sucursal)->value('id')
+                ?? Sucursales::where('id_empresa', $empresaId)->orderByDesc('es_matriz')->orderBy('id')->value('id');
+        } else {
+            $sucursal = Sucursales::find($request->id_sucursal);
+
+            if (!$sucursal) {
+                return back()->withErrors(['id_sucursal' => 'La sucursal seleccionada no existe o esta desactivada.']);
+            }
+
+            if (!$editorEsSuperAdmin && (int) $sucursal->id_empresa !== (int) SucursalService::getEmpresaIdActiva()) {
+                return back()->withErrors(['id_sucursal' => 'La sucursal seleccionada no pertenece a tu empresa.']);
+            }
+
+            $empresaId = $sucursal->id_empresa;
+            $sucursalId = $sucursal->id;
+        }
+
+        try {
             $logger->step('Valores anteriores', [
                 'name' => $usuario->name,
                 'email' => $usuario->email,
@@ -266,7 +298,8 @@ class UsuarioController extends Controller
             }
             $usuario->email = $request->email;
             $usuario->tipo = $request->tipo;
-            $usuario->id_sucursal = $request->id_sucursal;
+            $usuario->id_sucursal = $sucursalId;
+            $usuario->id_empresa = $empresaId;
             $usuario->save();
 
             $logger->success([
@@ -278,7 +311,7 @@ class UsuarioController extends Controller
             return redirect()->route('usuario.index');
         } catch (\Exception $e) {
             $logger->error($e, [
-                'usuario_id' => $request->id,
+                'usuario_id' => $id,
             ]);
 
             return back()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
