@@ -46,7 +46,7 @@ class DeviceSessionReplacementTest extends TestCase
         return $this->postJson('/api/v1/pos/devices/activate', ['device_id' => $id, 'branch_id' => $this->branch->id, 'close_other_sessions' => $confirmed], ['Authorization' => 'Bearer '.$token]);
     }
 
-    public function test_confirmation_closes_only_own_sessions_preserves_current_and_is_idempotent(): void
+    public function test_limit_automatically_closes_only_own_sessions_preserves_current_and_is_idempotent(): void
     {
         $old = $this->device($this->user);
         $old->update(['last_sequence' => 9]);
@@ -58,12 +58,7 @@ class DeviceSessionReplacementTest extends TestCase
         $new = (string) Str::uuid();
         $token = $this->token($this->user, $new);
 
-        $this->activate($new, $token)->assertStatus(409)->assertJsonPath('code', 'DEVICE_SESSION_CONFIRMATION_REQUIRED');
-        $this->assertNull(OfflineDevice::find($new));
-        $this->assertTrue($old->fresh()->authorized);
-        $this->assertSame(0, (int) $this->user->fresh()->device_session_version);
-
-        $this->activate($new, $token, true)->assertOk()->assertJsonPath('authorized', true);
+        $this->activate($new, $token)->assertOk()->assertJsonPath('authorized', true);
         $this->assertFalse($old->fresh()->authorized);
         $this->assertFalse($web->fresh()->authorized);
         $this->assertNotNull($old->fresh()->session_closed_at);
@@ -72,29 +67,27 @@ class DeviceSessionReplacementTest extends TestCase
         $this->assertSame(1, $this->user->tokens()->count());
         $this->assertSame(1, $other->tokens()->count());
         $this->assertSame(1, (int) $this->user->fresh()->device_session_version);
-        // Even with other users occupying the cupo, access is allowed after confirmation.
+        // Even with other users occupying the cupo, the current user can enter.
         $this->assertSame(2, OfflineDevice::where('authorized', true)->count());
-        $this->activate($new, $token, true)->assertOk();
+        $this->activate($new, $token)->assertOk();
         $this->assertSame(1, (int) $this->user->fresh()->device_session_version);
         $this->activate($old->id, $oldToken)->assertUnauthorized();
 
         // A fresh login can recover the same device ID, sequence and local operations.
         $freshToken = $this->token($this->user, $old->id);
-        $this->activate($old->id, $freshToken, true)->assertOk();
+        $this->activate($old->id, $freshToken)->assertOk();
         $this->assertTrue($old->fresh()->authorized);
         $this->assertFalse(OfflineDevice::find($new)->authorized);
         $this->assertSame(9, (int) $old->fresh()->last_sequence);
     }
 
-    public function test_browser_replacement_invalidates_old_browser_session_and_pos_token(): void
+    public function test_browser_activation_at_the_limit_invalidates_old_browser_session_and_pos_token(): void
     {
         $old = $this->device($this->user);
         $token = $this->token($this->user, $old->id);
         $new = (string) Str::uuid();
         $this->actingAs($this->user, 'web')->withSession(['device_session_version' => 0]);
-        $this->postJson('/device-session/activate', ['device_id' => $new])->assertStatus(409);
-        $this->postJson('/caja/status')->assertStatus(409)->assertJsonPath('code', 'DEVICE_SESSION_CONFIRMATION_REQUIRED');
-        $this->postJson('/device-session/activate', ['device_id' => $new, 'close_other_sessions' => true])->assertOk()->assertSessionHas('device_session_version', 1);
+        $this->postJson('/device-session/activate', ['device_id' => $new])->assertOk()->assertSessionHas('device_session_version', 1);
         $this->getJson('/api/v1/offline/health')->assertOk()->assertJsonPath('authenticated', true);
         $this->activate($old->id, $token)->assertUnauthorized();
 
@@ -109,7 +102,7 @@ class DeviceSessionReplacementTest extends TestCase
         $this->getJson('/api/v1/offline/health')->assertOk()->assertJsonPath('authenticated', true);
     }
 
-    public function test_confirmation_never_undoes_admin_revocation_or_manual_authorization(): void
+    public function test_session_replacement_never_undoes_admin_revocation_or_manual_authorization(): void
     {
         $old = $this->device($this->user);
         $revoked = $this->device($this->user);

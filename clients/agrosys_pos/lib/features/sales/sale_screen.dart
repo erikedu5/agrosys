@@ -667,7 +667,12 @@ class _SaleScreenState extends State<SaleScreen> {
                     icon: const Icon(Icons.close),
                   ),
                 ),
-                Expanded(child: CashScreen(controller: widget.controller)),
+                Expanded(
+                  child: CashScreen(
+                    controller: widget.controller,
+                    onOpened: () => Navigator.pop(dialogContext),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: TextButton(
@@ -683,7 +688,9 @@ class _SaleScreenState extends State<SaleScreen> {
         ),
       ),
     );
-    if (mounted) await _load();
+    if (!mounted) return;
+    await _load();
+    if (mounted && widget.controller.hasOpenCash) _searchFocus.requestFocus();
   }
 
   Future<void> _lastReceipt() async {

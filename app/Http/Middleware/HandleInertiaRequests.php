@@ -64,7 +64,8 @@ class HandleInertiaRequests extends Middleware
                     'nombre' => $sucursalCompleta->nombre,
                     'direccion' => $sucursalCompleta->direccion,
                     'esAdminEmpresa' => $user->tipo === 'adminEmpresa',
-                    'sucursalesDisponibles' => []
+                    'sucursalesDisponibles' => [],
+                    'auditoria_activa' => app(\App\Services\Auditoria\InventoryFreeze::class)->auditoriaActiva($sucursalCompleta->id)?->folio,
                 ];
 
                 // Si es admin de empresa, agregar las sucursales disponibles

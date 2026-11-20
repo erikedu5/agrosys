@@ -24,20 +24,20 @@ class DeviceSessions
         $needsActivation = ! $device || ! $device->authorized;
         $limit = $branch->empresa->dispositivosPorSucursalPermitidos();
         $count = OfflineDevice::where('branch_id', $branch->id)->where('authorized', true)->whereNull('revoked_at')->count();
-        if ($needsActivation && $limit !== null && $count >= $limit && ! $confirmed) {
-            throw new HttpResponseException(response()->json([
-                'code' => 'DEVICE_SESSION_CONFIRMATION_REQUIRED',
-                'message' => 'Se alcanzó el número de dispositivos de la sucursal. Para continuar, confirma que deseas cerrar todas las demás sesiones de tu usuario.',
-                'limit' => $limit,
-            ], 409));
-        }
+        // Reaching the branch limit replaces only this user's other sessions.
+        // A replacement is not a revocation: their device identity, local data
+        // and pending operations remain recoverable after a new login.
+        $replaceOtherSessions = $needsActivation && (
+            $confirmed || ($limit !== null && $count >= $limit)
+        );
         if (! $device) {
             $device = OfflineDevice::create(['id' => $id, 'user_id' => $user->id, 'branch_id' => $branch->id, 'client_kind' => $kind, 'authorized' => ! config('offline.require_activation'), 'offline_expires_at' => now()]);
         } elseif ($device->session_closed_at && ! config('offline.require_activation')) {
             $device->authorized = true;
         }
-        // Confirmation replaces sessions; it never grants manual administrator approval.
-        if ($needsActivation && $confirmed && $device->authorized) {
+        // An automatic replacement never grants manual administrator approval
+        // and never undoes an administrative revocation.
+        if ($replaceOtherSessions && $device->authorized) {
             OfflineDevice::where('user_id', $user->id)->where('id', '!=', $id)->whereNull('revoked_at')
                 ->update(['authorized' => false, 'session_closed_at' => now(), 'offline_expires_at' => now()]);
             $tokens = $user->tokens()->whereNotNull('pos_device_id');

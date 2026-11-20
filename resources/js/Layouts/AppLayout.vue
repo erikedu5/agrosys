@@ -177,7 +177,7 @@ const navItems = computed(() => {
     console.log('tipo', tipo);
 
     return [
-        { type: 'link', label: 'Inicio', route: 'dashboard' },
+        { type: 'link', label: 'Inicio', route: 'dashboard', condition: tipo !== 'auditor' },
         {
             type: 'dropdown',
             label: 'Venta',
@@ -231,6 +231,15 @@ const navItems = computed(() => {
                 { label: 'Catálogo de Marca', route: 'marca.index' },
                 { label: 'Catálogo de Enfermedades', route: 'enfermedad.index' },
                 { label: 'Catálogo de Tipo de Flores', route: 'tipoFlor.index' },
+            ],
+        },
+        {
+            type: 'dropdown',
+            label: 'Auditorías',
+            condition: ['auditor', 'superAdmin', 'adminEmpresa'].includes(tipo),
+            children: [
+                { label: 'Auditorías de inventario', route: 'auditorias.index' },
+                { label: 'Histórico de auditorías', route: 'auditorias.historico' },
             ],
         },
         {
@@ -573,6 +582,15 @@ const searchItems = computed(() => {
                 <header v-if="$slots.header" class="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
                     <slot name="header" />
                 </header>
+
+                <!-- Aviso de bloqueo por auditoría de inventario en la sucursal activa -->
+                <div v-if="$page.props.sucursalActiva?.auditoria_activa" class="ui-alert ui-alert-blue mx-4 mt-3 sm:mx-6" role="status">
+                    Sucursal en auditoría de inventario (folio {{ $page.props.sucursalActiva.auditoria_activa }}).
+                    Las ventas siguen permitidas; transferencias, compras, altas, dosificación, reseteos y devoluciones están bloqueadas hasta que termine.
+                </div>
+                <div v-if="$page.props.errors?.auditoria" class="ui-alert ui-alert-red mx-4 mt-3 sm:mx-6" role="alert">
+                    {{ $page.props.errors.auditoria }}
+                </div>
 
                 <!-- Contenido de la página -->
                 <main class="app-content">

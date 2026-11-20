@@ -63,7 +63,9 @@ const restaurar = (id) => {
             <div class="ui-grid">
                 <RecordCard v-for="usuario in usuarios.data" :key="usuario.id" :eyebrow="`#${usuario.id}`" :title="usuario.name" :subtitle="usuario.email"
                     :fields="[
-                        isSuperAdmin
+                        usuario.tipo === 'auditor'
+                            ? { label: 'Acceso', value: 'Auditor externo (alcance por empresa)' }
+                            : isSuperAdmin
                             ? { label: 'Empresa', value: usuario.empresa ? usuario.empresa.nombre : 'Sin empresa asignada' }
                             : { label: 'Sucursal', value: usuario.sucursal ? usuario.sucursal.nombre : 'Sin sucursal asignada' },
                         { label: 'Última actualización', value: formatFecha(usuario.updated_at) },

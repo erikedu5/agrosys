@@ -55,6 +55,12 @@ class FortifyServiceProvider extends ServiceProvider
                     ]);
                 }
 
+                if ($user->isAuditor()) {
+                    $this->validarAuditor($user);
+
+                    return $user;
+                }
+
                 $sucursal = Sucursales::withTrashed()->find($user->id_sucursal);
                 if (!$sucursal || $sucursal->trashed()) {
                     if ($user->tipo !== 'adminEmpresa') {
@@ -104,6 +110,23 @@ class FortifyServiceProvider extends ServiceProvider
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });
+    }
+
+    /** Auditor externo: sin sucursal propia; requiere vigencia y al menos un alcance en empresa activa. */
+    private function validarAuditor(User $user): void
+    {
+        if (!$user->accesoVigente()) {
+            throw ValidationException::withMessages([
+                Fortify::username() => ['El acceso de este auditor ya vencio. Contacta al administrador.'],
+            ]);
+        }
+
+        $tieneAlcance = $user->alcancesAuditor()->whereHas('empresa')->exists();
+        if (!$tieneAlcance) {
+            throw ValidationException::withMessages([
+                Fortify::username() => ['Este auditor no tiene empresas asignadas o estan desactivadas.'],
+            ]);
+        }
     }
 
     private function reasignarSucursalAdminEmpresa(User $user, ?Sucursales $anterior): ?Sucursales

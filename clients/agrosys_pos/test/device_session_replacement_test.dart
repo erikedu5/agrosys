@@ -34,7 +34,7 @@ class ReplacementApi extends FixtureApi {
 
 void main() {
   testWidgets(
-    'replacing sessions requires explicit confirmation; cancel sends nothing',
+    'legacy servers can still request explicit session-replacement confirmation',
     (tester) async {
       final api = ReplacementApi();
       final controller = AppController(

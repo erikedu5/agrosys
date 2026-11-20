@@ -13,6 +13,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    public const TIPO_AUDITOR = 'auditor';
+
     use HasApiTokens;
     use HasFactory;
     use HasProfilePhoto;
@@ -32,6 +34,7 @@ class User extends Authenticatable
         'tipo',
         'id_sucursal',
         'id_empresa',
+        'acceso_hasta',
     ];
 
     /**
@@ -53,6 +56,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'acceso_hasta' => 'date',
     ];
 
     /**
@@ -116,5 +120,24 @@ class User extends Authenticatable
     public function isSuperAdmin()
     {
         return $this->tipo === 'superAdmin';
+    }
+
+    /**
+     * Verificar si el usuario es auditor externo
+     */
+    public function isAuditor(): bool
+    {
+        return $this->tipo === self::TIPO_AUDITOR;
+    }
+
+    public function alcancesAuditor()
+    {
+        return $this->hasMany(AuditorAlcance::class, 'id_usuario');
+    }
+
+    /** Vigencia del acceso externo: null = sin vencimiento. */
+    public function accesoVigente(): bool
+    {
+        return $this->acceso_hasta === null || $this->acceso_hasta->copy()->endOfDay()->isFuture();
     }
 }

@@ -22,6 +22,7 @@ class PurchaseManagement
         if ($existing = PurchaseIdempotency::find($branch->id_empresa, $key, $hash)) {
             return $existing;
         }
+        app(\App\Services\Auditoria\InventoryFreeze::class)->assertNotFrozen($branch, 'la compra');
         try {
             return DB::transaction(function () use ($user, $branch, $data, $key, $hash) {
                 $ids = collect($data['productos'])->pluck('id')->unique()->sort()->values();

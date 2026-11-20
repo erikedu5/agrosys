@@ -149,6 +149,9 @@ class InventoryManagement
     {
         $this->authorizeDestructive($user);
         abort_unless(in_array($action, ['reset', 'delete'], true), 422);
+        if ($action === 'reset') {
+            app(\App\Services\Auditoria\InventoryFreeze::class)->assertNotFrozen($branch, 'el reseteo de inventario');
+        }
 
         return DB::transaction(function () use ($user, $branch, $id, $action, $version, $stockRevision) {
             $product = $this->lockedProduct($branch, $id, $version);
@@ -176,6 +179,7 @@ class InventoryManagement
     public function addStock(User $user, Sucursales $branch, int $id, mixed $quantity): AltaInventario
     {
         Validator::make(['cantidad' => $quantity], ['cantidad' => 'required|numeric|gt:0|max:999999.99'])->validate();
+        app(\App\Services\Auditoria\InventoryFreeze::class)->assertNotFrozen($branch, 'el alta de inventario');
         $units = Decimal::units($quantity, 'cantidad');
 
         return $this->moveStock($user, $branch, $id, $units, AltaInventario::EVENTO_ALTA);
@@ -202,6 +206,7 @@ class InventoryManagement
         if ($count > 99999) {
             throw ValidationException::withMessages(['medida' => 'La medida es demasiado pequeña para el contenido del envase.']);
         }
+        app(\App\Services\Auditoria\InventoryFreeze::class)->assertNotFrozen($branch, 'la dosificación');
         if ($leftover > 0 && ! filter_var($data['acepta_perdida'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             throw ValidationException::withMessages(['acepta_perdida' => "Sobran {$plain($leftover)} $unit que se perderán. Confirma la pérdida para continuar."]);
         }

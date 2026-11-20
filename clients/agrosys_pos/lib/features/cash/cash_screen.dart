@@ -37,7 +37,10 @@ const cashLabels = {
 
 class CashScreen extends StatefulWidget {
   final AppController controller;
-  const CashScreen({super.key, required this.controller});
+
+  /// Se invoca al confirmar la apertura (p. ej. para cerrar el modal y vender).
+  final VoidCallback? onOpened;
+  const CashScreen({super.key, required this.controller, this.onOpened});
   @override
   State<CashScreen> createState() => _CashScreenState();
 }
@@ -172,7 +175,7 @@ class _CashScreenState extends State<CashScreen> {
         body,
       );
       if (!mounted) return;
-      await _retry(id);
+      await _retry(id, opening: action == 'open');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -180,8 +183,9 @@ class _CashScreenState extends State<CashScreen> {
     }
   }
 
-  Future<void> _retry(String id) async {
+  Future<void> _retry(String id, {bool opening = false}) async {
     if (_writing) return;
+    var opened = false;
     setState(() {
       _writing = true;
       _error = null;
@@ -190,6 +194,7 @@ class _CashScreenState extends State<CashScreen> {
     try {
       await widget.controller.retryInventoryRequest(id);
       if (!mounted) return;
+      opened = opening && widget.onOpened != null;
       setState(() {
         _notice = 'Operación de caja confirmada.';
         _confirmed = false;
@@ -210,9 +215,10 @@ class _CashScreenState extends State<CashScreen> {
     } finally {
       if (mounted) {
         setState(() => _writing = false);
-        await _load(keepError: true);
+        if (!opened) await _load(keepError: true);
       }
     }
+    if (opened && mounted) widget.onOpened!();
   }
 
   Future<void> _print(Map<String, dynamic> cut) async {
@@ -381,7 +387,10 @@ class _CashScreenState extends State<CashScreen> {
             TextButton(
               onPressed: _writing || !c.canWriteInventory('cash.manage')
                   ? null
-                  : () => _retry(request.operationId),
+                  : () => _retry(
+                      request.operationId,
+                      opening: request.path == 'cash/open',
+                    ),
               child: const Text('Reintentar solicitud'),
             ),
           ]),

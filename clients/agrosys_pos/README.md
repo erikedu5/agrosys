@@ -5,11 +5,11 @@ espera ante límites de solicitudes, ventas con filtro por categoría, inventari
 compras y transferencias con menús según los permisos del usuario.
 La gestión de inventario, compras y transferencias requiere conexión.
 
-Al alcanzar el número de dispositivos de la sucursal, el nuevo acceso solicita
-confirmar «Cerrar las demás sesiones y entrar». Cierra todos los otros accesos web
-y POS del mismo usuario, conservando los de otros usuarios y los datos locales.
+Al alcanzar el número de dispositivos de la sucursal, el nuevo acceso cierra
+automáticamente todos los otros accesos web y POS del mismo usuario, conservando
+los de otros usuarios y los datos locales.
 Los equipos sin conexión detectan el cierre al reconectarse. Este cambio requiere
-actualizar el backend, aplicar la migración y actualizar los instaladores 2.1.1; consulta
+actualizar el backend y aplicar la migración; consulta
 [el flujo de sesiones](../../openspec/changes/flutter-pos-mvp/device-sessions.md).
 
 El paquete macOS universal (Intel y Apple Silicon) actualmente disponible es

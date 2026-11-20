@@ -22,6 +22,10 @@ class MainController extends Controller
      */
     public function index(Request $request)
     {
+        if ($request->user()?->isAuditor()) {
+            return redirect()->route('auditorias.index');
+        }
+
         $sucursalActiva = SucursalService::getSucursalActiva();
         $empresaActiva = SucursalService::getEmpresaIdActiva();
 

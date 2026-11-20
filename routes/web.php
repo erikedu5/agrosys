@@ -272,6 +272,32 @@ Route::post('/transferencias/{id}/recibir', [TransferenciaController::class, 're
     ->name('transferencias.recibir')
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-inventario-admin-superAdmin-adminEmpresa']);
 
+// Auditorías de inventario. El permiso fino por acción (operar/cancelar/ver) vive en AuditoriaAccess.
+// Sin 'sucursal.selection': el auditor no tiene sucursal activa; cada auditoría define la suya.
+Route::middleware(['auth:sanctum', 'hasRoles:auditor-superAdmin-adminEmpresa'])->prefix('/auditorias')->name('auditorias.')
+    ->controller(\App\Http\Controllers\AuditoriaController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/crear', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/historico', 'historico')->name('historico');
+        Route::get('/alcance/sucursales', 'sucursalesAlcance')->name('alcance.sucursales');
+        Route::get('/alcance/auditores', 'auditoresDisponibles')->name('alcance.auditores');
+        Route::get('/{auditoria}', 'show')->name('show')->whereNumber('auditoria');
+        Route::get('/{auditoria}/editar', 'edit')->name('edit')->whereNumber('auditoria');
+        Route::put('/{auditoria}', 'update')->name('update')->whereNumber('auditoria');
+        Route::post('/{auditoria}/iniciar', 'iniciar')->name('iniciar')->whereNumber('auditoria');
+        Route::get('/{auditoria}/captura', 'captura')->name('captura')->whereNumber('auditoria');
+        Route::get('/{auditoria}/buscar-producto', 'buscarProducto')->name('buscarProducto')->whereNumber('auditoria');
+        Route::post('/{auditoria}/conteos', 'capturar')->name('conteos.store')->whereNumber('auditoria');
+        Route::post('/{auditoria}/conteos/{conteo}/anular', 'anular')->name('conteos.anular')->whereNumber(['auditoria', 'conteo']);
+        Route::post('/{auditoria}/cerrar-conteo', 'cerrarConteo')->name('cerrarConteo')->whereNumber('auditoria');
+        Route::post('/{auditoria}/reconteo', 'reconteo')->name('reconteo')->whereNumber('auditoria');
+        Route::post('/{auditoria}/finalizar', 'finalizar')->name('finalizar')->whereNumber('auditoria');
+        Route::post('/{auditoria}/cancelar', 'cancelar')->name('cancelar')->whereNumber('auditoria');
+        Route::put('/{auditoria}/items/{item}/comentario', 'comentario')->name('items.comentario')->whereNumber(['auditoria', 'item']);
+        Route::get('/{auditoria}/reporte.xlsx', 'reporteXlsx')->name('reporte.xlsx')->whereNumber('auditoria');
+    });
+
 Route::get('/facturas/index', [\App\Http\Controllers\FacturaController::class, 'index'])
     ->name("facturas.index")
     ->middleware(['auth:sanctum', 'hasRoles:vendedor-admin-superAdmin-adminEmpresa']);

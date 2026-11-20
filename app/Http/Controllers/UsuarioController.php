@@ -10,10 +10,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use App\Models\AuditorAlcance;
 use Laravel\Fortify\Rules\Password;
 
 class UsuarioController extends Controller
 {
+    /** Roles que cada editor puede asignar (validación en servidor; la UI sólo refleja esto). */
+    private const ROLES_POR_EDITOR = [
+        'superAdmin' => ['superAdmin', 'adminEmpresa', 'admin', 'vendedor', 'inventario', User::TIPO_AUDITOR],
+        'adminEmpresa' => ['admin', 'vendedor', 'inventario', User::TIPO_AUDITOR],
+        'admin' => ['admin', 'vendedor', 'inventario'],
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -31,7 +42,15 @@ class UsuarioController extends Controller
 
         if (Auth::user()->tipo !== 'superAdmin') {
             $sucursal = SucursalService::getSucursalActiva();
-            $query = $query->where('id_sucursal', $sucursal);
+            $empresaId = SucursalService::getEmpresaIdActiva();
+            $esAdminEmpresa = Auth::user()->tipo === 'adminEmpresa';
+            $query = $query->where(function ($q) use ($sucursal, $empresaId, $esAdminEmpresa) {
+                $q->where('id_sucursal', $sucursal);
+                if ($esAdminEmpresa && $empresaId) {
+                    $q->orWhere(fn ($w) => $w->where('tipo', User::TIPO_AUDITOR)
+                        ->whereHas('alcancesAuditor', fn ($a) => $a->where('id_empresa', $empresaId)));
+                }
+            });
         }
 
         if ($request->boolean('deleted')) {
@@ -75,7 +94,9 @@ class UsuarioController extends Controller
         return Inertia::render('Usuario/CreateUsuario', [
             'sucursales' => $sucursales,
             'empresas' => $empresas,
-            'isSuperAdmin' => $isSuperAdmin
+            'isSuperAdmin' => $isSuperAdmin,
+            'rolesPermitidos' => $this->rolesPermitidos(),
+            'empresasAuditor' => $this->empresasAuditor(),
         ]);
     }
 
@@ -87,7 +108,7 @@ class UsuarioController extends Controller
         $validation = [
             'name' => 'required',
             'email' => 'required|email',
-            'tipo' => 'required',
+            'tipo' => ['required', Rule::in($this->rolesPermitidos())],
             'password' => 'required',
         ];
 
@@ -95,13 +116,17 @@ class UsuarioController extends Controller
             'name.required' => 'Agregar un nombre de usuario.',
             'email.required' => 'Agregar un correo electrónico.',
             'tipo.required' => 'Agregar un Rol.',
+            'tipo.in' => 'No tienes permiso para asignar ese rol.',
             'password.required' => 'Agregar una contraseña.',
         ];
 
-        // Para adminEmpresa validar empresa, para otros validar sucursal
+        // Para adminEmpresa validar empresa, para auditor su alcance, para otros validar sucursal
         if ($request->tipo === 'adminEmpresa') {
             $validation['id_empresa'] = 'required';
             $messages['id_empresa.required'] = 'Seleccionar una empresa.';
+        } elseif ($request->tipo === User::TIPO_AUDITOR) {
+            $validation += $this->reglasAuditor();
+            $messages += $this->mensajesAuditor();
         } else {
             $validation['id_sucursal'] = 'required';
             $messages['id_sucursal.required'] = 'Seleccionar una sucursal.';
@@ -116,8 +141,10 @@ class UsuarioController extends Controller
             'tipo' => $request->tipo,
         ]);
 
+        $alcances = $request->tipo === User::TIPO_AUDITOR ? $this->normalizarAlcances($request->input('alcances', [])) : [];
+
         // Enforcement: limite de "dispositivos" por sucursal (modelado como usuarios activos por sucursal).
-        if (!in_array($request->tipo, ['adminEmpresa', 'superAdmin'], true) && $request->filled('id_sucursal')) {
+        if (!in_array($request->tipo, ['adminEmpresa', 'superAdmin', User::TIPO_AUDITOR], true) && $request->filled('id_sucursal')) {
             $sucursal = Sucursales::find($request->id_sucursal);
             $empresa = $sucursal ? Empresa::find($sucursal->id_empresa) : null;
             $limit = $empresa?->numero_dispositivos_por_sucursal;
@@ -125,7 +152,7 @@ class UsuarioController extends Controller
             if ($empresa && $empresa->plan_code && $limit) {
                 $actual = User::query()
                     ->where('id_sucursal', $sucursal->id)
-                    ->whereNotIn('tipo', ['adminEmpresa', 'superAdmin'])
+                    ->whereNotIn('tipo', ['adminEmpresa', 'superAdmin', User::TIPO_AUDITOR])
                     ->count();
 
                 if ($actual >= (int) $limit) {
@@ -155,6 +182,11 @@ class UsuarioController extends Controller
                     'empresa_id' => $request->id_empresa,
                     'sucursal_id' => $data['id_sucursal'],
                 ]);
+            } elseif ($request->tipo === User::TIPO_AUDITOR) {
+                // Auditor externo: sin sucursal ni empresa propia; su alcance vive en auditor_alcances.
+                $data['id_sucursal'] = null;
+                $data['id_empresa'] = null;
+                $data['acceso_hasta'] = $request->input('acceso_hasta') ?: null;
             } else {
                 $data['id_empresa'] = Sucursales::where('id', $request->id_sucursal)->first()->id_empresa;
                 $data['id_sucursal'] = $request->id_sucursal;
@@ -165,9 +197,17 @@ class UsuarioController extends Controller
                 ]);
             }
 
+            if ($request->tipo !== User::TIPO_AUDITOR) {
+                $data['acceso_hasta'] = null;
+            }
             $request->merge($data);
 
-            $usuario = User::create($request->all());
+            $usuario = DB::transaction(function () use ($request, $alcances) {
+                $usuario = User::create($request->all());
+                $this->guardarAlcances($usuario, $alcances);
+
+                return $usuario;
+            });
 
             $logger->success([
                 'usuario_id' => $usuario->id,
@@ -211,12 +251,18 @@ class UsuarioController extends Controller
             $sucursales = Sucursales::where('id_empresa', $sucursalUser->id_empresa)->get();
         }
 
-        $usuario = User::find($id);
+        $usuario = User::findOrFail($id);
+        $usuario->setAttribute('acceso_hasta_fecha', $usuario->acceso_hasta?->format('Y-m-d'));
+        $usuario->setAttribute('alcances', $usuario->alcancesAuditor()
+            ->when(!$isSuperAdmin, fn ($q) => $q->where('id_empresa', SucursalService::getEmpresaIdActiva()))
+            ->get(['id_empresa', 'id_sucursal']));
         return Inertia::render('Usuario/CreateUsuario', [
             'usuario' => $usuario,
             'sucursales' => $sucursales,
             'empresas' => $empresas,
-            'isSuperAdmin' => $isSuperAdmin
+            'isSuperAdmin' => $isSuperAdmin,
+            'rolesPermitidos' => $this->rolesPermitidos(),
+            'empresasAuditor' => $this->empresasAuditor(),
         ]);
     }
 
@@ -226,18 +272,20 @@ class UsuarioController extends Controller
     public function update(Request $request, $id)
     {
         $esAdminEmpresa = $request->tipo === 'adminEmpresa';
+        $esAuditor = $request->tipo === User::TIPO_AUDITOR;
 
         $request->validate([
             'name' => 'required',
             'email' => 'required|email',
-            'tipo' => 'required',
-            'id_sucursal' => $esAdminEmpresa ? 'nullable' : 'required',
-        ], [
+            'tipo' => ['required', Rule::in($this->rolesPermitidos())],
+            'id_sucursal' => ($esAdminEmpresa || $esAuditor) ? 'nullable' : 'required',
+        ] + ($esAuditor ? $this->reglasAuditor() : []), [
             'name.required' => 'Agregar un nombre de usuario.',
             'email.required' => 'Agregar un correo electrónico.',
             'tipo.required' => 'Agregar un Rol.',
+            'tipo.in' => 'No tienes permiso para asignar ese rol.',
             'id_sucursal.required' => 'Seleccionar una sucursal.',
-        ]);
+        ] + ($esAuditor ? $this->mensajesAuditor() : []));
 
         // Iniciar logging del evento
         $logger = \App\Services\EventLogger::start('ACTUALIZAR_USUARIO', [
@@ -257,7 +305,21 @@ class UsuarioController extends Controller
 
         $editorEsSuperAdmin = Auth::user()->tipo === 'superAdmin';
 
-        if ($esAdminEmpresa) {
+        // Un editor no puede modificar usuarios con un rol que él no puede asignar.
+        if (!in_array($usuario->tipo, $this->rolesPermitidos(), true)) {
+            abort(403, 'No tienes permiso para editar este usuario.');
+        }
+
+        $alcances = [];
+        if ($esAuditor) {
+            if (!$editorEsSuperAdmin && $usuario->isAuditor()
+                && !$usuario->alcancesAuditor()->where('id_empresa', SucursalService::getEmpresaIdActiva())->exists()) {
+                abort(403, 'Este auditor no pertenece a tu empresa.');
+            }
+            $alcances = $this->normalizarAlcances($request->input('alcances', []));
+            $empresaId = null;
+            $sucursalId = null;
+        } elseif ($esAdminEmpresa) {
             // Solo superAdmin puede mover un adminEmpresa de empresa.
             $empresaId = ($editorEsSuperAdmin ? $request->id_empresa : null) ?: $usuario->id_empresa;
 
@@ -300,7 +362,15 @@ class UsuarioController extends Controller
             $usuario->tipo = $request->tipo;
             $usuario->id_sucursal = $sucursalId;
             $usuario->id_empresa = $empresaId;
-            $usuario->save();
+            $usuario->acceso_hasta = $esAuditor ? ($request->input('acceso_hasta') ?: null) : null;
+            DB::transaction(function () use ($usuario, $alcances, $esAuditor, $editorEsSuperAdmin) {
+                $usuario->save();
+                if ($esAuditor) {
+                    $this->guardarAlcances($usuario, $alcances, $editorEsSuperAdmin ? null : SucursalService::getEmpresaIdActiva());
+                } else {
+                    $usuario->alcancesAuditor()->delete();
+                }
+            });
 
             $logger->success([
                 'usuario_id' => $usuario->id,
@@ -315,6 +385,88 @@ class UsuarioController extends Controller
             ]);
 
             return back()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
+        }
+    }
+
+    private function rolesPermitidos(): array
+    {
+        return self::ROLES_POR_EDITOR[Auth::user()->tipo] ?? [];
+    }
+
+    /** Empresas que el editor puede asignar al alcance de un auditor. */
+    private function empresasAuditor()
+    {
+        $user = Auth::user();
+        if ($user->tipo === 'superAdmin') {
+            return Empresa::orderBy('nombre')->get(['id', 'nombre']);
+        }
+        if ($user->tipo === 'adminEmpresa') {
+            return Empresa::whereKey(SucursalService::getEmpresaIdActiva())->get(['id', 'nombre']);
+        }
+
+        return collect();
+    }
+
+    private function reglasAuditor(): array
+    {
+        return [
+            'alcances' => 'required|array|min:1|max:200',
+            'alcances.*.id_empresa' => 'required|integer',
+            'alcances.*.id_sucursal' => 'nullable|integer',
+            'acceso_hasta' => 'nullable|date|after_or_equal:today',
+        ];
+    }
+
+    private function mensajesAuditor(): array
+    {
+        return [
+            'alcances.required' => 'Asigna al menos una empresa al auditor.',
+            'alcances.min' => 'Asigna al menos una empresa al auditor.',
+            'acceso_hasta.after_or_equal' => 'La vigencia no puede estar en el pasado.',
+        ];
+    }
+
+    /**
+     * Valida el alcance contra lo que el editor puede asignar. Una empresa completa absorbe
+     * sus sucursales puntuales.
+     */
+    private function normalizarAlcances(array $alcances): array
+    {
+        $permitidas = $this->empresasAuditor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $completas = [];
+        $puntuales = [];
+        foreach ($alcances as $alcance) {
+            $empresaId = (int) ($alcance['id_empresa'] ?? 0);
+            if (!in_array($empresaId, $permitidas, true)) {
+                throw ValidationException::withMessages(['alcances' => 'Sólo puedes asignar empresas dentro de tu administración.']);
+            }
+            $sucursalId = $alcance['id_sucursal'] ?? null;
+            if ($sucursalId === null || $sucursalId === '') {
+                $completas[$empresaId] = true;
+                continue;
+            }
+            if (!Sucursales::whereKey((int) $sucursalId)->where('id_empresa', $empresaId)->exists()) {
+                throw ValidationException::withMessages(['alcances' => 'La sucursal seleccionada no pertenece a la empresa del alcance.']);
+            }
+            $puntuales[$empresaId.'-'.$sucursalId] = ['id_empresa' => $empresaId, 'id_sucursal' => (int) $sucursalId];
+        }
+
+        $resultado = array_map(fn ($id) => ['id_empresa' => $id, 'id_sucursal' => null], array_keys($completas));
+        foreach ($puntuales as $alcance) {
+            if (!isset($completas[$alcance['id_empresa']])) {
+                $resultado[] = $alcance;
+            }
+        }
+
+        return $resultado;
+    }
+
+    /** Reemplaza el alcance; con $soloEmpresa conserva los alcances de otras empresas (editor adminEmpresa). */
+    private function guardarAlcances(User $usuario, array $alcances, ?int $soloEmpresa = null): void
+    {
+        $usuario->alcancesAuditor()->when($soloEmpresa, fn ($q) => $q->where('id_empresa', $soloEmpresa))->delete();
+        foreach ($alcances as $alcance) {
+            AuditorAlcance::create($alcance + ['id_usuario' => $usuario->id]);
         }
     }
 

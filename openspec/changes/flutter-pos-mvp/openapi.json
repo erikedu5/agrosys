@@ -711,7 +711,7 @@
             }
           },
           "409": {
-            "description": "DEVICE_SESSION_CONFIRMATION_REQUIRED: ask user before retrying with close_other_sessions=true. The current token is preserved; no other user sessions are closed.",
+            "description": "Device-registration conflict. When the branch device quota is reached, activation automatically replaces only the caller's other sessions; it does not close other users' sessions.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1752,7 +1752,7 @@
             }
           },
           "409": {
-            "description": "DEVICE_SESSION_CONFIRMATION_REQUIRED: ask user before retrying with close_other_sessions=true. The current token is preserved; no other user sessions are closed.",
+            "description": "Device-registration conflict. When the branch device quota is reached, activation automatically replaces only the caller's other sessions; it does not close other users' sessions.",
             "content": {
               "application/json": {
                 "schema": {

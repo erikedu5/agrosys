@@ -24,6 +24,9 @@ class TransferManagement
             'productos.*.cantidad' => 'required|numeric|min:0.01|max:999999.99'])->validate();
         $destination = Sucursales::where('id_empresa', $origin->id_empresa)->findOrFail($data['id_sucursal_destino']);
         abort_if($destination->id === $origin->id, 422, 'Selecciona otra sucursal de la misma empresa.');
+        $freeze = app(\App\Services\Auditoria\InventoryFreeze::class);
+        $freeze->assertNotFrozen($origin, 'la transferencia');
+        $freeze->assertNotFrozen($destination, 'la transferencia');
 
         return DB::transaction(function () use ($user, $origin, $destination, $data) {
             $ids = collect($data['productos'])->pluck('id')->sort()->values();
@@ -53,6 +56,9 @@ class TransferManagement
                 return $transfer;
             }
             abort_unless($transfer->status === 'pendiente', 409, 'La transferencia no está pendiente.');
+            $freeze = app(\App\Services\Auditoria\InventoryFreeze::class);
+            $freeze->assertNotFrozen($origin, 'la recepción de la transferencia');
+            $freeze->assertNotFrozen($destination, 'la recepción de la transferencia');
             $details = $transfer->detalles()->orderBy('id_producto')->get();
             $ids = $details->pluck('id_producto')->unique()->sort()->values();
             $products = Producto::withoutGlobalScope('empresa')->where('id_empresa', $destination->id_empresa)

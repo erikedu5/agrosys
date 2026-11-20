@@ -108,13 +108,12 @@ class NativePosApiTest extends TestCase
 
         $this->device = (string) Str::uuid();
         $this->login();
-        $this->api('POST', 'devices/activate', $this->context())->assertStatus(409)->assertJsonPath('code', 'DEVICE_SESSION_CONFIRMATION_REQUIRED');
-        $this->api('POST', 'devices/activate', [...$this->context(), 'close_other_sessions' => true])->assertOk();
+        $this->api('POST', 'devices/activate', $this->context())->assertOk();
         $this->assertSame(0, Venta::count());
 
         $this->device = $oldDevice;
         $this->login();
-        $this->api('POST', 'devices/activate', [...$this->context(), 'close_other_sessions' => true])->assertOk();
+        $this->api('POST', 'devices/activate', $this->context())->assertOk();
         $this->lease = $originalLease;
         $this->push([$pending])->assertOk()->assertJsonPath('results.0.status', 'confirmed');
         $this->push([$pending])->assertOk()->assertJsonPath('results.0.status', 'duplicate');

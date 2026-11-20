@@ -26,6 +26,7 @@ const cashSessionId = ref(page.props.cashSessionId ?? null);
 const cashReady = computed(() => !!cashSessionId.value && !cashModalOpen.value && !cashBusy.value && !cashPending.value);
 const cashChanged = state => { if ('sessionId' in state) cashSessionId.value = state.sessionId; cashPending.value = state.pending; };
 const openCashModal = () => { pagoModalOpen.value = false; cashModalOpen.value = true; };
+const cashOpened = () => { cashModalOpen.value = false; nextTick(() => searchInput.value?.focus()); };
 watch(() => [page.props.auth.user.id, page.props.sucursalActiva.id], () => {
     cashModalOpen.value = false;
     cashSessionId.value = page.props.cashSessionId ?? null;
@@ -1120,7 +1121,7 @@ onUnmounted(() => {
         <!-- Cobro -->
         <DialogModal :show="cashModalOpen" max-width="5xl" :closeable="!cashBusy" @close="cashModalOpen = false">
             <template #content>
-                <CashPanel v-if="cashModalOpen" @changed="cashChanged" @busy-change="cashBusy = $event" />
+                <CashPanel v-if="cashModalOpen" @changed="cashChanged" @busy-change="cashBusy = $event" @opened="cashOpened" />
             </template>
             <template #footer>
                 <button type="button" :disabled="cashBusy" @click="cashModalOpen = false" class="min-h-11 rounded-lg border border-gray-300 px-5 py-2 font-semibold disabled:opacity-50">Volver a la venta</button>

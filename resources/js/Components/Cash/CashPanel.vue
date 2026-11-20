@@ -1,12 +1,12 @@
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { rememberCashSession } from '@/Offline/services/cashSession';
 import { offlineSaleRepository } from '@/Offline/repositories/OfflineSaleRepository';
 
 const props = defineProps({ cash: { type: Object, default: null } });
-const emit = defineEmits(['changed', 'busy-change']);
+const emit = defineEmits(['changed', 'busy-change', 'opened']);
 const page = usePage();
 const helpPinned = ref(false), helpHovered = ref(false), helpFocused = ref(false);
 const helpVisible = computed(() => helpPinned.value || helpHovered.value || helpFocused.value);
@@ -63,6 +63,7 @@ async function retry() {
     if (!pending.value || busy.value) return;
     busy.value = true; error.value = ''; success.value = '';
     const request = pending.value;
+    let opened = false;
     try {
         const { data } = await axios.post(route('cash.write', { action: request.action }), request.body, { timeout: 20000 });
         rememberCashSession(page.props.auth.user.id, page.props.sucursalActiva.id, data.session.closedAt ? null : data.sessionId);
@@ -71,6 +72,7 @@ async function retry() {
         cash.value = { ...cash.value, current: data.session.closedAt ? null : data.session,
             ...(data.session.closedAt ? { history: [data.session, ...cash.value.history.filter(s => s.id !== data.sessionId)] } : {}) };
         if (request.action === 'close') printable.value = data.session;
+        opened = request.action === 'open' && !data.session.closedAt;
         success.value = request.action === 'close' ? 'Corte guardado.' : 'Movimiento de caja guardado.';
         amount.value = ''; description.value = ''; counted.value = ''; notes.value = '';
         await refresh();
@@ -81,6 +83,8 @@ async function retry() {
             await refresh().catch(() => {});
         }
     } finally { busy.value = false; }
+    // Esperar a que 'changed'/'busy-change' lleguen al padre antes de que cierre el modal.
+    if (opened) { await nextTick(); emit('opened'); }
 }
 </script>
 

@@ -48,6 +48,12 @@ class AltaInventario extends Model
         'tipo_evento' => self::EVENTO_ALTA,
     ];
 
+    protected static function booted(): void
+    {
+        // Respaldo del bloqueo por auditoría: corre dentro de la transacción del llamador.
+        static::creating(fn (AltaInventario $movimiento) => app(\App\Services\Auditoria\InventoryFreeze::class)->guardLedger($movimiento));
+    }
+
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'id_producto');

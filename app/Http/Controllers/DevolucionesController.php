@@ -101,6 +101,7 @@ class DevolucionesController extends Controller
             'items.*.producto_id' => 'required|integer',
             'items.*.cantidad' => 'required|numeric|min:0.01',
         ]);
+        app(\App\Services\Auditoria\InventoryFreeze::class)->assertNotFrozen((int) SucursalService::getSucursalActiva(), 'la devolución');
 
         // Iniciar logging del evento
         $logger = \App\Services\EventLogger::start('PROCESAR_DEVOLUCION', [

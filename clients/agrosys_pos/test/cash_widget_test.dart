@@ -75,8 +75,9 @@ void main() {
           await tester.tap(open);
           await settle();
           expect(c.canCompleteSale, isTrue);
-          await tester.tap(find.byTooltip('Volver a la venta'));
-          await settle();
+          // Abrir caja cierra el modal y deja vender de inmediato.
+          expect(find.byType(Dialog), findsNothing);
+          expect(tester.widget<InkWell>(addButton).onTap, isNotNull);
           await tester.tap(add);
           await settle();
           await tester.tap(find.byKey(const Key('sale-cash-button')));

@@ -83,6 +83,11 @@ class PosAccess
         if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true) && ! $branch->empresa->ventas_bloqueadas) {
             $permissions = [...$permissions, 'sale.create', 'sale.credit', 'sale.print_local_ticket'];
         }
+        // Auditoría en curso: sólo ventas mueven inventario en la sucursal.
+        if (app(\App\Services\Auditoria\InventoryFreeze::class)->isFrozen($branch)) {
+            $permissions = array_values(array_diff($permissions, ['purchase.create', 'inventory.add', 'inventory.dose',
+                'inventory.reset', 'transfer.create', 'transfer.receive']));
+        }
 
         return $permissions;
     }

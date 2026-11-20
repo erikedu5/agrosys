@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\SucursalService;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,6 +20,11 @@ class EnsureEmpresaSubscription
 
         // Super admins (operadores del sistema) no se bloquean.
         if ($user && $user->tipo === 'superAdmin') {
+            return $next($request);
+        }
+
+        // Auditores externos pueden cubrir varias empresas: la suscripción se valida por auditoría (AuditoriaAccess).
+        if ($user && $user->tipo === User::TIPO_AUDITOR) {
             return $next($request);
         }
 
