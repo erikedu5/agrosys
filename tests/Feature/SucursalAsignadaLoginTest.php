@@ -82,6 +82,16 @@ class SucursalAsignadaLoginTest extends TestCase
         $this->assertSoftDeleted($otra);
     }
 
+    public function test_editar_sucursal_envia_ancho_de_ticket_guardado(): void
+    {
+        $sucursal = Sucursales::factory()->create(['ticket_width_mm' => 58]);
+        $superAdmin = User::factory()->create(['tipo' => 'superAdmin']);
+
+        $this->actingAs($superAdmin)->get(route('sucursal.edit', $sucursal->id))
+            ->assertInertia(fn ($page) => $page->component('Sucursal/CreateSucursal')
+                ->where('sucursal.ticket_width_mm', fn ($value) => $value === 58));
+    }
+
     public function test_editar_admin_empresa_conserva_su_sucursal(): void
     {
         $empresa = Empresa::factory()->create();

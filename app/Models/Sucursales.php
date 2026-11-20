@@ -25,6 +25,7 @@ class Sucursales extends Model
 
     protected $casts = [
         'es_bodega' => 'boolean',
+        'ticket_width_mm' => 'integer',
     ];
 
     public function empresa()

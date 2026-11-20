@@ -15,7 +15,7 @@
         }
     });
 
-    const { form, reset } = usePersistedForm('sucursalForm', {
+    const { form, reset } = usePersistedForm(props.sucursal ? `sucursalForm-${props.sucursal.id}` : 'sucursalForm', {
         id: props.sucursal !== undefined ? props.sucursal.id: null,
         nombre: props.sucursal !== undefined ? props.sucursal.nombre: '',
         direccion: props.sucursal !== undefined ? props.sucursal.direccion: '',
@@ -24,10 +24,10 @@
         es_matriz: props.sucursal !== undefined ? props.sucursal.es_matriz? true: false : false,
         es_bodega: props.sucursal !== undefined ? props.sucursal.es_bodega? true: false : false,
         id_empresa: props.sucursal !== undefined ? props.sucursal.id_empresa : props.empresas[0].id,
-        ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? props.sucursal.ticket_width_mm : 80,
+        ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? Number(props.sucursal.ticket_width_mm) : 80,
 });
 
-    const empresaSeleccionada = ref(props.empresas.find(e => e.id === form.id_empresa) || null);
+    const empresaSeleccionada = ref(props.empresas.find(e => Number(e.id) === Number(form.id_empresa)) || null);
     watch(empresaSeleccionada, (val) => {
         form.id_empresa = val ? val.id : null;
     });
@@ -36,7 +36,7 @@
         { value: 80, label: '80 mm (recomendado)' },
         { value: 58, label: '58 mm' }
     ];
-    const ticketSeleccionado = ref(ticketOptions.find(t => t.value === form.ticket_width_mm) || null);
+    const ticketSeleccionado = ref(ticketOptions.find(t => t.value === Number(form.ticket_width_mm)) || null);
     watch(ticketSeleccionado, (val) => {
         form.ticket_width_mm = val ? val.value : null;
     });
