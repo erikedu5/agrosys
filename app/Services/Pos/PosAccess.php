@@ -63,15 +63,21 @@ class PosAccess
             }
         }
         if (in_array($user->tipo, ['inventario', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
-            $permissions = [...$permissions, 'inventory.read', 'inventory.movements.read', 'transfer.read'];
+            $permissions = [...$permissions, 'inventory.read', 'inventory.movements.read'];
             if (! $branch->empresa->ventas_bloqueadas || $user->tipo === 'superAdmin') {
-                $permissions = [...$permissions, 'product.create', 'product.update', 'product.prices.update', 'inventory.add', 'inventory.dose', 'transfer.create', 'transfer.receive'];
+                $permissions = [...$permissions, 'product.create', 'product.update', 'product.prices.update', 'inventory.add', 'inventory.dose'];
                 if (in_array($user->tipo, ['adminEmpresa', 'superAdmin'], true)) {
                     $permissions = [...$permissions, 'product.delete', 'inventory.reset'];
                 }
                 if (app(\App\Services\InventoryManagement::class)->canManageCosts($user, $branch)) {
                     $permissions = [...$permissions, 'product.costs.manage'];
                 }
+            }
+        }
+        if (in_array($user->tipo, ['vendedor', 'inventario', 'admin', 'adminEmpresa', 'superAdmin'], true)) {
+            $permissions[] = 'transfer.read';
+            if (! $branch->empresa->ventas_bloqueadas || $user->tipo === 'superAdmin') {
+                $permissions = [...$permissions, 'transfer.create', 'transfer.receive'];
             }
         }
         if (in_array($user->tipo, ['vendedor', 'admin', 'adminEmpresa', 'superAdmin'], true) && ! $branch->empresa->ventas_bloqueadas) {

@@ -5,6 +5,7 @@
     import { usePersistedForm } from '@/stores/formStore';
     import InputError from '@/Components/InputError.vue';
     import VueSingleSelect from '@/Components/VueSingleSelect.vue';
+    import { useForm } from '@inertiajs/vue3';
     import { ref, watch } from 'vue';
 
     const props=defineProps({
@@ -15,30 +16,33 @@
         }
     });
 
-    const { form, reset } = usePersistedForm(props.sucursal ? `sucursalForm-${props.sucursal.id}` : 'sucursalForm', {
-        id: props.sucursal !== undefined ? props.sucursal.id: null,
-        nombre: props.sucursal !== undefined ? props.sucursal.nombre: '',
-        direccion: props.sucursal !== undefined ? props.sucursal.direccion: '',
-        telefono: props.sucursal !== undefined ? props.sucursal.telefono: '',
-        email: props.sucursal !== undefined ? props.sucursal.email: '',
-        es_matriz: props.sucursal !== undefined ? props.sucursal.es_matriz? true: false : false,
-        es_bodega: props.sucursal !== undefined ? props.sucursal.es_bodega? true: false : false,
-        id_empresa: props.sucursal !== undefined ? props.sucursal.id_empresa : props.empresas[0].id,
-        ticket_width_mm: props.sucursal !== undefined && props.sucursal.ticket_width_mm ? Number(props.sucursal.ticket_width_mm) : 80,
-});
-
-    const empresaSeleccionada = ref(props.empresas.find(e => Number(e.id) === Number(form.id_empresa)) || null);
-    watch(empresaSeleccionada, (val) => {
-        form.id_empresa = val ? val.id : null;
-    });
-
+    const esVerdadero = (valor) => valor === true || valor === 1 || valor === '1';
     const ticketOptions = [
         { value: 80, label: '80 mm (recomendado)' },
         { value: 58, label: '58 mm' }
     ];
-    const ticketSeleccionado = ref(ticketOptions.find(t => t.value === Number(form.ticket_width_mm)) || null);
-    watch(ticketSeleccionado, (val) => {
-        form.ticket_width_mm = val ? val.value : null;
+    const anchoTicket = (valor) => ticketOptions.some(t => t.value === Number(valor)) ? Number(valor) : 80;
+
+    const datos = {
+        id: props.sucursal?.id ?? null,
+        nombre: props.sucursal?.nombre ?? '',
+        direccion: props.sucursal?.direccion ?? '',
+        telefono: props.sucursal?.telefono ?? '',
+        email: props.sucursal?.email ?? '',
+        es_matriz: esVerdadero(props.sucursal?.es_matriz),
+        es_bodega: esVerdadero(props.sucursal?.es_bodega),
+        id_empresa: props.sucursal ? props.sucursal.id_empresa : props.empresas[0]?.id,
+        ticket_width_mm: anchoTicket(props.sucursal?.ticket_width_mm),
+    };
+
+    // Al editar siempre se parte de lo guardado en el servidor; el borrador persistido solo aplica a una sucursal nueva.
+    const { form, reset } = props.sucursal
+        ? { form: useForm(datos), reset: () => {} }
+        : usePersistedForm('sucursalForm', datos);
+
+    const empresaSeleccionada = ref(props.empresas.find(e => Number(e.id) === Number(form.id_empresa)) || null);
+    watch(empresaSeleccionada, (val) => {
+        form.id_empresa = val ? val.id : null;
     });
 
     const submit = () => {
@@ -106,7 +110,9 @@
 
                 <div class="ui-field">
                     <label class="ui-label">Ancho de ticket (mm)</label>
-                    <vue-single-select v-model="ticketSeleccionado" :options="ticketOptions" option-key="value" option-label="label" placeholder="Seleccione" class="w-full" />
+                    <select class="ui-input" v-model.number="form.ticket_width_mm">
+                        <option v-for="opcion in ticketOptions" :key="opcion.value" :value="opcion.value">{{ opcion.label }}</option>
+                    </select>
                     <InputError :message="form.errors.ticket_width_mm" />
                 </div>
 

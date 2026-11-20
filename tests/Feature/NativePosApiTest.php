@@ -346,6 +346,9 @@ class NativePosApiTest extends TestCase
             $this->assertSame($role !== 'inventario', in_array('sale.create', $permissions, true));
             $this->assertSame($role !== 'inventario', in_array('customer.read', $permissions, true));
             $this->assertSame($role !== 'inventario', in_array('sale.history', $permissions, true));
+            $this->assertContains('transfer.read', $permissions);
+            $this->assertContains('transfer.create', $permissions);
+            $this->assertContains('transfer.receive', $permissions);
         }
         $this->user->update(['tipo' => 'inventario']);
         $this->activate();
@@ -961,8 +964,7 @@ class NativePosApiTest extends TestCase
             $this->user->update(['tipo' => $role]);
             $purchase = $this->api('POST', 'purchases/list', $this->context());
             $role === 'inventario' ? $purchase->assertForbidden() : $purchase->assertOk();
-            $transfer = $this->api('POST', 'transfers/list', $this->context());
-            $role === 'vendedor' ? $transfer->assertForbidden() : $transfer->assertOk();
+            $this->api('POST', 'transfers/list', $this->context())->assertOk();
         }
         $this->user->update(['tipo' => 'inventario']);
         $this->api('POST', 'purchases/create', $this->purchaseInput())->assertForbidden();

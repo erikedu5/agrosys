@@ -48,6 +48,9 @@ const desactivar = (id) => {
                         { label: 'Límite de crédito', value: cliente.limite_credito != null ? formatMoneda(cliente.limite_credito) : 'Sin límite' },
                         { label: 'Plazo de crédito', value: cliente.plazo_credito_dias != null ? `${cliente.plazo_credito_dias} días` : 'Sin plazo' },
                         { label: 'RFC', value: cliente.rfc },
+                        { label: 'Contacto', value: cliente.nombre_contacto },
+                        { label: 'Teléfono', value: cliente.telefono_contacto },
+                        { label: 'Dirección', value: cliente.direccion, wide: true },
                     ]">
                     <template #badge>
                         <span v-if="cliente.requiereFactura != 0" class="ui-badge ui-badge-blue">Factura</span>

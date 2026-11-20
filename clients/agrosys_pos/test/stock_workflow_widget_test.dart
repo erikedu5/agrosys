@@ -19,10 +19,7 @@ void main() {
       'superAdmin',
     ]) {
       testWidgets('stock menus follow $role at ${size.width}', (tester) async {
-        final api = WorkflowServer(
-          purchasesAccess: role != 'inventario',
-          transfersAccess: role != 'vendedor',
-        );
+        final api = WorkflowServer(purchasesAccess: role != 'inventario');
         if (role == 'vendedor') {
           api.permissions!.removeWhere(
             (p) => p.startsWith('inventory.') || p.startsWith('product.'),
@@ -64,14 +61,16 @@ void main() {
           await tester.tap(find.byTooltip('Menú'));
           await tester.pumpAndSettle();
           expect(
-            find.widgetWithText(OutlinedButton, 'Compras'),
+            find.widgetWithText(OutlinedButton, 'Compra a proveedores'),
             role == 'inventario' ? findsNothing : findsOneWidget,
           );
           expect(
             find.widgetWithText(OutlinedButton, 'Transferencias'),
-            role == 'vendedor' ? findsNothing : findsOneWidget,
+            findsOneWidget,
           );
-          final label = role == 'inventario' ? 'Transferencias' : 'Compras';
+          final label = role == 'inventario'
+              ? 'Transferencias'
+              : 'Compra a proveedores';
           final menu = find.widgetWithText(OutlinedButton, label);
           await tester.ensureVisible(menu);
           await tester.pumpAndSettle();
@@ -197,7 +196,7 @@ void main() {
             ),
           );
           await settle();
-          await navigate('Compras');
+          await navigate('Compra a proveedores');
           await tester.tap(find.byKey(const Key('purchases-create')));
           await settle();
           await field('supplier', 'Proveedor de prueba');

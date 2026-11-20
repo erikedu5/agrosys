@@ -78,6 +78,9 @@ class ClientesController extends Controller
                 'email',
                 'max:255',
             ],
+            'nombre_contacto' => ['nullable', 'string', 'max:255'],
+            'telefono_contacto' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string', 'max:500'],
         ], [
             'nombre.required' => 'Por favor ingresa el nombre del cliente.',
             'tipo_precio.in' => 'El tipo de precio seleccionado no es valido.',
@@ -92,6 +95,9 @@ class ClientesController extends Controller
             'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
             'uso_cfdi.required' => 'El uso de CFDI es obligatorio para clientes que requieren factura.',
             'email_facturacion.email' => 'El correo de facturacion debe tener un formato valido.',
+            'nombre_contacto.max' => 'El nombre del contacto no puede exceder 255 caracteres.',
+            'telefono_contacto.max' => 'El telefono de contacto no puede exceder 30 caracteres.',
+            'direccion.max' => 'La direccion no puede exceder 500 caracteres.',
         ]);
 
 
@@ -111,6 +117,9 @@ class ClientesController extends Controller
             'codigo_postal' => $request->boolean('requiereFactura') ? $request->codigo_postal : null,
             'uso_cfdi' => $request->boolean('requiereFactura') ? strtoupper($request->uso_cfdi) : null,
             'email_facturacion' => $request->boolean('requiereFactura') ? $request->email_facturacion : null,
+            'nombre_contacto' => $request->input('nombre_contacto'),
+            'telefono_contacto' => $request->input('telefono_contacto'),
+            'direccion' => $request->input('direccion'),
             'id_sucursal' => SucursalService::getSucursalActiva(),
         ];
 
@@ -168,6 +177,9 @@ class ClientesController extends Controller
                 'email',
                 'max:255',
             ],
+            'nombre_contacto' => ['nullable', 'string', 'max:255'],
+            'telefono_contacto' => ['nullable', 'string', 'max:30'],
+            'direccion' => ['nullable', 'string', 'max:500'],
         ], [
             'tipo_precio.in' => 'El tipo de precio seleccionado no es valido.',
             'limite_credito.numeric' => 'El limite de credito debe ser numerico.',
@@ -179,6 +191,9 @@ class ClientesController extends Controller
             'codigo_postal.required' => 'El codigo postal es obligatorio para clientes que requieren factura.',
             'uso_cfdi.required' => 'El uso de CFDI es obligatorio para clientes que requieren factura.',
             'email_facturacion.email' => 'El correo de facturacion debe tener un formato valido.',
+            'nombre_contacto.max' => 'El nombre del contacto no puede exceder 255 caracteres.',
+            'telefono_contacto.max' => 'El telefono de contacto no puede exceder 30 caracteres.',
+            'direccion.max' => 'La direccion no puede exceder 500 caracteres.',
         ]);
 
 
@@ -190,6 +205,9 @@ class ClientesController extends Controller
         $cliente->tipo_precio = $request->input('tipo_precio') ?: 'publico';
         $cliente->limite_credito = $request->input('limite_credito');
         $cliente->plazo_credito_dias = $request->input('plazo_credito_dias');
+        $cliente->nombre_contacto = $request->input('nombre_contacto');
+        $cliente->telefono_contacto = $request->input('telefono_contacto');
+        $cliente->direccion = $request->input('direccion');
         $cliente->requiereFactura = $request->boolean('requiereFactura');
         if ($request->requiereFactura) {
             $cliente->rfc = strtoupper($request->rfc);

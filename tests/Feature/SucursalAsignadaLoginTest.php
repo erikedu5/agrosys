@@ -92,6 +92,35 @@ class SucursalAsignadaLoginTest extends TestCase
                 ->where('sucursal.ticket_width_mm', fn ($value) => $value === 58));
     }
 
+    public function test_actualizar_sucursal_guarda_matriz_bodega_y_ticket_y_la_edicion_los_envia(): void
+    {
+        $sucursal = Sucursales::factory()->create(['es_matriz' => false, 'es_bodega' => false, 'ticket_width_mm' => 80]);
+        $superAdmin = User::factory()->create(['tipo' => 'superAdmin']);
+
+        $this->actingAs($superAdmin)->put(route('sucursal.update', $sucursal->id), [
+            'id' => $sucursal->id, 'nombre' => 'Bodega central', 'direccion' => 'Calle 1', 'id_empresa' => $sucursal->id_empresa,
+            'es_matriz' => true, 'es_bodega' => true, 'ticket_width_mm' => 58,
+        ])->assertRedirect(route('sucursal.index'));
+
+        $sucursal->refresh();
+        $this->assertTrue($sucursal->es_matriz);
+        $this->assertTrue($sucursal->es_bodega);
+        $this->assertSame(58, $sucursal->ticket_width_mm);
+
+        $this->actingAs($superAdmin)->get(route('sucursal.edit', $sucursal->id))
+            ->assertInertia(fn ($page) => $page->component('Sucursal/CreateSucursal')
+                ->where('sucursal.es_matriz', true)
+                ->where('sucursal.es_bodega', true)
+                ->where('sucursal.ticket_width_mm', 58));
+
+        $this->actingAs($superAdmin)->put(route('sucursal.update', $sucursal->id), [
+            'id' => $sucursal->id, 'nombre' => 'Bodega central', 'direccion' => 'Calle 1', 'id_empresa' => $sucursal->id_empresa,
+            'es_matriz' => false, 'es_bodega' => false, 'ticket_width_mm' => 80,
+        ])->assertRedirect(route('sucursal.index'));
+        $this->assertFalse($sucursal->fresh()->es_bodega);
+        $this->assertFalse($sucursal->fresh()->es_matriz);
+    }
+
     public function test_editar_admin_empresa_conserva_su_sucursal(): void
     {
         $empresa = Empresa::factory()->create();

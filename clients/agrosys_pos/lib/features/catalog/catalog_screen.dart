@@ -257,6 +257,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         drawer: wide
             ? null
             : Drawer(
+                width: _menuWidth,
                 child: _menu(
                   context,
                   close: () => _scaffoldKey.currentState?.closeDrawer(),
@@ -264,7 +265,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
               ),
         body: Row(
           children: [
-            if (wide && _menuOpen) SizedBox(width: 280, child: _menu(context)),
+            if (wide && _menuOpen)
+              SizedBox(width: _menuWidth, child: _menu(context)),
             if (wide && _menuOpen) const VerticalDivider(width: 1),
             Expanded(
               child: IndexedStack(
@@ -364,90 +366,234 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  Widget _menu(BuildContext context, {VoidCallback? close}) => SafeArea(
-    child: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text(
-            'Menú principal',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+
+  /// Mismo orden y agrupación que el menú lateral de la app web (AppLayout.vue):
+  /// venta, inventario y compras, transferencias, clientes; después Usuario.
+  static const _navigation = [
+    (0, 'Productos', Icons.sell_outlined),
+    (2, 'Venta', Icons.attach_money),
+    (3, 'Historial', Icons.receipt_long_outlined),
+    (5, 'Inventario', Icons.inventory_2_outlined),
+    (6, 'Compra a proveedores', Icons.shopping_bag_outlined),
+    (7, 'Transferencias', Icons.swap_horiz),
+    (1, 'Clientes', Icons.people_outline),
+  ];
+  static const _menuWidth = 320.0;
+
+  Widget _menu(BuildContext context, {VoidCallback? close}) {
+    final c = widget.controller;
+    return SafeArea(
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _menuTitle('Navegación'),
+                _menuGrid(3, [
+                  for (final item in _navigation)
+                    if (_allowed(item.$1)) _menuTile(item, close),
+                ]),
+              ],
+            ),
           ),
-        ),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.05,
-          children: [
-            for (final item in const [
-              (0, 'Productos', Icons.inventory_2_outlined),
-              (5, 'Inventario', Icons.warehouse_outlined),
-              (6, 'Compras', Icons.shopping_bag_outlined),
-              (7, 'Transferencias', Icons.swap_horiz),
-              (2, 'Venta', Icons.point_of_sale),
-              (1, 'Clientes', Icons.people_outline),
-              (3, 'Historial', Icons.receipt_long_outlined),
-              (4, 'Cuenta', Icons.person_outline),
-            ])
-              if (_allowed(item.$1))
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: _section == item.$1
-                        ? const Color(0xffeff6ff)
-                        : Colors.white,
-                    side: BorderSide(
-                      color: _section == item.$1
-                          ? WebTheme.blue
-                          : WebTheme.border,
-                      width: 2,
-                    ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xfff9fafb),
+              border: Border(top: BorderSide(color: WebTheme.border)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Usuario',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: WebTheme.ink,
                   ),
-                  onPressed: () {
-                    _navigate(item.$1);
-                    close?.call();
-                  },
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: WebTheme.border),
+                  ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(item.$3, color: WebTheme.blue, size: 28),
-                      const SizedBox(height: 10),
                       Text(
-                        item.$2,
-                        textAlign: TextAlign.center,
+                        c.session!.userName,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: WebTheme.green,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              c.session!.branch.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: WebTheme.green,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        const Divider(),
-        Text(
-          widget.controller.session!.userName,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        Text(
-          widget.controller.session!.branch.name,
-          style: const TextStyle(color: WebTheme.green),
-        ),
-        const SizedBox(height: 16),
-        TextButton.icon(
-          onPressed: widget.controller.busy ? null : widget.controller.signOut,
-          icon: const Icon(Icons.logout, color: Colors.red),
-          label: const Text(
-            'Cerrar sesión',
-            style: TextStyle(color: Colors.red),
+                const SizedBox(height: 16),
+                _menuGrid(2, [
+                  _menuTile(
+                    (4, 'Cuenta', Icons.person_outline),
+                    close,
+                    background: Colors.white,
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _menuAction(
+                  'Cambiar sucursal',
+                  Icons.swap_horiz,
+                  foreground: const Color(0xff15803d),
+                  background: const Color(0xfff0fdf4),
+                  border: const Color(0xffbbf7d0),
+                  onPressed: c.busy || c.syncBusy
+                      ? null
+                      : () {
+                          close?.call();
+                          _changeBranch();
+                        },
+                ),
+                const SizedBox(height: 16),
+                _menuAction(
+                  'Cerrar sesión',
+                  Icons.logout,
+                  foreground: const Color(0xffb91c1c),
+                  background: const Color(0xfffef2f2),
+                  border: const Color(0xfffecaca),
+                  onPressed: c.busy ? null : c.signOut,
+                ),
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuTitle(String text) => Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.only(bottom: 8),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: WebTheme.border)),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: WebTheme.ink,
+      ),
+    ),
+  );
+
+  Widget _menuGrid(int columns, List<Widget> children) => GridView.count(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisCount: columns,
+    mainAxisSpacing: 12,
+    crossAxisSpacing: 12,
+    childAspectRatio: columns == 3 ? 1 : 1.6,
+    children: children,
+  );
+
+  /// Botón de la cuadrícula con los colores del menú web (azul si es la sección actual).
+  Widget _menuTile(
+    (int, String, IconData) item,
+    VoidCallback? close, {
+    Color background = const Color(0xfff9fafb),
+  }) {
+    final selected = _section == item.$1;
+    final color = selected ? const Color(0xff1d4ed8) : const Color(0xff374151);
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.all(6),
+        foregroundColor: color,
+        backgroundColor: selected ? const Color(0xffdbeafe) : background,
+        side: BorderSide(
+          color: selected ? const Color(0xff3b82f6) : WebTheme.border,
+          width: 2,
         ),
-      ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onPressed: () {
+        _navigate(item.$1);
+        close?.call();
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(item.$3, color: color, size: 24),
+          const SizedBox(height: 8),
+          // Ancho fijo para partir en palabras; si no cabe, se reduce en vez de cortarse.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: 84,
+                child: Text(
+                  item.$2,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w500,
+                    color: color,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuAction(
+    String label,
+    IconData icon, {
+    required Color foreground,
+    required Color background,
+    required Color border,
+    required VoidCallback? onPressed,
+  }) => OutlinedButton.icon(
+    style: OutlinedButton.styleFrom(
+      minimumSize: const Size.fromHeight(48),
+      foregroundColor: foreground,
+      backgroundColor: background,
+      side: BorderSide(color: border, width: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ),
+    onPressed: onPressed,
+    icon: Icon(icon, size: 18),
+    label: Text(
+      label,
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
     ),
   );
 

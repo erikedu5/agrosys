@@ -26,6 +26,9 @@ class Clientes extends Model
         'codigo_postal',
         'uso_cfdi',
         'email_facturacion',
+        'nombre_contacto',
+        'telefono_contacto',
+        'direccion',
         'activo'
     ];
 

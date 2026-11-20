@@ -106,6 +106,29 @@ class ControllerErrorRegressionTest extends TestCase
         $this->delete(route('cliente.destroy', $customer))->assertNotFound();
     }
 
+    public function test_customer_contact_fields_are_optional_and_saved(): void
+    {
+        $this->post(route('cliente.store'), ['nombre' => 'Sin contacto', 'requiereFactura' => false])
+            ->assertRedirect(route('cliente.index'));
+        $customer = Clientes::where('nombre', 'Sin contacto')->firstOrFail();
+        $this->assertNull($customer->nombre_contacto);
+        $this->assertNull($customer->telefono_contacto);
+        $this->assertNull($customer->direccion);
+
+        $this->put(route('cliente.update', $customer), [
+            'nombre' => 'Sin contacto', 'requiereFactura' => false,
+            'nombre_contacto' => 'Juan Pérez', 'telefono_contacto' => '555 123 4567', 'direccion' => 'Calle 1 #23, Centro',
+        ])->assertRedirect(route('cliente.index'));
+        $customer->refresh();
+        $this->assertSame('Juan Pérez', $customer->nombre_contacto);
+        $this->assertSame('555 123 4567', $customer->telefono_contacto);
+        $this->assertSame('Calle 1 #23, Centro', $customer->direccion);
+
+        $this->put(route('cliente.update', $customer), [
+            'nombre' => 'Sin contacto', 'requiereFactura' => false, 'telefono_contacto' => str_repeat('1', 31),
+        ])->assertSessionHasErrors('telefono_contacto');
+    }
+
     public function test_missing_customer_update_returns_404(): void
     {
         $this->putJson(route('cliente.update', 999999), [

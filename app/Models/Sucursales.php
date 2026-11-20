@@ -24,6 +24,7 @@ class Sucursales extends Model
     ];
 
     protected $casts = [
+        'es_matriz' => 'boolean',
         'es_bodega' => 'boolean',
         'ticket_width_mm' => 'integer',
     ];

@@ -21,6 +21,9 @@
         tipo_precio: props.cliente !== undefined ? (props.cliente.tipo_precio ?? 'publico') : 'publico',
         limite_credito: props.cliente !== undefined ? (props.cliente.limite_credito ?? '') : '',
         plazo_credito_dias: props.cliente !== undefined ? (props.cliente.plazo_credito_dias ?? '') : '',
+        nombre_contacto: props.cliente !== undefined ? (props.cliente.nombre_contacto ?? '') : '',
+        telefono_contacto: props.cliente !== undefined ? (props.cliente.telefono_contacto ?? '') : '',
+        direccion: props.cliente !== undefined ? (props.cliente.direccion ?? '') : '',
         id: props.cliente !== undefined ? props.cliente.id: null,
     });
 
@@ -64,6 +67,9 @@
         form.tipo_precio = cliente?.tipo_precio ?? 'publico';
         form.limite_credito = cliente?.limite_credito ?? '';
         form.plazo_credito_dias = cliente?.plazo_credito_dias ?? '';
+        form.nombre_contacto = cliente?.nombre_contacto ?? '';
+        form.telefono_contacto = cliente?.telefono_contacto ?? '';
+        form.direccion = cliente?.direccion ?? '';
         form.id = cliente?.id ?? null;
     };
 
@@ -129,6 +135,27 @@
                         </select>
                         <p class="ui-help">Precio del catálogo de productos que se usará en las ventas de este cliente.</p>
                         <InputError :message="form.errors.tipo_precio" />
+                    </div>
+                </section>
+
+                <section class="ui-card flex flex-col gap-4 p-4 sm:p-5">
+                    <h2 class="ui-section-title">Contacto</h2>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="ui-field">
+                            <label class="ui-label">Nombre del contacto (opcional)</label>
+                            <input type="text" maxlength="255" class="ui-input" :class="{ 'ui-input-error': form.errors.nombre_contacto }" v-model="form.nombre_contacto">
+                            <InputError :message="form.errors.nombre_contacto" />
+                        </div>
+                        <div class="ui-field">
+                            <label class="ui-label">Teléfono de contacto (opcional)</label>
+                            <input type="tel" maxlength="30" class="ui-input" :class="{ 'ui-input-error': form.errors.telefono_contacto }" v-model="form.telefono_contacto">
+                            <InputError :message="form.errors.telefono_contacto" />
+                        </div>
+                    </div>
+                    <div class="ui-field">
+                        <label class="ui-label">Dirección (opcional)</label>
+                        <textarea rows="2" maxlength="500" class="ui-input" :class="{ 'ui-input-error': form.errors.direccion }" v-model="form.direccion"></textarea>
+                        <InputError :message="form.errors.direccion" />
                     </div>
                 </section>
 

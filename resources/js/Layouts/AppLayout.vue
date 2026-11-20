@@ -200,7 +200,7 @@ const navItems = computed(() => {
             type: 'link',
             label: 'Transferencias',
             route: 'transferencias.index',
-            condition: ['inventario', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo)
+            condition: ['vendedor', 'inventario', 'admin', 'superAdmin', 'adminEmpresa'].includes(tipo)
         },
         {
             type: 'dropdown',

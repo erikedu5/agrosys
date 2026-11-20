@@ -70,6 +70,8 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
+            'es_matriz' => 'nullable|boolean',
+            'es_bodega' => 'nullable|boolean',
         ], [
             'nombre.required' => 'Agregar un nombre de sucursal.',
             'direccion.required' => 'Agregar una dirección.',
@@ -104,7 +106,8 @@ class SucursalController extends Controller
                 'telefono' => $request->telefono,
                 'email' => $request->email,
                 'id_empresa' => $request->id_empresa,
-                'es_matriz' => $request->es_matriz,
+                'es_matriz' => $request->boolean('es_matriz'),
+                'es_bodega' => $request->boolean('es_bodega'),
                 'ticket_width_mm' => $request->ticket_width_mm ?? 80,
             ]);
 
@@ -173,6 +176,8 @@ class SucursalController extends Controller
             'nombre' => 'required',
             'direccion' => 'required',
             'ticket_width_mm' => 'nullable|in:58,80',
+            'es_matriz' => 'nullable|boolean',
+            'es_bodega' => 'nullable|boolean',
         ], [
             'nombre.required' => 'Agregar un nombre de sucursal.',
             'direccion.required' => 'Agregar una dirección.',
@@ -199,13 +204,16 @@ class SucursalController extends Controller
                 'nombre' => $sucursal->nombre,
                 'direccion' => $sucursal->direccion,
                 'es_matriz' => $sucursal->es_matriz,
+                'es_bodega' => $sucursal->es_bodega,
+                'ticket_width_mm' => $sucursal->ticket_width_mm,
             ]);
 
             $sucursal->nombre = $request->nombre;
             $sucursal->direccion = $request->direccion;
             $sucursal->telefono = $request->telefono;
             $sucursal->email = $request->email;
-            $sucursal->es_matriz = $request->es_matriz;
+            $sucursal->es_matriz = $request->boolean('es_matriz');
+            $sucursal->es_bodega = $request->boolean('es_bodega');
             $sucursal->id_empresa = $request->id_empresa;
             if ($request->filled('ticket_width_mm')) {
                 $sucursal->ticket_width_mm = (int) $request->ticket_width_mm;
